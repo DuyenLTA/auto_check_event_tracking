@@ -86,12 +86,12 @@ giá trị cho phép, tester chỉ điền `steps`.
 6. Test cần máy → `@pytest.mark.device`.
 
 ## Success Criteria
-- [ ] Flow YAML chạy được tuần tự nhiều case, mỗi case một cửa sổ
-- [ ] Step thất bại ra `NOT_TESTED` kèm lý do, không phải `FAIL`
-- [ ] Selector không thấy → lỗi kèm gợi ý node gần giống
-- [ ] Cảnh báo khi flow dùng `tap_text`
-- [ ] `pytest -m "not device"` xanh khi rút cáp
-- [ ] Không thêm dependency. Cả 4 file mới <200 LOC
+- [x] Flow YAML chạy được tuần tự nhiều case, mỗi case một cửa sổ
+- [x] Step thất bại ra `NOT_TESTED` kèm lý do, không phải `FAIL`
+- [x] Selector không thấy → lỗi kèm gợi ý node gần giống
+- [x] Cảnh báo khi flow dùng `tap_text`
+- [x] `pytest -m "not device"` xanh khi rút cáp
+- [x] Không thêm dependency. Cả 4 file mới <200 LOC
 
 ## Risk Assessment
 - **Popup rating bị chặn tần suất — RỦI RO LỚN NHẤT CỦA PHASE NÀY.** Rating thường
@@ -208,11 +208,78 @@ case đòi hỏi, không có thì rơi về danh sách cho phép của spec. Tes
 ### Test
 +24 (12 selector trên dump thật, 12 runner). Tổng **262**, xanh khi không cắm máy.
 
-## Còn lại — chờ file test case của user
+## Đã làm — parser flow (2026-09-08)
 
-**Chưa viết `event_flow_parse`.** Đây là phần duy nhất phụ thuộc định dạng file. `Flow`
-dựng được từ Python nên runner dùng được ngay; khi file của user tới thì chỉ viết parser
-khớp đúng định dạng đó, không phải sửa gì khác.
+`event_flow_parse` xong. Định dạng lấy từ ví dụ YAML ở mục Architecture phía trên;
+`Flow`/`FlowCase`/`Step` đã có sẵn nên parser khớp models, không phát minh từ vựng mới.
 
-User nói không cần lo chuyện 5 sao không hiện lại — tiền đề đó họ tự lo, nên không xây
-thêm gì quanh `clear_prefs`.
+```
+event_flow_validate.py     kiểm dữ liệu thô: khoá lạ, chuỗi, thời gian, index    64
+event_flow_step_parse.py   một phần tử `steps` -> Step                          167
+event_flow_parse.py        đi cấu trúc event/case, gom lỗi                      193
+routes_event.py            + POST /event/flow (chỉ đọc, không chạm máy)         197
+```
+
+Tách 3 file vì bản một-file chạm 215 LOC. Ranh giới: kiểm dữ liệu thô (cả hai file
+kia dùng) / từ vựng step (dài ra khi thêm thao tác) / cấu trúc flow (không đổi).
+
+### Nguyên tắc: sai âm thầm ở parser ra kết luận sai về app
+
+Vòng đầu parser bỏ qua khoá lạ. Code review bắt được 3 đường sai âm thầm, mỗi đường
+kết thúc bằng một verdict sai — không phải bằng một message lỗi:
+
+| Gõ sai | Nếu bỏ qua âm thầm | Kết quả |
+|---|---|---|
+| `param` thiếu `s` | `expect_params` rỗng | **PASS giả** — mất đúng khả năng bắt "màn Result báo `placement_name=home`" |
+| `indx` thay `index` | selector về index 0 | bấm card khác → lái sang màn khác → **FAIL oan** |
+| `steps` khai hai lần | yaml lấy cái sau | case chạy thiếu bước → **FAIL oan** |
+
+Nên giờ **mọi mapping đều kiểm khoá lạ** (`unknown_keys`), dùng chung một helper cho
+case · reset · selector · swipe · wait_text.
+
+### Quyết định trong code
+
+- **Case có một step không đọc được → bỏ CẢ case.** Chạy case thiếu bước còn tệ hơn
+  không chạy: nó ra kết luận về app dựa trên đường đi không phải đường tester mô tả.
+- **bool YAML không nháy → báo lỗi, không tự đổi.** `true` cho ra `str(True)` = `'True'`,
+  lệch với `'true'` máy giữ → `prepare()` trả BLOCKED kèm message quy tội "build đặt
+  `minimumFetchInterval = 0`". Chẩn đoán sai hoàn toàn, tester đi soi build trong khi
+  lỗi là một cặp nháy thiếu. Đổi ngầm thành `'true'` thì phải **đoán** app lưu bool kiểu
+  gì (RC lưu chuỗi, logcat in bool thành số) — chưa đo nên không đoán.
+- **Whitelist keyevent kiểm ngay lúc parse**, import `adb_input.KEYEVENTS` (không tạo
+  import cycle). Đợi tới lúc chạy thì case đã reset RC, xoá prefs, force-stop, mở lại
+  app, chèn mốc rồi mới `not_tested` vì một chữ gõ sai — mất cả một chu kỳ chạy máy.
+  `POWER` lại chính là phím làm hỏng cả phiên test.
+- **Nhãn case trùng → báo lỗi.** `expectations()` là dict keyed by label; hai case cùng
+  nhãn thì một cái đè mất expectations của cái kia và cả hai cửa sổ nhận cùng một bộ.
+  Runner dựa vào bất biến này mà trước đó không ai thực thi nó.
+- **Đọc `reset` TRƯỚC khi bỏ case vì thiếu step**, không thì lỗi reset biến mất, tester
+  sửa step rồi chạy lại mới lộ ra — đúng vòng lặp mà "gom hết lỗi một lượt" cấm.
+- **Khai hai khoá tìm kiếm cùng lúc → báo lỗi**, không chọn ngầm một cái. Chọn ngầm là
+  bấm vào node tester không hề ý.
+- **`launch: {package: ...}` → báo lỗi.** Dạng này có trong ví dụ ở mục Architecture nên
+  tester sẽ gõ đúng thế, nhưng runner lấy package ở cấp flow. Nói rõ thay vì bỏ đối số.
+- **`DIRECTIONS` chuyển về `device_actions`** — một nguồn sự thật, `swipe` và parser
+  validate cùng một danh sách.
+
+### Test
++58 → tổng **320**, xanh khi không cắm máy. Chia hai file: `test_event_flow_parse.py`
+(parser LÀM GÌ) và `test_event_flow_parse_regressions.py` (những gì nó PHẢI TỪ CHỐI —
+mỗi test một đường sai âm thầm đã từng xanh).
+
+Hai test bị viết lại vì assert không chứng minh điều tên nó nói:
+- test whitelist phím cũ **khoá cứng** hành vi phát hiện muộn → giờ khoá hành vi chặn sớm.
+- test "không bỏ sót step nào runner hiểu" chỉ so chuỗi với một list hardcode **trong
+  chính test** → đổi tên cho đúng việc, và thêm test chạy thật cả 7 kind qua `run_step`
+  (`type` và `home` trước đó chưa đi qua runner lần nào).
+
+## Còn lại
+
+**`POST /event/flow/run` + nút "Sinh case từ spec".** Route chạy phải **gate theo
+`flow.ok`**, tuyệt đối không iterate `flow.cases` khi còn lỗi. Nút sinh case phụ thuộc
+**open question 2** (bảng spec thật bao nhiêu event/screen → đổi hẳn UX) nên chưa làm.
+
+`routes_event.py` đang 197 LOC — thêm route chạy flow là vượt 200, tách
+`routes_event_flow.py` trước.
+
+**Chưa chạy `pytest -m device`.** Nó force-stop app và sửa Remote Config trên máy thật.

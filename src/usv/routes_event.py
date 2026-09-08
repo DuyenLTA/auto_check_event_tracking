@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 from . import event_check_runner, logcat_stream
 from .adb_parsers import AdbError
 from .check_config import ConfigError, load as load_config
+from .event_flow_parse import parse_flow
 from .event_spec_parse import parse_paste
 from .event_state import EventRun, now_vn, state
 from .event_window import cut, mark_label
@@ -29,6 +30,11 @@ router = APIRouter()
 
 class SpecRequest(BaseModel):
     text: str = Field(default="", max_length=2_000_000)
+
+
+class FlowRequest(BaseModel):
+    text: str = Field(default="", max_length=2_000_000)
+    package: str = ""
 
 
 class RecordRequest(BaseModel):
@@ -71,6 +77,20 @@ async def load_spec(request: SpecRequest) -> dict:
     state.run = None
     state.windows = ()
     return {"stage": state.stage, **sheet.payload()}
+
+
+@router.post("/event/flow")
+async def load_flow(request: FlowRequest) -> dict:
+    """Doc flow YAML -> tra case va loi cho bang preview. KHONG chay gi tren may.
+
+    Tra 200 ke ca khi co loi, cung ly do `/event/spec`: flow sai la loi du lieu
+    cua tester, can thay het cho sai mot luot de sua.
+
+    Khong luu vao state: buoc nay chi de tester soi flow truoc khi chay. Cai
+    `fragile` trong payload la canh bao selector khop theo chu - vo khi doi
+    ngon ngu, bao chu khong chan.
+    """
+    return parse_flow(request.text, request.package).payload()
 
 
 @router.post("/event/record")
