@@ -20,15 +20,13 @@ SHEET_RESULTS = "Kết quả"
 SHEET_SUMMARY = "Tổng quan"
 
 _HEADERS = (
-    ("Trang thai", 16),
-    ("Kiểm tra", 12),
-    ("Element", 34),
-    ("Thiết kế", 22),
-    ("App", 22),
-    ("Lệch", 34),
+    ("Trạng thái", 16),
+    ("Kiểm tra", 16),
+    ("Event / Param", 40),
+    ("Spec cần", 30),
+    ("App gửi", 26),
+    ("Lệch", 30),
     ("Giải thích", 62),
-    ("Node trên app", 24),
-    ("Độ tin cậy khớp", 15),
 )
 
 # Mau nen theo trang thai. Dung ARGB, khong co dau '#'.
@@ -56,10 +54,8 @@ def build(
     results: list[CheckResult],
     summary: Summary,
     *,
-    screen: str = "",
     package: str = "",
-    metrics_label: str = "",
-    design_title: str = "",
+    device: str = "",
     generated_at: str = "",
     warnings: list[str] | None = None,
 ) -> bytes:
@@ -85,9 +81,8 @@ def build(
     wrap = Alignment(vertical="top", wrap_text=True)
     for row_index, item in enumerate(results, start=2):
         values = (
-            str(item.verdict), item.check, item.element, item.expected, item.actual,
-            item.delta, item.message, item.device_label,
-            f"t{item.tier}/{item.confidence:.2f}" if item.tier >= 0 else "",
+            str(item.verdict), item.check, item.element, item.expected,
+            item.actual, item.delta, item.message,
         )
         fill = PatternFill("solid", fgColor=_FILL[_tone(item.verdict)])
         for col_index, value in enumerate(values, start=1):
@@ -95,8 +90,7 @@ def build(
             cell.alignment = wrap
             cell.fill = fill
 
-    _write_summary(book, summary, screen=screen, package=package,
-                   metrics_label=metrics_label, design_title=design_title,
+    _write_summary(book, summary, package=package, device=device,
                    generated_at=generated_at, warnings=warnings or [])
 
     buffer = io.BytesIO()
@@ -113,21 +107,20 @@ def _write_summary(book, summary: Summary, **info) -> None:
     bold = Font(bold=True)
 
     rows: list[tuple[str, object]] = [
-        ("Màn hình", info.get("screen", "")),
-        ("Thiết kế", info.get("design_title", "")),
         ("App", info.get("package", "")),
-        ("May", info.get("metrics_label", "")),
+        ("Máy", info.get("device", "")),
         ("Tạo lúc", info.get("generated_at", "")),
         ("", ""),
-        ("Lệch thiết kế", summary.failed),
+        ("Sai", summary.failed),
         ("Khớp", summary.passed),
         ("Chưa kết luận được", summary.not_verifiable),
-        ("Không khớp được", summary.unmatched),
-        ("App có thêm", summary.extra),
+        ("Chưa test", summary.not_tested),
+        ("Spec không khai", summary.extra),
         ("Tỉ lệ khớp", f"{summary.pass_ratio:.0%}"),
         ("", ""),
-        ("LƯU Ý", "'Không khớp được' KHONG phai loi cua app - do la gioi han cua "
-                  "công cụ khi app không gắn resource-id/chữ. Không tính vào số lệch."),
+        ("LƯU Ý", "'Chưa test' và 'Spec không khai' KHÔNG tính vào số sai. "
+                  "Chưa đánh dấu bước nào thì công cụ chưa đo gì; event app bắn "
+                  "mà spec không khai có thể là spec chưa cập nhật."),
     ]
     for label, value in rows:
         if not label and not value:
