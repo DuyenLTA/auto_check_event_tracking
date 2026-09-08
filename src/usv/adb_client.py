@@ -11,6 +11,8 @@ from __future__ import annotations
 import asyncio
 import logging
 
+from .adb_appdata import AppDataMixin
+from .adb_input import InputMixin
 from .adb_logcat import LogcatMixin
 from .adb_parsers import (
     AdbError, AdbTransportError, Device, check_package, check_serial, find_adb,
@@ -32,7 +34,7 @@ _TRANSPORT_HINTS = (
 )
 
 
-class AdbClient(LogcatMixin):
+class AdbClient(LogcatMixin, InputMixin, AppDataMixin):
     def __init__(self, adb_path: str | None = None) -> None:
         self.adb = find_adb(adb_path)
 
