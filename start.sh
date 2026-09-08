@@ -43,14 +43,33 @@ VPY="$ENV_DIR/bin/python"
 # Cai lai khi thieu thu vien HOAC khi pyproject.toml moi hon lan cai truoc
 STAMP="$ENV_DIR/.usv-installed"
 NEEDS_INSTALL=0
-"$VPY" -c "import usv, fastapi, yaml, openpyxl, PIL, multipart" >/dev/null 2>&1 || NEEDS_INSTALL=1
+"$VPY" -c "import usv, fastapi, yaml, openpyxl" >/dev/null 2>&1 || NEEDS_INSTALL=1
 [ -f "$STAMP" ] && [ pyproject.toml -nt "$STAMP" ] && NEEDS_INSTALL=1
+
+# `usv` phai tro vao CHINH repo nay. Doi ten thu muc du an lam file .pth cua
+# editable install tro vao duong dan cu -> uvicorn nap MOT PACKAGE KHAC ma
+# pytest khong he bao loi, vi pytest lay src qua `pythonpath` trong pyproject.
+# Da gap that: server serve nguyen mot tool khac, moi route tra 404.
+HERE_SRC="$(cd "$(dirname "$0")" && pwd)/src"
+LOADED="$("$VPY" -c "import usv,os;print(os.path.dirname(os.path.dirname(usv.__file__)))" 2>/dev/null || true)"
+if [ -n "$LOADED" ] && [ "$LOADED" != "$HERE_SRC" ]; then
+  echo "usv dang tro vao $LOADED thay vi $HERE_SRC - cai lai..."
+  NEEDS_INSTALL=1
+fi
 if [ "$NEEDS_INSTALL" = "1" ]; then
   echo "Dang cai thu vien..."
   "$VPY" -m pip install -q --upgrade pip >/dev/null 2>&1
   "$VPY" -m pip install -q -e . || die "Cai thu vien that bai.
   Thu chay tay de xem chi tiet: $VPY -m pip install -e ."
   touch "$STAMP"
+
+  AFTER="$("$VPY" -c "import usv,os;print(os.path.dirname(os.path.dirname(usv.__file__)))" 2>/dev/null || true)"
+  if [ -n "$AFTER" ] && [ "$AFTER" != "$HERE_SRC" ]; then
+    die "Cai xong ma usv van tro vao $AFTER.
+  Thuong la con mot ban editable cu cua du an khac cung dung package 'usv'.
+  Xem: $VPY -m pip list | grep -i usv
+  Bo di:  $VPY -m pip uninstall -y usv"
+  fi
 fi
 
 # --- 3. Tim adb (canh bao thoi, khong chan) -----------------------------------

@@ -83,11 +83,26 @@ Home         rating_star_clicked      Khi user click rate    star_value         
 
 **Một hàng một dòng.** Hàng sai số cột bị báo lỗi kèm số dòng chứ không tự ghép lại: ghép theo số cột làm **mất ô rỗng** ở điểm gãy và sinh ra spec sai mà không báo gì.
 
-## Trạng thái
+## Chạy
 
-Tầng máy đã xong và có test: nạp spec · ghi logcat · cắt cửa sổ theo mốc · chấm check · render report HTML/xlsx.
+```bash
+./start.sh                    # http://127.0.0.1:8000
+PORT=9000 ./start.sh          # đổi cổng
+USV_NO_BROWSER=1 ./start.sh   # không tự mở browser
+```
 
-**Chưa có tab web** — route HTTP và UI là bước sau, xem `plans/260908-1521-event-tracking-auto-verify/phase-06-route-va-tab-web.md`. Hiện gọi từ Python:
+Lần đầu mất ~30 giây (tự tạo môi trường ảo + cài thư viện). Các lần sau ~1 giây.
+
+Bốn bước trên giao diện:
+
+1. **Dán bảng spec** → bấm *Đọc bảng*. Hàng nào sai số cột thì báo kèm số dòng. Còn lỗi thì không cho Ghi.
+2. **Chọn máy và app** → *Bắt đầu ghi*. Tool tự bật log Firebase, tắt rồi mở lại app.
+3. **Đánh dấu từng bước**: bấm nút của bước sắp làm **rồi mới** thao tác trên máy. Nút nhóm theo màn, có ô lọc và dấu đã-bấm. Mốc của bước sau là điểm kết của bước trước — không có nút Xong.
+4. **Chấm** → xem report HTML hoặc tải xlsx.
+
+## Gọi từ Python
+
+Không cần giao diện thì dùng trực tiếp:
 
 ```python
 from usv import event_check_runner, report_event_html

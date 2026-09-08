@@ -1,7 +1,7 @@
 ---
 phase: 6
 title: "Route + tab web"
-status: pending
+status: completed
 priority: P2
 effort: "5h"
 dependencies: [5]
@@ -69,12 +69,12 @@ phải làm gì — cột văn xuôi này dùng làm nhãn, **không** chạm ve
 6. `pytest` toàn bộ.
 
 ## Success Criteria
-- [ ] Luồng đủ chạy được không cắm máy (adb monkeypatch)
-- [ ] Test gọi qua `TestClient`, **đã chứng minh bắt được lỗi import**
-- [ ] Không preview hợp lệ thì không Ghi được
-- [ ] Tab UI cũ không bị ảnh hưởng — 459 test cũ xanh
-- [ ] Không thêm dependency
-- [ ] Cả 2 file mới <200 LOC
+- [x] Luồng đủ chạy được không cắm máy (adb monkeypatch)
+- [x] Test gọi qua `TestClient`, **đã chứng minh bắt được lỗi import**
+- [x] Không preview hợp lệ thì không Ghi được
+- [x] Tab UI cũ không bị ảnh hưởng — 459 test cũ xanh
+- [x] Không thêm dependency
+- [x] Cả 2 file mới <200 LOC
 
 ## Risk Assessment
 - **Open question 2 chặn UX ở đây.** Spec 5 event thì danh sách nút phẳng là đủ;
@@ -84,3 +84,40 @@ phải làm gì — cột văn xuôi này dùng làm nhãn, **không** chạm ve
   `/event/stop` phải kill được cả khi client đóng tab; thêm dọn dẹp lúc shutdown.
 - `EventRun` + `CheckRun` cùng trong một state → hai tab đè nhau. Chặn: khoá riêng
   từng field, test 2 tab chạy nối tiếp không xoá dữ liệu của nhau.
+
+## Lệch khỏi plan khi làm
+
+**Thêm 2 module ngoài dự kiến.** Plan ghi `routes_event.py` + `web/event.js`. Thực tế:
+- `event_state.py` (82 LOC) — `session_state.py` đã bị bỏ khi tách repo nên phải có
+  chỗ giữ spec/phiên ghi/kết quả. Có `stage` để UI biết bật tắt nút nào; suy từ các
+  field khác cũng được nhưng logic sẽ rải ra cả hai phía rồi lệch nhau.
+- `routes_device.py` (53 LOC) — cũng bị bỏ khi tách repo, mà UI cần chọn máy/app.
+- `routes_event_report.py` (74 LOC) — tách khỏi `routes_event.py` để dưới 200 LOC.
+- Web tách 3 file: `event.js` (196) · `event-marks.js` (81) · `event-render.js` (77).
+  Một file là 255 LOC, vượt ngưỡng.
+
+**Bỏ câu chưa chốt số 2 (spec bao nhiêu event).** User hỏi lại nó ảnh hưởng gì đến
+tool. Kiểm bằng grep: không có `limit` / `MAX_` / `paginat` / cắt bớt nào phụ thuộc
+số event ở bất kỳ tầng nào. Nên đã làm bản **nhóm theo màn + ô lọc + dấu đã-bấm**,
+chạy tốt cho cả 5 và 60 event. Câu đó không phải câu hỏi.
+
+**Sửa 2 bug tìm được khi làm phase này** — cả hai đều thuộc loại "test xanh mà vẫn hỏng":
+
+1. `exporter.py` còn tham chiếu `summary.unmatched`, field đã bỏ khi tách repo →
+   `AttributeError` khi tải xlsx. Không ai thấy vì `test_report_export.py` đã bị xoá
+   nên không còn test nào gọi `exporter.build()`. Đã sửa header + hàng tổng cho domain
+   event, và `test_xlsx_tai_duoc_sau_khi_cham` khoá lại (đã chứng minh: đưa
+   `summary.unmatched` trở lại thì test đỏ đúng `AttributeError` đó).
+
+2. `start.sh` kiểm `import PIL, multipart` — hai thư viện đã bỏ khỏi dependency →
+   **cài lại mỗi lần chạy**. Và không có chỗ nào phát hiện `usv` trỏ sai repo: đổi tên
+   thư mục dự án làm file `.pth` của editable install trỏ vào đường dẫn cũ, uvicorn nạp
+   **nguyên một package khác** trong khi pytest vẫn xanh (pytest lấy `src` qua
+   `pythonpath` trong pyproject). Đã gặp thật: server serve tool UI, mọi route 404.
+   Thêm guard so `usv.__file__` với `src/` của chính repo, cài lại vẫn sai thì báo kèm
+   lệnh `pip uninstall`.
+
+**Smoke test thật, không chỉ TestClient.** Chạy `./start.sh` rồi curl từng endpoint:
+`/` 200 · `/static/*` 200 · `/event/state` · `/event/config` · `/devices` (thấy máy
+thật Pixel_4) · `POST /event/spec` (parse spec thật) · `/event/report` 409 khi chưa
+chấm. Đây là bước bắt được bug số 2 — 180 test không bắt được.
