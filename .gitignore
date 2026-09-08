@@ -1,0 +1,15 @@
+.env
+.env.local
+__pycache__/
+*.egg-info/
+.pytest_cache/
+out/
+.venv/
+
+# Output tam khi chay tool (report/anh xuat ra), KHONG loai fixture test.
+out/
+*.xlsx
+!tests/fixtures/**
+
+# Cache cay Figma da tai - du lieu design, khong phai ma nguon
+.cache/

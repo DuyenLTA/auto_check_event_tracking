@@ -1,0 +1,36 @@
+[project]
+name = "auto-check-event-tracking"
+version = "0.1.0"
+description = "Auto Check Event Tracking - doi chieu event Firebase Analytics voi bang spec"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "pyyaml>=6.0",
+    "openpyxl>=3.1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "httpx>=0.27"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# Dong goi config/ vao package -> `pip install .` (khong -e) van chay.
+# web/* giu san cho tab web o phase 6.
+[tool.setuptools.package-data]
+usv = ["web/*", "data/*.yaml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+# Test can device that bi skip mac dinh -> suite chay duoc khi khong cam may.
+# Chay rieng bang: pytest -m device
+addopts = "-m 'not device'"
+markers = [
+    "device: can device Android that (mac dinh skip)",
+]

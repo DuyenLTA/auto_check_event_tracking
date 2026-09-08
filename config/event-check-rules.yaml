@@ -1,0 +1,33 @@
+# Nguong va bat/tat cho tool check event tracking.
+# Sua file nay roi goi lai /event/check la co hieu luc ngay, khong phai khoi
+# dong lai server.
+
+checks:
+  # Event co ban khong, va co ban trung khong.
+  #
+  # duplicate: mot buoc ma event ban nhieu lan -> FAIL_DUPLICATE.
+  # Cham theo TUNG CUA SO marker, khong theo ca phien: do that tren AIP922,
+  # `track_ad_request` ban 17 lan trong mot lan mo app la binh thuong.
+  # Tat neu app co retry lam bao oan.
+  event_presence:
+    enabled: true
+    severity: error
+    duplicate: true
+
+  # Thieu param / gia tri ngoai danh sach / sai kieu / thua param.
+  #
+  # param_extra: app gui param spec khong khai -> FAIL_PARAM_EXTRA.
+  # Param he thong cua Firebase (tien to `ga_` / `_`) LUON bi loc truoc khi
+  # cham - khong loc thi moi event deu fail, vi `ga_event_origin` co o 42/42
+  # event tren app that.
+  #
+  # global_param_heuristic: coi param xuat hien o 100% event la global param
+  # app tu khai (setDefaultEventParameters) -> bao thong tin thay vi FAIL.
+  # TAT MAC DINH: AIP922 khong co global param nao, tien to `ga_` da loc sach,
+  # nen bat len la them mot lop doan khong can thiet. Chi bat khi gap app that
+  # co khai global param.
+  event_params:
+    enabled: true
+    severity: error
+    param_extra: true
+    global_param_heuristic: false
