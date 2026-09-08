@@ -160,10 +160,59 @@ remote_config.py         dò file frc_* · override · clear_prefs · verify    
 ### Test
 +54 (19 patch nội dung file, 35 validate adb). Tổng **234**, xanh khi không cắm máy.
 
+## Đã làm — driver (user chốt: **1 case = 1 event**)
+
+Một case = một cửa sổ marker = một event mong đợi. `event_window.cut` cắt sẵn theo mốc
+nên không phải làm gì thêm cho chuyện đó.
+
+```
+device_actions.py      phân giải selector → bấm/quét, gợi ý khi không thấy   130
+event_flow_models.py   Step · Reset · FlowCase · Flow                        104
+event_flow_run.py      reset → mở lại → verify → chèn mốc → chạy step        195
+```
+
+### Điều đáng giá nhất: case chấm chặt hơn spec
+
+Spec nói `placement_name` **được phép** là result/exit_click/app_shortcut/home. Case thì
+lái app tới **đúng một** trong bốn chỗ đó, nên nó biết lần này **phải** ra giá trị nào.
+
+Lỗi thật hay gặp: màn Result nhưng app gửi `placement_name=home`. Chấm theo spec là
+**PASS** (vì `home` nằm trong danh sách cho phép). Chấm theo case là **FAIL_VALUE**.
+Có hai test cạnh nhau chứng minh: `test_case_bat_duoc_loi_ma_SPEC_KHONG_bat_duoc` và
+`test_khong_cham_theo_spec_thi_dung_la_PASS`.
+
+Cài bằng cách thêm `expect_params` vào `Window`; `checks/event_params.py` ưu tiên giá trị
+case đòi hỏi, không có thì rơi về danh sách cho phép của spec. Tester bấm mốc tay thì
+`expect_params` rỗng → hành vi cũ không đổi.
+
+### Quyết định trong code
+
+- **Thứ tự trong một case không đổi được**: sửa RC/xoá prefs → force-stop + mở lại →
+  đọc lại verify → chèn mốc → chạy step. App đọc giá trị mới lúc process start.
+- **Step thất bại → `not_tested`, KHÔNG phải fail.** Không lái tới được màn cần test thì
+  tool chưa đo gì cả; kết luận app thiếu event lúc đó là báo oan. Cùng nguyên tắc `fa_silent`.
+- **Reset không ăn → `blocked`.** Gồm cả trường hợp verify thấy RC bị đè (build dev đặt
+  `minimumFetchInterval = 0`).
+- **Mốc mang NHÃN CASE**, không chỉ tên event: 4 case cùng một event thì không phân biệt
+  nhãn là không biết cửa sổ nào ứng với case nào.
+- **Gán `expect_params` tra theo NHÃN, không theo thứ tự**: case thất bại không chèn mốc
+  nên số cửa sổ ít hơn số case, zip theo thứ tự sẽ gán lệch — lệch còn tệ hơn không gán.
+- **Một case blocked không dừng cả lượt** — các case khác vẫn đo được.
+- **Không thấy element → gợi ý node gần giống** (`difflib`). Báo "not found" một mình thì
+  tester phải tự đọc dump hàng trăm node.
+- **Bấm vào TÂM node**, không phải góc trên-trái (góc có thể nằm ngoài vùng bấm được).
+- **Quét TRONG node**, không quét cả màn — quét cả màn dễ trúng thanh điều hướng hoặc
+  notification shade.
+- **Bỏ node `bounds` 0x0**: node ẩn/chưa layout xong, bấm vào đó là bấm vào không khí.
+
+### Test
++24 (12 selector trên dump thật, 12 runner). Tổng **262**, xanh khi không cắm máy.
+
 ## Còn lại — chờ file test case của user
 
-User sẽ đưa file test case, nên **chưa viết** `event_flow_models` / `event_flow_parse` /
-`event_flow_run` / `device_actions`: tự nghĩ ra định dạng flow rồi phải viết lại là lãng phí.
+**Chưa viết `event_flow_parse`.** Đây là phần duy nhất phụ thuộc định dạng file. `Flow`
+dựng được từ Python nên runner dùng được ngay; khi file của user tới thì chỉ viết parser
+khớp đúng định dạng đó, không phải sửa gì khác.
 
-User cũng nói không cần lo chuyện 5 sao không hiện lại — tiền đề đó họ tự lo, nên không
-xây thêm gì quanh `clear_prefs`.
+User nói không cần lo chuyện 5 sao không hiện lại — tiền đề đó họ tự lo, nên không xây
+thêm gì quanh `clear_prefs`.
