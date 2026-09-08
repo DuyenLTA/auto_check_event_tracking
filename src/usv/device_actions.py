@@ -24,6 +24,8 @@ from .models import DeviceNode
 # So node gan giong in ra khi khong tim thay - du de nhan ra, khong lam nghen log.
 SUGGEST = 5
 MIN_RATIO = 0.5
+# Huong quet. Mot nguon su that: parser flow validate theo day, `swipe` cung vay.
+DIRECTIONS = ("up", "down", "left", "right")
 
 
 @dataclass(frozen=True, slots=True)
@@ -111,6 +113,10 @@ async def swipe(client, serial: str, nodes: list[DeviceNode], selector: Selector
     Quet trong node thay vi ca man hinh: quet ca man de trung vao thanh dieu
     huong hoac notification shade.
     """
+    if direction not in DIRECTIONS:
+        raise AdbError(
+            f"Huong quet {direction!r} khong hieu. Chi nhan: "
+            + ", ".join(DIRECTIONS))
     node = find(nodes, selector)
     box = node.bounds_px
     cx, cy = (box.left + box.right) / 2, (box.top + box.bottom) / 2
@@ -122,9 +128,5 @@ async def swipe(client, serial: str, nodes: list[DeviceNode], selector: Selector
         "left": (cx + dx, cy, cx - dx, cy),
         "right": (cx - dx, cy, cx + dx, cy),
     }
-    if direction not in moves:
-        raise AdbError(
-            f"Huong quet {direction!r} khong hieu. Chi nhan: "
-            + ", ".join(sorted(moves)))
     await client.input_swipe(serial, *moves[direction])
     return node

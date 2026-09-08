@@ -1,0 +1,40 @@
+# Flow mau: mot case = mot event (user chot).
+# `params` la gia tri case NAY phai ra, khong phai ca danh sach spec cho phep.
+package: com.aihomedesign.aihomedecor.designidea.aiinterior
+
+events:
+  - event: rating_placement_viewed
+    cases:
+      # Popup rating bi chan boi pref LOCAL apero_rate_prefs.xml, khong boi
+      # Remote Config - do duoc tren may that. Nen phai xoa pref do.
+      - params: {placement_name: home}
+        reset:
+          remote_config: {rate_popup_enable: "true"}
+          clear_prefs: [apero_rate_prefs.xml]
+        steps:
+          - launch
+          - wait_text: "Japandi Style"
+          - tap_id: tvQuestionTitle
+          - wait: 2s
+
+      - name: rating tu man Result
+        params: {placement_name: result}
+        reset:
+          clear_prefs: apero_rate_prefs.xml
+        steps:
+          - launch
+          - wait_text: {text: "Cozy Cottage", timeout: 15s}
+          # index bat buoc: 4 card dung chung resource_id borderContainer
+          - tap_id: {id: borderContainer, index: 2}
+          - swipe: {id: rvQuestion, dir: up}
+          - back
+
+  - event: rating_star_clicked
+    cases:
+      - params: {star_value: "5", placement_name: home}
+        steps:
+          - launch
+          - wait: 500ms
+          # tap_text vo khi doi ngon ngu - Flow tu gan co fragile de canh bao
+          - tap_text: "Japandi Style"
+          - key: ENTER
