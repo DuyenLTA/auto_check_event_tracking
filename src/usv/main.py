@@ -2,14 +2,7 @@
 
 Route nghiep vu nam o routes_*.py.
 
-CHUA CO ROUTE NAO: tang may (nap spec, ghi logcat, cat cua so, cham check,
-render report) da xong va co test, nhung route HTTP + tab web la buoc sau. Xem
-plans/260908-1521-event-tracking-auto-verify/phase-06-route-va-tab-web.md.
-Den luc do goi truc tiep tu Python:
-
-    from usv.event_spec_parse import parse_paste
-    from usv.event_window import cut_log
-    from usv import event_check_runner, report_event_html
+Route nghiep vu nam o routes_*.py.
 """
 
 from __future__ import annotations
@@ -21,6 +14,9 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .resources import web_dir
+from .routes_device import router as device_router
+from .routes_event import router as event_router
+from .routes_event_report import router as event_report_router
 
 WEB_DIR = web_dir()
 LOOPBACK = {"127.0.0.1", "::1", "localhost"}
@@ -30,6 +26,9 @@ logging.basicConfig(level=logging.INFO,
 log = logging.getLogger(__name__)
 
 app = FastAPI(title="Auto Check Event Tracking")
+app.include_router(device_router)
+app.include_router(event_router)
+app.include_router(event_report_router)
 
 
 @app.middleware("http")
@@ -67,9 +66,9 @@ async def index():
     path = (WEB_DIR / "index.html") if WEB_DIR else None
     if path is None or not path.is_file():
         return JSONResponse(
-            {"detail": "Chua co tab web - xem docstring usv/main.py va "
-                       "phase-06 trong plans/."},
-            status_code=501,
+            {"detail": "Khong tim thay web/index.html. Chay tu thu muc repo, hoac "
+                       "cai bang 'pip install -e .' thay vi 'pip install .'"},
+            status_code=500,
         )
     return FileResponse(path)
 

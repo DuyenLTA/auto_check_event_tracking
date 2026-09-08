@@ -24,3 +24,23 @@ def metrics() -> ScreenMetrics:
 def spike_xml() -> str:
     """Dump UI that luc spike. Dung de phan giai selector (bam theo resource-id)."""
     return (FIXTURES / "spike-dump.xml").read_text(encoding="utf-8")
+
+
+@pytest.fixture
+def client():
+    """TestClient gia lap request tu loopback.
+
+    Mac dinh TestClient dung Host 'testserver' va client host 'testclient' -> bi
+    middleware loopback_only tra 403. Ep ve 127.0.0.1 de test CHAY QUA middleware
+    that thay vi vo hieu hoa no (xem test_middleware_chan_non_loopback).
+    """
+    from fastapi.testclient import TestClient
+
+    from usv import main
+    from usv.event_state import state
+
+    state.reset()
+    with TestClient(main.app, base_url="http://127.0.0.1",
+                    client=("127.0.0.1", 50000)) as test_client:
+        yield test_client
+    state.reset()

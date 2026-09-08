@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="vi" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Auto Check Event Tracking</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Firebase Analytics</p>
+    <h1>Auto Check Event Tracking</h1>
+    <p class="lead">Dán bảng spec, đánh dấu từng bước trong lúc thao tác trên máy,
+      tool đối chiếu event app thật bắn ra rồi ra report.</p>
+  </header>
+
+  <section class="step" id="step-spec">
+    <h2><span class="num">1</span> Bảng spec</h2>
+    <p class="hint">Copy từ Excel/Google Sheet rồi dán vào đây — <b>một hàng một dòng</b>,
+      ô rỗng để tab liên tiếp. Dòng đầu phải là dòng tiêu đề cột.</p>
+    <textarea id="spec-text" rows="8" spellcheck="false"
+      placeholder="Screen Name&#9;Event_Name&#9;Triggered&#9;Params&#9;Param Description&#9;Value Type&#9;Value&#9;Value Description"></textarea>
+    <div class="row">
+      <button id="btn-spec" class="primary">Đọc bảng</button>
+      <span id="spec-info" class="info"></span>
+    </div>
+    <div id="spec-errors"></div>
+    <div id="spec-preview"></div>
+  </section>
+
+  <section class="step" id="step-device">
+    <h2><span class="num">2</span> Máy và app</h2>
+    <div class="row">
+      <label>Máy <select id="device"></select></label>
+      <button id="btn-devices">Tìm lại máy</button>
+    </div>
+    <div class="row">
+      <label>App <input id="pkg-filter" placeholder="lọc theo tên package" size="24"></label>
+      <select id="package"></select>
+    </div>
+    <div class="row">
+      <label class="check"><input type="checkbox" id="from-launch" checked>
+        Ghi từ lúc mở app</label>
+      <span class="hint">Bắt được <code>first_open</code>, <code>session_start</code>
+        và <code>placement_name=app_shortcut</code>. Tool tự tắt rồi mở lại app.</span>
+    </div>
+    <div class="row">
+      <button id="btn-record" class="primary" disabled>Bắt đầu ghi</button>
+      <span id="record-info" class="info"></span>
+    </div>
+  </section>
+
+  <section class="step" id="step-mark">
+    <h2><span class="num">3</span> Đánh dấu từng bước</h2>
+    <p class="hint">Bấm nút của bước sắp làm, <b>rồi mới</b> thao tác trên máy.
+      Mốc của bước sau chính là điểm kết của bước trước — không cần nút Xong.</p>
+    <div class="row">
+      <input id="mark-filter" placeholder="lọc event" size="28">
+      <span id="mark-progress" class="info"></span>
+      <button id="btn-stop" disabled>Dừng ghi</button>
+    </div>
+    <div id="marks"></div>
+  </section>
+
+  <section class="step" id="step-check">
+    <h2><span class="num">4</span> Kết quả</h2>
+    <div class="row">
+      <button id="btn-check" class="primary" disabled>Chấm</button>
+      <a id="link-report" class="btn" href="/event/report" target="_blank" hidden>Xem report</a>
+      <a id="link-xlsx" class="btn" href="/event/report.xlsx" hidden>Tải xlsx</a>
+      <button id="btn-reset">Làm lại</button>
+    </div>
+    <div id="summary"></div>
+    <div id="results"></div>
+  </section>
+</div>
+<script src="/static/event-marks.js"></script>
+<script src="/static/event-render.js"></script>
+<script src="/static/event.js"></script>
+</body>
+</html>

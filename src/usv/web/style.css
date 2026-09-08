@@ -1,0 +1,102 @@
+/* Cung bo token voi report (report_event_css.py) - tool va report mot ho.
+   Theme: :root sang, media query cho dark, [data-theme] de ep tay. */
+:root{
+  --ink:#10181a;--ink-soft:#56686a;--paper:#eef2f1;--surface:#fff;
+  --surface-alt:#f5f8f7;--line:#d7e1df;
+  --accent:#146b6e;--accent-soft:#dcecea;
+  --pass:#1f7a4d;--pass-soft:#e2f4e8;
+  --fail:#b23b2e;--fail-soft:#fbeae6;
+  --pending:#97650f;--pending-soft:#f7ecd7;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --ink:#e8efee;--ink-soft:#9fb3b1;--paper:#0d1516;--surface:#141f20;
+  --surface-alt:#182324;--line:#24393a;
+  --accent:#55c2bf;--accent-soft:#16302f;
+  --pass:#5fce8e;--pass-soft:#16301f;
+  --fail:#ef8574;--fail-soft:#341c18;
+  --pending:#e0ab54;--pending-soft:#34290f;
+}}
+:root[data-theme="dark"]{
+  --ink:#e8efee;--ink-soft:#9fb3b1;--paper:#0d1516;--surface:#141f20;
+  --surface-alt:#182324;--line:#24393a;
+  --accent:#55c2bf;--accent-soft:#16302f;
+  --pass:#5fce8e;--pass-soft:#16301f;
+  --fail:#ef8574;--fail-soft:#341c18;
+  --pending:#e0ab54;--pending-soft:#34290f;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--paper);color:var(--ink);line-height:1.5;
+  font-family:'Public Sans',system-ui,sans-serif;font-variant-numeric:tabular-nums;}
+.wrap{max-width:1000px;margin:0 auto;padding:2rem 1.25rem 4rem;
+  display:flex;flex-direction:column;gap:1.25rem;}
+.eyebrow{margin:0;font-family:'Manrope',sans-serif;font-weight:800;font-size:.8rem;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--accent);}
+h1{margin:.2rem 0 0;font-family:'Manrope',sans-serif;font-weight:800;font-size:1.9rem;}
+.lead{margin:.4rem 0 0;color:var(--ink-soft);max-width:70ch;}
+h2{margin:0 0 .6rem;font-family:'Manrope',sans-serif;font-weight:700;font-size:1.15rem;
+  display:flex;align-items:center;gap:.6rem;}
+.num{display:inline-flex;align-items:center;justify-content:center;width:1.6rem;
+  height:1.6rem;border-radius:50%;background:var(--accent-soft);color:var(--accent);
+  font-size:.85rem;font-weight:800;flex:none;}
+.step{background:var(--surface);border:1px solid var(--line);border-radius:12px;
+  padding:1.1rem 1.25rem;}
+.step[aria-disabled="true"]{opacity:.5;pointer-events:none;}
+.hint{margin:.2rem 0 .6rem;font-size:.85rem;color:var(--ink-soft);max-width:78ch;}
+.row{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;margin-top:.6rem;}
+label{font-size:.88rem;color:var(--ink-soft);display:inline-flex;gap:.4rem;
+  align-items:center;}
+label.check{cursor:pointer;}
+textarea,input,select{font-family:'JetBrains Mono',monospace;font-size:.83rem;
+  background:var(--surface-alt);color:var(--ink);border:1px solid var(--line);
+  border-radius:8px;padding:.45rem .6rem;}
+textarea{width:100%;resize:vertical;white-space:pre;overflow-x:auto;}
+button,.btn{font-family:'Public Sans',sans-serif;font-size:.88rem;font-weight:600;
+  border:1px solid var(--line);background:var(--surface-alt);color:var(--ink);
+  border-radius:8px;padding:.45rem .9rem;cursor:pointer;text-decoration:none;
+  display:inline-block;}
+button:hover:not(:disabled),.btn:hover{border-color:var(--accent);}
+button:disabled{opacity:.45;cursor:not-allowed;}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+:root[data-theme="dark"] button.primary,
+:root:not([data-theme="light"]) button.primary{color:#08201f;}
+.info{font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--ink-soft);}
+code{font-family:'JetBrains Mono',monospace;font-size:.85em;}
+
+/* --- bang preview spec + ket qua --- */
+.scroll{overflow-x:auto;margin-top:.7rem;border:1px solid var(--line);border-radius:8px;}
+table{width:100%;border-collapse:collapse;font-size:.83rem;min-width:640px;}
+thead th{text-align:left;font-family:'JetBrains Mono',monospace;font-size:.68rem;
+  text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);
+  padding:.5rem .7rem;background:var(--surface-alt);
+  border-bottom:1px solid var(--line);}
+tbody td{padding:.45rem .7rem;border-bottom:1px solid var(--line);vertical-align:top;}
+tbody tr:last-child td{border-bottom:none;}
+td.mono{font-family:'JetBrains Mono',monospace;color:var(--ink-soft);}
+
+.tag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:.72rem;
+  font-weight:600;padding:.15rem .5rem;border-radius:20px;white-space:nowrap;}
+.tag.pass{background:var(--pass-soft);color:var(--pass);}
+.tag.fail{background:var(--fail-soft);color:var(--fail);}
+.tag.pending{background:var(--pending-soft);color:var(--pending);}
+.tag.muted{background:var(--surface-alt);color:var(--ink-soft);
+  border:1px solid var(--line);}
+
+.alert{margin-top:.7rem;border:1px solid var(--line);border-left:3px solid var(--fail);
+  background:var(--fail-soft);border-radius:0 8px 8px 0;padding:.7rem .9rem;
+  font-size:.85rem;}
+.alert ul{margin:.3rem 0 0;padding-left:1.1rem;}
+.alert li{font-family:'JetBrains Mono',monospace;font-size:.78rem;}
+.alert.warn{border-left-color:var(--pending);background:var(--pending-soft);}
+
+/* --- panel danh dau buoc --- */
+.group{margin-top:.8rem;}
+.group h3{margin:0 0 .4rem;font-size:.8rem;font-weight:700;color:var(--ink-soft);
+  text-transform:uppercase;letter-spacing:.06em;}
+.marks{display:flex;flex-wrap:wrap;gap:.5rem;}
+.mark{text-align:left;max-width:22rem;}
+.mark b{display:block;font-family:'JetBrains Mono',monospace;font-size:.8rem;
+  font-weight:600;}
+.mark span{display:block;font-size:.76rem;color:var(--ink-soft);font-weight:400;}
+.mark.done{background:var(--pass-soft);border-color:transparent;color:var(--pass);}
+.mark.done span{color:var(--pass);}
+.mark.current{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent);}
