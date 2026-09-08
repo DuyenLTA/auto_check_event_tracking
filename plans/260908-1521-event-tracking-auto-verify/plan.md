@@ -26,7 +26,7 @@ ra report pass/fail theo mẫu tool check ID ads. Tab mới trong `ui-spec-verif
 | 4 | Cắt cửa sổ theo marker + chấm check | P1 | completed | [phase-04](phase-04-cat-cua-so-va-cham-check.md) |
 | 5 | Report theo mẫu tool ads | P2 | completed | [phase-05](phase-05-report-theo-mau-tool-ads.md) |
 | 6 | Route + tab web (luồng bấm tay) | P2 | completed | [phase-06](phase-06-route-va-tab-web.md) |
-| 7 | Driver tự động lái app theo flow | P2 | pending | [phase-07](phase-07-driver-tu-dong-lai-app.md) |
+| 7 | Driver tự động lái app theo flow | P2 | in-progress | [phase-07](phase-07-driver-tu-dong-lai-app.md) |
 
 Phụ thuộc tuyến tính 1→2→3→4→5→6→7. Phase 2 và 3 độc lập nhau, chạy song song được.
 
