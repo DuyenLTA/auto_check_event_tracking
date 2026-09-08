@@ -1,8 +1,11 @@
 """Phien ghi logcat. Chay KHONG can may - AdbClient duoc thay bang ban gia.
 
-Kiem hai thu khong the bo:
+Ba thu khong the bo:
   - THU TU cac buoc trong start(): setprop -> logcat -c -> stream -> mo app.
     Sai thu tu la mat event dau tien hoac an ca log.
+  - DOC LIEN TUC. Doc luc bam moc thi giua hai lan bam khong ai doc cai ong;
+    pipe OS ~64 KB, dong log ~204 byte -> day sau ~320 dong, adbd nghen roi
+    log MAT AM THAM. Xem test_doc_lien_tuc_*.
   - fa_silent: phan biet "app khong ban event" voi "FA khong in log" (R3).
 """
 
@@ -14,17 +17,20 @@ import pytest
 
 from usv import logcat_stream
 from usv.adb_parsers import AdbError
-from usv.logcat_stream import Recording, drain, enable_fa, mark, start, stop
+from usv.logcat_stream import Recording, enable_fa, mark, start, stop
 
 
 class FakeStdout:
+    """stdout gia. Het dong thi tra b"" (EOF) nhu StreamReader that."""
+
     def __init__(self, lines: list[bytes]) -> None:
         self.queue = list(lines)
+        self.reads = 0
 
     async def readline(self) -> bytes:
-        if not self.queue:
-            raise asyncio.TimeoutError
-        return self.queue.pop(0)
+        self.reads += 1
+        await asyncio.sleep(0)          # nhuong vong lap nhu I/O that
+        return self.queue.pop(0) if self.queue else b""
 
 
 class FakeProcess:
@@ -49,6 +55,7 @@ class FakeClient:
         self.lines = lines or []
         self.prop_value = prop
         self.process: FakeProcess | None = None
+        self.tags: tuple[str, ...] = ()
 
     async def setprop(self, serial, key, value):
         self.calls.append("setprop")
@@ -79,10 +86,19 @@ class FakeClient:
 
 
 @pytest.fixture(autouse=True)
-def _no_sleep(monkeypatch):
-    async def instant(_seconds):
-        return None
-    monkeypatch.setattr(logcat_stream.asyncio, "sleep", instant)
+def _no_launch_wait(monkeypatch):
+    """Bo thoi gian cho app khoi dong.
+
+    Dat LAUNCH_SETTLE = 0 chu KHONG va vao asyncio.sleep: task doc nen can
+    sleep(0) that de duoc nhuong vong lap.
+    """
+    monkeypatch.setattr(logcat_stream, "LAUNCH_SETTLE", 0)
+
+
+async def _idle(times: int = 12) -> None:
+    """Nhuong vong lap nhieu lan - gia lap khoang nghi giua hai buoc."""
+    for _ in range(times):
+        await asyncio.sleep(0)
 
 
 def test_enable_fa_dat_ca_hai_property():
@@ -100,9 +116,14 @@ def test_thu_tu_start_dung():
     """setprop TRUOC khi mo app (property doc luc process start);
     stream TRUOC khi mo app (de bat first_open/session_start)."""
     client = FakeClient()
-    asyncio.run(start(client, "S1", "com.x"))
-    order = [c for c in client.calls if c in
-             {"setprop", "clear", "spawn", "force_stop", "launch"}]
+
+    async def run():
+        recording = await start(client, "S1", "com.x")
+        await stop(recording)
+
+    asyncio.run(run())
+    order = [c for c in client.calls
+             if c in {"setprop", "clear", "spawn", "force_stop", "launch"}]
     assert order.index("setprop") < order.index("spawn")
     assert order.index("clear") < order.index("spawn")
     assert order.index("spawn") < order.index("launch")
@@ -111,7 +132,11 @@ def test_thu_tu_start_dung():
 
 def test_from_launch_tat_thi_khong_dong_app():
     client = FakeClient()
-    asyncio.run(start(client, "S1", "com.x", from_launch=False))
+
+    async def run():
+        await stop(await start(client, "S1", "com.x", from_launch=False))
+
+    asyncio.run(run())
     assert "force_stop" not in client.calls
     assert "launch" not in client.calls
 
@@ -119,46 +144,144 @@ def test_from_launch_tat_thi_khong_dong_app():
 def test_loc_dung_tag_va_co_ca_USV_MARK():
     """Thieu USV_MARK trong tag la mat moc -> khong cat duoc cua so."""
     client = FakeClient()
-    asyncio.run(start(client, "S1", "com.x"))
+
+    async def run():
+        await stop(await start(client, "S1", "com.x"))
+
+    asyncio.run(run())
     assert "USV_MARK" in client.tags
     assert "FA-SVC" in client.tags
 
 
-def test_drain_doc_het_dong_dang_cho():
-    client = FakeClient(lines=[b"dong 1\n", b"dong 2\n"])
-    recording = asyncio.run(start(client, "S1", "com.x"))
-    asyncio.run(drain(recording))
-    assert recording.lines == ["dong 1", "dong 2"]
+# --- DOC LIEN TUC: chinh cai bug da sua ---
 
+def test_doc_lien_tuc_khong_can_bam_moc():
+    """Dong log den trong khoang NGHI phai duoc doc ngay.
+
+    Day la bug da sua: truoc kia chi doc luc bam moc, nen mot khoang nghi dai
+    lam pipe day va log mat am tham. Chup lines TRUOC khi stop - neu chi doc
+    luc stop thi snapshot nay rong.
+    """
+    client = FakeClient(lines=[b"dong 1\n", b"dong 2\n", b"dong 3\n"])
+    snapshot: list[str] = []
+
+    async def run():
+        recording = await start(client, "S1", "com.x")
+        await _idle()
+        snapshot.extend(recording.lines)       # chua bam moc, chua stop
+        await stop(recording)
+        return recording
+
+    asyncio.run(run())
+    assert snapshot == ["dong 1", "dong 2", "dong 3"], (
+        "dong den giua khoang nghi phai duoc doc ngay, khong cho den luc bam moc")
+
+
+def test_task_doc_chay_ngay_tu_start():
+    client = FakeClient(lines=[b"x\n"])
+
+    async def run():
+        recording = await start(client, "S1", "com.x")
+        assert recording.reader is not None, "start() phai tao task doc nen"
+        await stop(recording)
+        assert recording.reader is None, "stop() phai don task"
+
+    asyncio.run(run())
+
+
+def test_mark_khong_doc_stream():
+    """Doc o ca task nen lan trong mark() la hai ben gianh cung mot stdout."""
+    client = FakeClient(lines=[b"a\n"])
+
+    async def run():
+        recording = await start(client, "S1", "com.x")
+        await _idle()
+        before = client.process.stdout.reads
+        await mark(client, recording, "buoc 1")
+        assert client.process.stdout.reads == before, "mark() khong duoc doc stream"
+
+    asyncio.run(run())
+
+
+def test_stop_lay_not_phan_con_trong_pipe():
+    """kill TRUOC roi moi cho task doc -> khong mat phan cuoi."""
+    client = FakeClient(lines=[b"dau\n", b"cuoi\n"])
+
+    async def run():
+        recording = await start(client, "S1", "com.x")
+        await stop(recording)
+        return recording
+
+    recording = asyncio.run(run())
+    assert recording.lines == ["dau", "cuoi"]
+
+
+def test_loi_doc_stream_khong_lam_sap_phien():
+    """Phan da doc duoc van phai dung de cham check."""
+    client = FakeClient(lines=[b"co ich\n"])
+
+    async def run():
+        recording = await start(client, "S1", "com.x")
+        await _idle()
+
+        async def bung(*_a, **_k):
+            raise OSError("stream dut")
+
+        client.process.stdout.readline = bung
+        await _idle()
+        await stop(recording)
+        return recording
+
+    recording = asyncio.run(run())
+    assert recording.lines == ["co ich"]
+    assert recording.stopped is True
+
+
+# --- moc va trang thai ---
 
 def test_mark_chen_dung_tag_va_ghi_lai_nhan():
     client = FakeClient()
-    recording = asyncio.run(start(client, "S1", "com.x"))
-    asyncio.run(mark(client, recording, "buoc 1"))
+
+    async def run():
+        recording = await start(client, "S1", "com.x")
+        await mark(client, recording, "buoc 1")
+        await stop(recording)
+        return recording
+
+    recording = asyncio.run(run())
     assert client.logs == [("USV_MARK", "buoc 1")]
     assert recording.marks == ["buoc 1"]
 
 
 def test_mark_sau_khi_dung_thi_bao_loi():
     client = FakeClient()
-    recording = asyncio.run(start(client, "S1", "com.x"))
-    asyncio.run(stop(recording))
-    with pytest.raises(AdbError):
-        asyncio.run(mark(client, recording, "buoc 2"))
+
+    async def run():
+        recording = await start(client, "S1", "com.x")
+        await stop(recording)
+        with pytest.raises(AdbError):
+            await mark(client, recording, "buoc 2")
+
+    asyncio.run(run())
 
 
 def test_stop_kill_process_va_danh_dau_stopped():
     client = FakeClient(lines=[b"x\n"])
-    recording = asyncio.run(start(client, "S1", "com.x"))
-    process = client.process
-    asyncio.run(stop(recording))
+
+    async def run():
+        recording = await start(client, "S1", "com.x")
+        process = client.process
+        await stop(recording)
+        return recording, process
+
+    recording, process = asyncio.run(run())
     assert process.killed is True
     assert recording.stopped is True
     assert recording.process is None
 
 
 def test_fa_silent_khi_khong_co_dong_FA_nao():
-    """R3: build strip log Firebase. KHONG duoc ket luan app thieu event."""
+    """R3: app khong in log Firebase. KHONG duoc ket luan app thieu event."""
     recording = Recording(serial="S1", package="com.x",
                           lines=["09-08 15:00:00.000 D/CHRE ( 1): rac"])
     assert recording.fa_silent is True
@@ -172,5 +295,4 @@ def test_khong_fa_silent_khi_co_dong_FA():
 
 
 def test_payload_noi_ra_fa_silent():
-    recording = Recording(serial="S1", package="com.x", lines=[])
-    assert recording.payload()["fa_silent"] is True
+    assert Recording(serial="S1", package="com.x", lines=[]).payload()["fa_silent"] is True

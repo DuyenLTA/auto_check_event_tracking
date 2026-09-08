@@ -34,9 +34,9 @@ TAGS = (FA_TAG, "FA", MARK_TAG)
 
 # Cho app kip khoi dong lai truoc khi tester lam dong tac dau tien.
 LAUNCH_SETTLE = 1.5
-# Doc stream theo dong; het thoi gian nay ma khong co dong nao thi thoi, khong
-# treo mai.
-READ_IDLE = 0.4
+# Cho task doc not phan con trong pipe sau khi kill. Khong cho mai: kill roi ma
+# task khong ket thuc la co gi sai, thoi con hon treo ca server.
+STOP_TIMEOUT = 5.0
 
 
 @dataclass(slots=True)
@@ -48,6 +48,7 @@ class Recording:
     lines: list[str] = field(default_factory=list)
     marks: list[str] = field(default_factory=list)
     process: object | None = None
+    reader: object | None = None      # asyncio.Task doc stream lien tuc
     stopped: bool = False
 
     @property
@@ -92,6 +93,9 @@ async def start(client, serial: str, package: str, *,
     await client.logcat_clear(serial)
     process = await client.logcat_spawn(serial, TAGS)
     recording = Recording(serial=serial, package=package, process=process)
+    # Bat doc NGAY, truoc khi mo app: khong thi event dau tien (first_open,
+    # session_start) ban ra ma chua ai doc.
+    recording.reader = asyncio.create_task(_pump(recording))
 
     if from_launch and package:
         await client.force_stop(serial, package)
@@ -100,33 +104,53 @@ async def start(client, serial: str, package: str, *,
     return recording
 
 
-async def drain(recording: Recording) -> None:
-    """Doc het dong dang cho trong stream vao `recording.lines`."""
+async def _pump(recording: Recording) -> None:
+    """Doc stream LIEN TUC vao `recording.lines`, tu luc start den luc stop.
+
+    Phai chay nen chu KHONG doc luc bam moc. Doc luc bam moc thi giua hai lan
+    bam khong ai doc cai ong: pipe cua OS chi khoang 64 KB, dong log trung binh
+    204 byte -> day sau ~320 dong. Day thi adbd nghen, tut lai sau ring buffer,
+    va log BI MAT AM THAM.
+
+    Do that: mot lan mo app cua AIP922 sinh 1 259 dong sau khi da loc tag. Nen
+    mot khoang nghi dai giua hai buoc la du de mat dong - va mat am tham thi
+    report sai ma khong ai biet.
+
+    Loi doc KHONG lam sap phien ghi: bao ra qua log roi dung, phan da doc duoc
+    van dung de cham check.
+    """
     process = recording.process
     if process is None or process.stdout is None:
         return
-    while True:
-        try:
-            raw = await asyncio.wait_for(process.stdout.readline(), timeout=READ_IDLE)
-        except (asyncio.TimeoutError, asyncio.IncompleteReadError):
-            return
-        if not raw:
-            return
-        recording.lines.append(raw.decode("utf-8", "replace").rstrip("\n"))
+    try:
+        while True:
+            raw = await process.stdout.readline()
+            if not raw:            # EOF - process da dung
+                return
+            recording.lines.append(raw.decode("utf-8", "replace").rstrip("\n"))
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:       # noqa: BLE001 - doc log hong khong duoc lam sap phien
+        log.warning("Doc stream logcat that bai: %s", exc)
 
 
 async def mark(client, recording: Recording, label: str) -> None:
     """Chen moc vao logcat. MOT nut mot buoc: moc sau la diem ket cua buoc truoc."""
     if recording.stopped:
         raise AdbError("Phien ghi da dung - khong chen moc duoc nua.")
-    await drain(recording)
+    # KHONG doc stream o day - task nen dang doc lien tuc. Doc o ca hai cho la
+    # hai ben gianh cung mot stdout.
     await client.shell_log(recording.serial, MARK_TAG, label)
     recording.marks.append(label)
 
 
 async def stop(recording: Recording) -> Recording:
-    """Dung ghi, doc not phan con lai. Luon kill process du co loi."""
-    await drain(recording)
+    """Dung ghi. Luon kill process du co loi.
+
+    Thu tu: kill TRUOC roi moi cho task doc. Kill lam stdout ve EOF nen `_pump`
+    doc het phan con dong trong pipe roi tu ket thuc - khong mat dong nao. Huy
+    task truoc khi kill thi mat dung phan cuoi.
+    """
     process = recording.process
     if process is not None and process.returncode is None:
         try:
@@ -134,6 +158,16 @@ async def stop(recording: Recording) -> Recording:
             await process.wait()
         except ProcessLookupError:
             pass
+
+    reader = recording.reader
+    if reader is not None:
+        try:
+            await asyncio.wait_for(reader, timeout=STOP_TIMEOUT)
+        except (asyncio.TimeoutError, asyncio.CancelledError):
+            reader.cancel()
+        except Exception as exc:  # noqa: BLE001
+            log.warning("Task doc logcat ket thuc voi loi: %s", exc)
+    recording.reader = None
     recording.process = None
     recording.stopped = True
     return recording
