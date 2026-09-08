@@ -13,7 +13,7 @@ co `near_edge` de report noi ra, tester tu phan.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 
 from .fa_event_parse import Marker, ObservedEvent, parse_log
 
@@ -58,6 +58,12 @@ class Window:
     start_ms: float | None = None
     end_ms: float | None = None
     near_edge: tuple[str, ...] = ()   # ten event nam sat bien cua so
+    # Gia tri case DOI HOI cho lan chay nay. Rong khi tester bam moc tay.
+    #
+    # Spec noi placement_name DUOC PHEP la result/exit_click/app_shortcut/home;
+    # con mot case lai app toi DUNG MOT trong bon cho do nen no biet lan nay
+    # PHAI ra gia tri nao. Cham theo case thi chat hon cham theo spec.
+    expect_params: dict[str, str] = field(default_factory=dict)
 
     def named(self, name: str) -> tuple[ObservedEvent, ...]:
         return tuple(e for e in self.events if e.name == name and e.from_app)
@@ -70,7 +76,23 @@ class Window:
         return {"spec_event": self.spec_event, "note": self.note,
                 "event_count": len(self.events),
                 "events": [e.payload() for e in self.events],
-                "near_edge": list(self.near_edge)}
+                "near_edge": list(self.near_edge),
+                "expect_params": self.expect_params}
+
+
+def with_expectations(windows: tuple[Window, ...],
+                      expectations: dict[str, dict[str, str]]) -> tuple[Window, ...]:
+    """Gan gia tri case doi hoi vao cua so, tra cuu theo `note`.
+
+    Tra cuu theo `note` chu khong theo THU TU: mot step that bai thi case do
+    khong chen moc, nen so cua so it hon so case va zip theo thu tu se gan lech
+    - gan lech con te hon khong gan.
+    """
+    return tuple(
+        replace(w, expect_params=expectations[w.note])
+        if w.note in expectations else w
+        for w in windows
+    )
 
 
 def _edge_names(events: list[ObservedEvent], start: float | None,

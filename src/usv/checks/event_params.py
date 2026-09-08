@@ -63,13 +63,15 @@ def run(spec: SpecSheet, windows: tuple[Window, ...], config,
                 ))
                 continue
             out.extend(_check_params(event, observed.params, catch_extra,
-                                     globals_seen))
+                                     globals_seen, window.expect_params))
     return out
 
 
 def _check_params(event: SpecEvent, got: dict[str, str], catch_extra: bool,
-                  globals_seen: frozenset[str]) -> list[CheckResult]:
+                  globals_seen: frozenset[str],
+                  expect: dict[str, str] | None = None) -> list[CheckResult]:
     out: list[CheckResult] = []
+    wanted = expect or {}
     for param in event.params:
         label = f"{event.name}.{param.name}"
         if param.name not in got:
@@ -82,6 +84,19 @@ def _check_params(event: SpecEvent, got: dict[str, str], catch_extra: bool,
             continue
 
         value = got[param.name]
+        # Case tu dong lai app toi DUNG MOT cho nen no biet gia tri nao phai ra
+        # - cham theo do thi chat hon danh sach cho phep cua spec. Do la cach
+        # duy nhat bat duoc loi "man Result bao placement_name=home".
+        exact = wanted.get(param.name)
+        if exact is not None and value != exact:
+            out.append(CheckResult(
+                element=label, check="event_params", verdict=Verdict.FAIL_VALUE,
+                expected=f"{exact} (case này lái tới đúng chỗ đó)", actual=value,
+                delta=f"{value!r} thay vì {exact!r}",
+                message=(f"Case lái app tới nơi phải ra {exact!r} nhưng app gửi "
+                         f"{value!r}."),
+            ))
+            continue
         if not param.free_form and value not in param.allowed:
             out.append(CheckResult(
                 element=label, check="event_params", verdict=Verdict.FAIL_VALUE,

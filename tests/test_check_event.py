@@ -188,3 +188,54 @@ def test_dong_bi_cat_ra_NOT_VERIFIABLE_khong_bao_thieu_param():
     nv = [r for r in results if r.verdict is Verdict.NOT_VERIFIABLE
           and r.check == "event_params"]
     assert nv and "bị logcat cắt" in nv[0].message
+
+
+# --- case tu dong: cham theo gia tri CASE doi hoi, chat hon spec ---
+
+def _window_with_expect(place: str, expect: dict[str, str]):
+    """Cua so co event ban ra `place`, va case doi hoi `expect`."""
+    from usv.event_window import cut_log, mark_label, with_expectations
+    log = "\n".join([
+        "09-08 15:00:01.000 I/USV_MARK( 9): "
+        + mark_label("rating_placement_viewed", "case X"),
+        "09-08 15:00:02.000 V/FA-SVC ( 9): Logging event: origin=app,"
+        f"name=rating_placement_viewed,params=Bundle[{{placement_name={place}}}]",
+    ])
+    return with_expectations(cut_log(log), {"case X": expect})
+
+
+def test_case_bat_duoc_loi_ma_SPEC_KHONG_bat_duoc():
+    """Lỗi thật hay gặp: màn Result nhưng app gửi placement_name=home.
+
+    Spec cho phép cả result LẪN home nên chấm theo spec là PASS. Case thì lái
+    app tới đúng màn Result nên nó biết lần này PHẢI là 'result'.
+    """
+    spec = parse_paste(SPEC_TSV)
+    windows = _window_with_expect("home", {"placement_name": "result"})
+    results, _ = event_check_runner.run(spec, windows, CONFIG)
+    fails = [r for r in results if r.verdict is Verdict.FAIL_VALUE]
+    assert len(fails) == 1
+    assert "result" in fails[0].expected and "home" in fails[0].actual
+
+
+def test_khong_cham_theo_spec_thi_dung_la_PASS():
+    """Chung minh cau tren: cung du lieu, khong co expect thi spec cho qua."""
+    spec = parse_paste(SPEC_TSV)
+    windows = _window_with_expect("home", {})
+    results, _ = event_check_runner.run(spec, windows, CONFIG)
+    assert not [r for r in results if r.verdict is Verdict.FAIL_VALUE]
+
+
+def test_case_dung_gia_tri_thi_PASS():
+    spec = parse_paste(SPEC_TSV)
+    windows = _window_with_expect("home", {"placement_name": "home"})
+    results, _ = event_check_runner.run(spec, windows, CONFIG)
+    assert not [r for r in results if r.failed]
+
+
+def test_case_doi_hoi_gia_tri_NGOAI_spec_van_bao_sai():
+    """Case ghi sai thì cũng phải lộ ra, không im lặng cho qua."""
+    spec = parse_paste(SPEC_TSV)
+    windows = _window_with_expect("home", {"placement_name": "khong_co_trong_spec"})
+    results, _ = event_check_runner.run(spec, windows, CONFIG)
+    assert [r for r in results if r.verdict is Verdict.FAIL_VALUE]
