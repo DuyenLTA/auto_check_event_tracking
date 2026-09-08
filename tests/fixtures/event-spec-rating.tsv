@@ -1,0 +1,4 @@
+Screen Name	Event_Name	Triggered	Params	Param Description	Value Type	Value	Value Description
+Home	rating_placement_viewed	Khi màn rating hiển thị	placement_name		String	result, exit_click, app_shortcut, home	Vị trí mà màn rating xuất hiện
+Home	rating_star_clicked	Khi user click rate	star_value		Number	1,2,3,4,5	Số sao user đã rate
+			placement_name		String	result, exit_click, app_shortcut, home	Vị trí mà user thực hiện rate
