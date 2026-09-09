@@ -35,11 +35,12 @@ def _log(*extra: str) -> str:
 
 
 def _run(spec_tsv: str = SPEC_TSV, log_text: str | None = None,
-         *, fa_silent: bool = False):
+         *, fa_silent: bool = False, stream_died: bool = False):
     spec = parse_paste(spec_tsv)
     assert spec.errors == (), spec.errors
     windows = cut_log(log_text if log_text is not None else _log())
-    return event_check_runner.run(spec, windows, CONFIG, fa_silent=fa_silent)
+    return event_check_runner.run(spec, windows, CONFIG, fa_silent=fa_silent,
+                                  stream_died=stream_died)
 
 
 def _by_verdict(results):
@@ -239,3 +240,25 @@ def test_case_doi_hoi_gia_tri_NGOAI_spec_van_bao_sai():
     windows = _window_with_expect("home", {"placement_name": "khong_co_trong_spec"})
     results, _ = event_check_runner.run(spec, windows, CONFIG)
     assert [r for r in results if r.verdict is Verdict.FAIL_VALUE]
+
+
+def test_stream_dut_thi_khong_ket_luan_app_thieu_event():
+    """May rot khoi USB giua phien -> phan sau khong duoc ghi.
+
+    Do that: may rot luc 14:31, tester bam tiep 69 phut, log dong bang o 315
+    dong, va tool bao 2 FAIL_MISSING - mot ket luan sai ve app tren mot phien
+    ghi da chet. Cung nguyen tac voi fa_silent: khong doc duoc thi khong ket
+    luan, chu khong bao FAIL.
+    """
+    only_marks = "\n".join([MARK_VIEWED, MARK_STAR])
+    results, summary = _run(log_text=only_marks, stream_died=True)
+    assert summary.failed == 0
+    nv = [r for r in results if r.verdict is Verdict.NOT_VERIFIABLE]
+    assert nv and any("đứt giữa đường" in r.message for r in nv)
+
+
+def test_stream_khong_dut_thi_van_bao_thieu_event():
+    """Chieu nguoc lai - thieu test nay thi mot bug lam co luon-bat cung xanh."""
+    only_marks = "\n".join([MARK_VIEWED, MARK_STAR])
+    results, summary = _run(log_text=only_marks, stream_died=False)
+    assert summary.failed == 2

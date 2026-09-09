@@ -29,12 +29,14 @@ def available_checks() -> list[str]:
 
 
 def run(spec: SpecSheet, windows: tuple[Window, ...], config: CheckConfig,
-        *, fa_silent: bool = False) -> tuple[list[CheckResult], Summary]:
+        *, fa_silent: bool = False,
+        stream_died: bool = False) -> tuple[list[CheckResult], Summary]:
     results: list[CheckResult] = []
     for name, run_check in _REGISTRY.items():
         if not config.enabled(name):
             continue
-        results.extend(run_check(spec, windows, config, fa_silent=fa_silent))
+        results.extend(run_check(spec, windows, config, fa_silent=fa_silent,
+                                 stream_died=stream_died))
 
     ordered = sort_for_report(results)
     summary = Summary()

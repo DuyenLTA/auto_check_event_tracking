@@ -21,34 +21,56 @@ from usv.logcat_stream import Recording, enable_fa, mark, start, stop
 
 
 class FakeStdout:
-    """stdout gia. Het dong thi tra b"" (EOF) nhu StreamReader that."""
+    """stdout gia. GIU ONG MO khi het dong, y nhu `adb logcat` that.
 
-    def __init__(self, lines: list[bytes]) -> None:
+    logcat khong bao gio tu EOF - no chi EOF khi process bi kill hoac khi adb
+    dut. Fake cu tra b"" ngay khi het dong nen KHONG phan biet duoc hai chuyen
+    nay, ma chung dan tan hai ket luan khac han:
+      - stop() kill  -> EOF CO Y, phien ghi day du
+      - rut may/adb dut -> EOF NGOAI Y MUON, phan con lai cua phien mat trang
+    """
+
+    def __init__(self, lines: list[bytes], *, closed: bool = False) -> None:
         self.queue = list(lines)
         self.reads = 0
+        self.closed = closed
+        # Dat de bung loi giua phien. Phai kiem TU BEN TRONG vong doi: gan lai
+        # readline tu ngoai khong con tac dung vi pump dang ket trong lan goi
+        # truoc do - y nhu stream that.
+        self.error: Exception | None = None
 
     async def readline(self) -> bytes:
         self.reads += 1
-        await asyncio.sleep(0)          # nhuong vong lap nhu I/O that
-        return self.queue.pop(0) if self.queue else b""
+        while True:
+            await asyncio.sleep(0)      # nhuong vong lap nhu I/O that
+            if self.error is not None:
+                raise self.error
+            if self.queue:
+                return self.queue.pop(0)
+            if self.closed:
+                return b""
 
 
 class FakeProcess:
-    def __init__(self, lines: list[bytes]) -> None:
-        self.stdout = FakeStdout(lines)
+    def __init__(self, lines: list[bytes], *, closed: bool = False) -> None:
+        self.stdout = FakeStdout(lines, closed=closed)
         self.returncode = None
         self.killed = False
 
     def kill(self) -> None:
         self.killed = True
         self.returncode = -9
+        self.stdout.closed = True       # kill lam pipe ve EOF nhu that
 
     async def wait(self) -> int:
         return self.returncode or 0
 
 
 class FakeClient:
-    def __init__(self, lines: list[bytes] | None = None, prop: str = "VERBOSE") -> None:
+    def __init__(self, lines: list[bytes] | None = None, prop: str = "VERBOSE",
+                 *, closed: bool = False) -> None:
+        # closed=True: ong dong ngay khi het dong -> gia lap adb dut giua phien.
+        self.closed = closed
         self.calls: list[str] = []
         self.props: dict[str, str] = {}
         self.logs: list[tuple[str, str]] = []
@@ -71,7 +93,7 @@ class FakeClient:
     async def logcat_spawn(self, serial, tags):
         self.calls.append("spawn")
         self.tags = tags
-        self.process = FakeProcess(self.lines)
+        self.process = FakeProcess(self.lines, closed=self.closed)
         return self.process
 
     async def shell_log(self, serial, tag, message):
@@ -224,10 +246,7 @@ def test_loi_doc_stream_khong_lam_sap_phien():
         recording = await start(client, "S1", "com.x")
         await _idle()
 
-        async def bung(*_a, **_k):
-            raise OSError("stream dut")
-
-        client.process.stdout.readline = bung
+        client.process.stdout.error = OSError("stream dut")
         await _idle()
         await stop(recording)
         return recording
@@ -296,3 +315,60 @@ def test_khong_fa_silent_khi_co_dong_FA():
 
 def test_payload_noi_ra_fa_silent():
     assert Recording(serial="S1", package="com.x", lines=[]).payload()["fa_silent"] is True
+
+
+# --- stream dut giua phien (rut may) ---
+
+def test_stream_dut_giua_phien_thi_ghi_lai():
+    """Rut may / adb dut -> phai GHI LAI la stream chet truoc khi bam Dung.
+
+    Da gap that: may rot khoi USB luc 14:31, tester bam tiep 69 phut, log dong
+    bang o 315 dong. Khong ghi lai thi check ket luan "app thieu event" tren
+    mot phien ghi da chet - dung kieu im lang tool nay sinh ra de chan.
+    """
+    client = FakeClient(lines=[b"dong 1\n"], closed=True)
+
+    async def run():
+        recording = await start(client, "S1", "com.x")
+        await _idle()
+        return recording
+
+    recording = asyncio.run(run())
+    assert recording.stream_died is True, (
+        "stream EOF ma chua ai bam Dung -> phai danh dau la dut giua phien")
+    assert recording.payload()["stream_died"] is True
+
+
+def test_stop_binh_thuong_thi_khong_bao_dut():
+    """Chieu nguoc lai: kill do stop() la EOF CO Y, khong duoc bao dut.
+
+    Thieu test nay thi moi phien ghi binh thuong deu bi gan co "da dut", va
+    canh bao keu oan thi tester hoc cach bo qua no.
+    """
+    client = FakeClient(lines=[b"dong 1\n"])
+
+    async def run():
+        recording = await start(client, "S1", "com.x")
+        await _idle()
+        await stop(recording)
+        return recording
+
+    recording = asyncio.run(run())
+    assert recording.stream_died is False, "stop() chu dong kill thi khong phai dut"
+    assert recording.lines == ["dong 1"]
+
+
+def test_loi_doc_stream_cung_tinh_la_dut():
+    """Doc loi cung la mat log tu do tro di - khong khac gi EOF som."""
+    client = FakeClient(lines=[b"co ich\n"])
+
+    async def run():
+        recording = await start(client, "S1", "com.x")
+        await _idle()
+
+        client.process.stdout.error = OSError("stream dut")
+        await _idle()
+        return recording
+
+    recording = asyncio.run(run())
+    assert recording.stream_died is True

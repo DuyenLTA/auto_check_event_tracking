@@ -35,7 +35,8 @@ async def report_html() -> HTMLResponse:
     html = report_event_html.build(
         run.spec, run.results, run.summary, package=run.package,
         generated_at=run.generated_at, event_count=run.event_count,
-        fa_silent=run.fa_silent, near_edge=run.near_edge, quick=run.quick,
+        fa_silent=run.fa_silent, stream_died=run.stream_died,
+        near_edge=run.near_edge, quick=run.quick,
     )
     return HTMLResponse(html)
 
@@ -62,6 +63,14 @@ def _warnings(run) -> list[str]:
     Thieu hai dong nay thi ho doc mot bang toan 'Thieu' va tuong app hong.
     """
     out = []
+    if run.stream_died:
+        # Dat dau tien: doc bang ma khong biet phien ghi da chet thi moi dong
+        # "khong bat duoc" deu bi hieu sai thanh loi app.
+        out.append(
+            "PHIÊN GHI BỊ ĐỨT GIỮA ĐƯỜNG: stream logcat dừng trước khi bấm Dừng "
+            "ghi (thường là máy rớt khỏi USB). Phần sau của phiên không được "
+            "ghi, nên các mục 'không bắn' chỉ là KHÔNG KIỂM ĐƯỢC, không phải "
+            "lỗi app. Cắm lại máy và ghi lại.")
     if run.quick:
         out.append(
             "Chạy ở chế độ nhanh (không đánh dấu từng bước): file này chỉ kết "

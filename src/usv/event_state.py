@@ -33,6 +33,8 @@ class EventRun:
     package: str = ""
     generated_at: str = ""
     fa_silent: bool = False
+    # Phien ghi bi dut giua duong -> bao cao phai noi ra, xem report_event_html.
+    stream_died: bool = False
     near_edge: tuple[str, ...] = ()
     event_count: int = 0
     quick: bool = False

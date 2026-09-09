@@ -21,7 +21,8 @@ from ..event_window import Window
 
 
 def run(spec: SpecSheet, windows: tuple[Window, ...], config,
-        *, fa_silent: bool = False) -> list[CheckResult]:
+        *, fa_silent: bool = False,
+        stream_died: bool = False) -> list[CheckResult]:
     setting = config.checks.get("event_presence")
     catch_duplicate = bool(setting.options.get("duplicate", True)) if setting else True
 
@@ -49,6 +50,20 @@ def run(spec: SpecSheet, windows: tuple[Window, ...], config,
             if not hits:
                 # fa_silent: khong doc duoc log Firebase thi khong the noi app
                 # thieu event. Phan biet hai chuyen nay la ly do R3 ton tai.
+                if stream_died:
+                    # Phien ghi chet giua duong (rut may/adb dut) nen phan sau
+                    # khong duoc ghi. "Khong thay event" luc nay khong noi gi
+                    # ve app. Dat TRUOC fa_silent: dut stream la ly do manh hon.
+                    out.append(CheckResult(
+                        element=label, check="event_presence",
+                        verdict=Verdict.NOT_VERIFIABLE,
+                        expected="event được bắn ra",
+                        message=("Phiên ghi bị đứt giữa đường (máy rớt khỏi "
+                                 "USB hoặc adb dừng) nên phần sau không được "
+                                 "ghi — không kết luận được là app thiếu "
+                                 "event. Cắm lại máy và ghi lại."),
+                    ))
+                    continue
                 if fa_silent:
                     out.append(CheckResult(
                         element=label, check="event_presence",

@@ -48,6 +48,12 @@ function renderSummary(node, data) {
       + 'bắn và param đúng hay không — <b>không</b> kết luận bắn đúng lúc. '
       + 'Kiểm bắn trùng đã tắt.</div>';
   }
+  if (data.stream_died) {
+    html += '<div class="alert"><b>Phiên ghi bị đứt giữa đường.</b> Stream '
+      + 'logcat dừng trước khi bấm Dừng ghi — thường là máy rớt khỏi USB. '
+      + 'Phần sau không được ghi, nên các mục "không bắn" chỉ là <b>không kiểm '
+      + 'được</b>, không phải lỗi app. Cắm lại máy và ghi lại.</div>';
+  }
   if (data.fa_silent) {
     html += '<div class="alert"><b>Không đọc được log Firebase.</b> Cả phiên ghi '
       + 'không có dòng <code>FA-SVC</code> nào — rất có thể bản này không in log '

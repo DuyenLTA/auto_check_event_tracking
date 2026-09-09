@@ -176,3 +176,15 @@ def test_section_toan_chua_test_noi_chua_test_chu_khong_phai_0_tren_0():
     page = report_event_html.build(spec, results, summary)
     assert "0/0 khớp" not in page
     assert "chưa test (1)" in page
+
+
+def test_callout_stream_dut_xuat_hien():
+    """Phien ghi chet ma bao cao im lang thi nguoi doc ket luan sai ve app."""
+    page = _build(stream_died=True)
+    assert "đứt giữa đường" in page
+    # Phai noi ro: "khong bat duoc" o day KHONG tinh la loi app.
+    assert "không tính là lỗi app" in page
+
+
+def test_khong_dut_thi_khong_co_callout_do():
+    assert "đứt giữa đường" not in HTML

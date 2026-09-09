@@ -11,11 +11,10 @@ report ads.
 
 from __future__ import annotations
 
-import html
-
 from .check_models import (FAIL_VERDICTS, CheckResult, Summary, Verdict,
                            verdict_label)
 from .event_spec_models import SpecSheet
+from .report_event_callouts import _callouts, esc
 from .report_event_css import CSS, FONTS
 
 _NO_SCREEN = "Không khai màn"
@@ -27,14 +26,6 @@ _STATUS = {
     Verdict.NOT_TESTED: "muted",
     Verdict.EXTRA: "muted",
 }
-
-
-def esc(value) -> str:
-    """Gia tri den TU LOG - du lieu khong kiem soat, phai escape het.
-
-    Do that: `error_msg` chua backtick, dau ngoac, dau hai cham.
-    """
-    return html.escape(str(value if value is not None else ""))
 
 
 def _status_class(verdict: Verdict) -> str:
@@ -98,52 +89,10 @@ def _section(name: str, rows: list[CheckResult], triggered: dict[str, str]) -> t
     return chip, section
 
 
-def _callouts(results: list[CheckResult], fa_silent: bool,
-              near_edge: tuple[str, ...], quick: bool = False) -> str:
-    out = []
-    if quick:
-        # Khong noi ra thi nguoi doc tuong da kiem ca thoi diem ban.
-        out.append(
-            "<div class='callout'><h3>Chạy ở chế độ nhanh</h3>"
-            "<p>Không đánh dấu từng bước, nên báo cáo này <b>chỉ</b> kết luận "
-            "event có bắn ra trong cả phiên và param có đúng hay không. Nó "
-            "<b>không</b> kết luận event bắn đúng lúc — không có biên bước thì "
-            "không có gì để so. Kiểm bắn trùng cũng đã tắt, vì một phiên dài vào "
-            "ra cùng một màn thì event đó bắn lại là đúng.</p></div>")
-    if fa_silent:
-        out.append(
-            "<div class='callout alarm'><h3>Không đọc được log Firebase</h3>"
-            "<p>Cả phiên ghi không có một dòng <code>FA-SVC</code> nào. Rất có thể "
-            "build này strip log Firebase, <b>không phải</b> app thiếu event — "
-            "đừng kết luận app sai từ báo cáo này. Thử lại với build debug, hoặc "
-            "kiểm tra <code>setprop log.tag.FA-SVC VERBOSE</code> đã ăn chưa "
-            "(property không sống qua reboot, và app phải khởi động lại sau khi "
-            "set).</p></div>")
-
-    extras = [r for r in results if r.verdict is Verdict.EXTRA]
-    if extras:
-        chips = "".join(f"<span class='chip'>{esc(r.element)} {esc(r.actual)}</span>"
-                        for r in extras)
-        out.append(
-            "<div class='callout'><h3>Không tính vào fail</h3>"
-            "<p>Event/param app có mà spec không khai. Có thể spec chưa cập nhật, "
-            "không hẳn app sai.</p>"
-            f"<div class='chip-list'>{chips}</div></div>")
-
-    if near_edge:
-        chips = "".join(f"<span class='chip'>{esc(n)}</span>" for n in near_edge)
-        out.append(
-            "<div class='callout'><h3>Event bắn sát mốc đánh dấu</h3>"
-            "<p>Những event này bắn rất gần lúc bấm mốc nên có thể thuộc bước "
-            "liền kề. Tool <b>không</b> tự đổi bước cho chúng — xem lại bằng mắt "
-            "nếu kết quả của chúng bất thường.</p>"
-            f"<div class='chip-list'>{chips}</div></div>")
-    return "".join(out)
-
-
 def build(spec: SpecSheet, results: list[CheckResult], summary: Summary, *,
           package: str = "", generated_at: str = "", event_count: int = 0,
-          fa_silent: bool = False, near_edge: tuple[str, ...] = (),
+          fa_silent: bool = False, stream_died: bool = False,
+          near_edge: tuple[str, ...] = (),
           quick: bool = False) -> str:
     screens = _screen_of(spec)
     triggered = _triggered_of(spec)
@@ -191,7 +140,7 @@ def build(spec: SpecSheet, results: list[CheckResult], summary: Summary, *,
     </div>
     <div class="section-chips">{''.join(chips)}</div>
   </header>
-  {_callouts(results, fa_silent, near_edge, quick)}
+  {_callouts(results, fa_silent, near_edge, quick, stream_died)}
   <div class="sections">{''.join(sections)}</div>
 </div>
 """

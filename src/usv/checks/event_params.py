@@ -38,7 +38,11 @@ def _looks_numeric(value: str) -> bool:
 
 
 def run(spec: SpecSheet, windows: tuple[Window, ...], config,
-        *, fa_silent: bool = False) -> list[CheckResult]:
+        *, fa_silent: bool = False,
+        stream_died: bool = False) -> list[CheckResult]:
+    # stream_died khong doi gi o day: event NAO BAT DUOC thi param cua no van
+    # doc duoc day du. Chi check presence moi phai than trong. Van nhan tham so
+    # de runner goi moi check cung mot chu ky.
     setting = config.checks.get("event_params")
     options = setting.options if setting else {}
     catch_extra = bool(options.get("param_extra", True))

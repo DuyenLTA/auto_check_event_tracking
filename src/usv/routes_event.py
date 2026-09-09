@@ -166,13 +166,15 @@ async def run_check() -> dict:
         config = config.with_option("event_presence", "duplicate", False)
 
     fa_silent = recording.fa_silent
+    stream_died = recording.stream_died
     results, summary = event_check_runner.run(
-        state.spec, state.windows, config, fa_silent=fa_silent)
+        state.spec, state.windows, config, fa_silent=fa_silent,
+        stream_died=stream_died)
     events, _ = parse_log(recording.text())
 
     state.run = EventRun(
         results=results, summary=summary, spec=state.spec, package=state.package,
-        generated_at=now_vn(), fa_silent=fa_silent,
+        generated_at=now_vn(), fa_silent=fa_silent, stream_died=stream_died,
         near_edge=tuple(dict.fromkeys(n for w in state.windows for n in w.near_edge)),
         event_count=len(events), quick=state.quick,
     )
@@ -181,6 +183,7 @@ async def run_check() -> dict:
         "quick": state.quick,
         "summary": summary.payload(),
         "fa_silent": fa_silent,
+        "stream_died": stream_died,
         "near_edge": list(state.run.near_edge),
         "config": config.payload(),
         "results": [r.payload() for r in results],

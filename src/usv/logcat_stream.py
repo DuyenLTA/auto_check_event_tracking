@@ -50,6 +50,12 @@ class Recording:
     process: object | None = None
     reader: object | None = None      # asyncio.Task doc stream lien tuc
     stopped: bool = False
+    # Stream chet TRUOC khi ai bam Dung: rut may, USB ngu, mat authorize.
+    # Phan con lai cua phien khong duoc ghi -> KHONG duoc ket luan app thieu
+    # event. Cung nguyen tac voi fa_silent. Xem _pump.
+    stream_died: bool = False
+    # stop() da duoc goi -> EOF sap toi la CO Y, khong phai dut.
+    stopping: bool = False
 
     @property
     def fa_silent(self) -> bool:
@@ -66,7 +72,8 @@ class Recording:
     def payload(self) -> dict:
         return {"serial": self.serial, "package": self.package,
                 "line_count": len(self.lines), "marks": list(self.marks),
-                "stopped": self.stopped, "fa_silent": self.fa_silent}
+                "stopped": self.stopped, "fa_silent": self.fa_silent,
+                "stream_died": self.stream_died}
 
 
 async def enable_fa(client, serial: str) -> bool:
@@ -126,11 +133,22 @@ async def _pump(recording: Recording) -> None:
         while True:
             raw = await process.stdout.readline()
             if not raw:            # EOF - process da dung
+                if not recording.stopping:
+                    # Chua ai bam Dung ma ong da dong -> adb dut. Ghi lai:
+                    # khong ghi thi phien ghi chet am tham, va check ket luan
+                    # "app thieu event" tren du lieu chi co phan dau.
+                    recording.stream_died = True
+                    log.warning(
+                        "Stream logcat dut truoc khi Dung ghi - chi doc duoc "
+                        "%d dong.", len(recording.lines))
                 return
             recording.lines.append(raw.decode("utf-8", "replace").rstrip("\n"))
     except asyncio.CancelledError:
         raise
     except Exception as exc:       # noqa: BLE001 - doc log hong khong duoc lam sap phien
+        # Doc loi = mat log tu day tro di, khong khac gi EOF som.
+        if not recording.stopping:
+            recording.stream_died = True
         log.warning("Doc stream logcat that bai: %s", exc)
 
 
@@ -151,6 +169,10 @@ async def stop(recording: Recording) -> Recording:
     doc het phan con dong trong pipe roi tu ket thuc - khong mat dong nao. Huy
     task truoc khi kill thi mat dung phan cuoi.
     """
+    # Bao truoc y dinh TRUOC khi kill: kill lam stdout ve EOF, va `_pump` phai
+    # biet EOF do la co y - khong thi moi lan Dung binh thuong deu bi gan co
+    # "da dut", canh bao keu oan thi tester hoc cach bo qua no.
+    recording.stopping = True
     process = recording.process
     if process is not None and process.returncode is None:
         try:
