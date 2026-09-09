@@ -35,7 +35,7 @@ async def report_html() -> HTMLResponse:
     html = report_event_html.build(
         run.spec, run.results, run.summary, package=run.package,
         generated_at=run.generated_at, event_count=run.event_count,
-        fa_silent=run.fa_silent, near_edge=run.near_edge,
+        fa_silent=run.fa_silent, near_edge=run.near_edge, quick=run.quick,
     )
     return HTMLResponse(html)
 
@@ -62,6 +62,11 @@ def _warnings(run) -> list[str]:
     Thieu hai dong nay thi ho doc mot bang toan 'Thieu' va tuong app hong.
     """
     out = []
+    if run.quick:
+        out.append(
+            "Chạy ở chế độ nhanh (không đánh dấu từng bước): file này chỉ kết "
+            "luận event có bắn ra trong cả phiên và param có đúng hay không, "
+            "KHÔNG kết luận event bắn đúng lúc. Kiểm bắn trùng đã tắt.")
     if run.fa_silent:
         out.append(
             "Cả phiên ghi không có dòng log FA-SVC nào. Rất có thể bản build này "

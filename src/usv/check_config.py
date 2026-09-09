@@ -44,6 +44,19 @@ class CheckConfig:
         setting = self.checks.get(check)
         return setting.options.get(key, default) if setting else default
 
+    def with_option(self, check: str, key: str, value) -> "CheckConfig":
+        """Ban sao voi mot tuy chon bi doi. Dung cho che do nhanh: phai tat
+        `duplicate` vi mot phien dai vao ra cung mot man la ban lai that."""
+        setting = self.checks.get(check)
+        if setting is None:
+            return self
+        options = dict(setting.options)
+        options[key] = value
+        checks = dict(self.checks)
+        checks[check] = CheckSetting(enabled=setting.enabled,
+                                     severity=setting.severity, options=options)
+        return CheckConfig(checks=checks)
+
     def payload(self) -> dict:
         return {
             "enabled_checks": sorted(n for n in self.checks if self.enabled(n)),

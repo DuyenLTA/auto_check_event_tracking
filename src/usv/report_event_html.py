@@ -99,8 +99,17 @@ def _section(name: str, rows: list[CheckResult], triggered: dict[str, str]) -> t
 
 
 def _callouts(results: list[CheckResult], fa_silent: bool,
-              near_edge: tuple[str, ...]) -> str:
+              near_edge: tuple[str, ...], quick: bool = False) -> str:
     out = []
+    if quick:
+        # Khong noi ra thi nguoi doc tuong da kiem ca thoi diem ban.
+        out.append(
+            "<div class='callout'><h3>Chạy ở chế độ nhanh</h3>"
+            "<p>Không đánh dấu từng bước, nên báo cáo này <b>chỉ</b> kết luận "
+            "event có bắn ra trong cả phiên và param có đúng hay không. Nó "
+            "<b>không</b> kết luận event bắn đúng lúc — không có biên bước thì "
+            "không có gì để so. Kiểm bắn trùng cũng đã tắt, vì một phiên dài vào "
+            "ra cùng một màn thì event đó bắn lại là đúng.</p></div>")
     if fa_silent:
         out.append(
             "<div class='callout alarm'><h3>Không đọc được log Firebase</h3>"
@@ -134,7 +143,8 @@ def _callouts(results: list[CheckResult], fa_silent: bool,
 
 def build(spec: SpecSheet, results: list[CheckResult], summary: Summary, *,
           package: str = "", generated_at: str = "", event_count: int = 0,
-          fa_silent: bool = False, near_edge: tuple[str, ...] = ()) -> str:
+          fa_silent: bool = False, near_edge: tuple[str, ...] = (),
+          quick: bool = False) -> str:
     screens = _screen_of(spec)
     triggered = _triggered_of(spec)
 
@@ -181,7 +191,7 @@ def build(spec: SpecSheet, results: list[CheckResult], summary: Summary, *,
     </div>
     <div class="section-chips">{''.join(chips)}</div>
   </header>
-  {_callouts(results, fa_silent, near_edge)}
+  {_callouts(results, fa_silent, near_edge, quick)}
   <div class="sections">{''.join(sections)}</div>
 </div>
 """

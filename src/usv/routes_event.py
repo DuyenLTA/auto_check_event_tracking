@@ -19,7 +19,7 @@ from .adb_parsers import AdbError
 from .check_config import ConfigError, load as load_config
 from .event_spec_parse import parse_paste
 from .event_state import EventRun, now_vn, state
-from .event_window import cut, mark_label
+from .event_window import cut, mark_label, whole_session
 from .fa_event_parse import parse_log
 from .routes_device import client
 
@@ -35,6 +35,9 @@ class RecordRequest(BaseModel):
     serial: str
     package: str
     from_launch: bool = True
+    # Che do NHANH: khong danh dau tung buoc, tester bam Ghi roi thao tac tu do.
+    # Danh doi: khong biet event ban dung luc hay khong. Xem event_window.whole_session.
+    quick: bool = False
 
 
 class MarkRequest(BaseModel):
@@ -91,8 +94,10 @@ async def start_record(request: RecordRequest) -> dict:
 
     state.recording = recording
     state.serial, state.package = request.serial, request.package
+    state.quick = request.quick
     state.run, state.windows = None, ()
-    return {"stage": state.stage, "recording": recording.payload()}
+    return {"stage": state.stage, "quick": state.quick,
+            "recording": recording.payload()}
 
 
 @router.post("/event/mark")
@@ -123,9 +128,18 @@ async def stop_record() -> dict:
         await logcat_stream.stop(recording)
 
     events, markers = parse_log(recording.text())
-    state.windows = cut(events, markers)
+    if state.quick:
+        # Khong co moc -> cat theo moc se ra 0 cua so va MOI dong thanh
+        # "chua test". Che do nhanh gom ca phien thanh mot cua so cho tung event.
+        app_events = [e for e in events if e.from_app]
+        state.windows = whole_session(
+            tuple(e.name for e in (state.spec.events if state.spec else ())),
+            app_events)
+    else:
+        state.windows = cut(events, markers)
     return {
         "stage": state.stage,
+        "quick": state.quick,
         "recording": recording.payload(),
         "window_count": len(state.windows),
         "event_count": len(events),
@@ -146,6 +160,11 @@ async def run_check() -> dict:
     except ConfigError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+    if state.quick:
+        # Mot phien dai vao ra cung mot man thi event do ban lai - dung, khong
+        # phai loi. Bat `duplicate` o che do nay la bao oan hang loat.
+        config = config.with_option("event_presence", "duplicate", False)
+
     fa_silent = recording.fa_silent
     results, summary = event_check_runner.run(
         state.spec, state.windows, config, fa_silent=fa_silent)
@@ -155,10 +174,11 @@ async def run_check() -> dict:
         results=results, summary=summary, spec=state.spec, package=state.package,
         generated_at=now_vn(), fa_silent=fa_silent,
         near_edge=tuple(dict.fromkeys(n for w in state.windows for n in w.near_edge)),
-        event_count=len(events),
+        event_count=len(events), quick=state.quick,
     )
     return {
         "stage": state.stage,
+        "quick": state.quick,
         "summary": summary.payload(),
         "fa_silent": fa_silent,
         "near_edge": list(state.run.near_edge),

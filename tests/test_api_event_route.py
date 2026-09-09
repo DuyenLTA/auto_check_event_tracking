@@ -295,3 +295,77 @@ def test_thieu_import_bi_bat(client, fake_adb, monkeypatch):
     client.post("/event/record", json={"serial": "FAKE1", "package": "com.example.app"})
     with pytest.raises(Exception):
         client.post("/event/stop")
+
+
+# --- che do nhanh: khong danh dau buoc ---
+
+def _quick_flow(client, fake_adb):
+    """Ghi che do nhanh: khong bam moc, chi bom event vao stream."""
+    client.post("/event/spec", json={"text": SPEC_TSV})
+    client.post("/event/record", json={"serial": "FAKE1", "package": "com.example.app",
+                                       "quick": True})
+    step = 0
+    for name in ("rating_placement_viewed", "rating_star_clicked"):
+        step += 1
+        stamp = f"09-08 15:00:{step:02d}"
+        fake_adb.process.stdout.queue.append(
+            (f"{stamp}.000 V/FA-SVC ( 9): Logging event: origin=app,"
+             f"name={name},params=Bundle[{{{PARAMS[name]}}}]\n").encode())
+    return client.post("/event/stop").json(), client.post("/event/check").json()
+
+
+def test_che_do_nhanh_khong_can_moc_van_cham_duoc(client, fake_adb):
+    """Cat theo moc thi 0 moc = 0 cua so = moi dong 'chua test'."""
+    stop, check = _quick_flow(client, fake_adb)
+    assert stop["quick"] is True
+    assert stop["marker_count"] == 0
+    assert stop["window_count"] == 2, "mot cua so cho moi event trong spec"
+    assert check["summary"]["not_tested"] == 0
+    assert check["summary"]["fail"] == 0
+    assert check["summary"]["pass"] == 5
+
+
+def test_che_do_nhanh_bao_ra_trong_ket_qua_va_trong_report(client, fake_adb):
+    _, check = _quick_flow(client, fake_adb)
+    assert check["quick"] is True
+    page = client.get("/event/report").text
+    assert "chế độ nhanh" in page.lower()
+
+
+def test_che_do_nhanh_ghi_canh_bao_vao_xlsx(client, fake_adb):
+    """Nguoi doc xlsx thuong la dev, ho khong thay callout ban HTML."""
+    _quick_flow(client, fake_adb)
+    assert client.get("/event/report.xlsx").status_code == 200
+
+
+def test_che_do_thuong_van_can_moc(client, fake_adb):
+    """Khong bam moc o che do thuong -> chua test, KHONG phai fail."""
+    client.post("/event/spec", json={"text": SPEC_TSV})
+    client.post("/event/record", json={"serial": "FAKE1", "package": "com.example.app",
+                                       "quick": False})
+    client.post("/event/stop")
+    check = client.post("/event/check").json()
+    assert check["quick"] is False
+    assert check["summary"]["not_tested"] == 2
+    assert check["summary"]["fail"] == 0
+
+
+def test_state_giu_co_quick(client, fake_adb):
+    client.post("/event/spec", json={"text": SPEC_TSV})
+    client.post("/event/record", json={"serial": "FAKE1", "package": "com.example.app",
+                                       "quick": True})
+    assert client.get("/event/state").json()["quick"] is True
+    client.post("/event/reset")
+    assert client.get("/event/state").json()["quick"] is False
+
+
+def test_index_tro_dung_ca_5_file_js(client):
+    response = client.get("/")
+    for asset in ("event-marks.js", "event-api.js", "event-device.js",
+                  "event-render.js", "event.js"):
+        assert f"/static/{asset}" in response.text, f"index.html thieu {asset}"
+
+
+@pytest.mark.parametrize("name", ["event-api.js", "event-device.js"])
+def test_asset_moi_serve_duoc(client, name):
+    assert client.get(f"/static/{name}").status_code == 200

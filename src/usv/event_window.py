@@ -144,3 +144,30 @@ def cut(events: list[ObservedEvent], markers: list[Marker]) -> tuple[Window, ...
 def cut_log(text: str) -> tuple[Window, ...]:
     events, markers = parse_log(text)
     return cut(events, markers)
+
+
+# Nhan cua cua so o che do nhanh - de report va UI phan biet duoc voi cua so
+# cat theo moc.
+WHOLE_SESSION = "cả phiên ghi"
+
+
+def whole_session(spec_events: tuple[str, ...],
+                  events: list[ObservedEvent]) -> tuple[Window, ...]:
+    """Che do NHANH: khong danh dau buoc, moi event trong spec mot cua so trum
+    ca phien ghi.
+
+    Danh doi co y: mat kha nang biet event ban DUNG LUC hay khong - khong co
+    bien buoc thi khong co gi de so. Bu lai tester chi bam Ghi roi thao tac tu
+    do, khong phai bam moc tung buoc.
+
+    Va vi mot phien dai co the vao ra cung mot man nhieu lan, nguoi goi PHAI tat
+    check ban trung o che do nay - xem CheckConfig.with_option.
+    """
+    stamps = [to_ms(e.timestamp) for e in events if to_ms(e.timestamp) is not None]
+    start = min(stamps) if stamps else None
+    end = max(stamps) if stamps else None
+    return tuple(
+        Window(spec_event=name, note=WHOLE_SESSION, events=tuple(events),
+               start_ms=start, end_ms=end)
+        for name in spec_events
+    )
