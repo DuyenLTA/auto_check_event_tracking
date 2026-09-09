@@ -9,6 +9,7 @@ const { renderMarks, markProgress, escapeHtml } = window.USV_MARKS;
 const { renderPreview, renderSummary, renderResults } = window.USV_RENDER;
 const { api, post, fail } = window.USV_API;
 const { initDevice } = window.USV_DEVICE;
+const watch = window.USV_PROGRESS;
 const $ = (id) => document.getElementById(id);
 
 const ui = {
@@ -18,6 +19,7 @@ const ui = {
   fromLaunch: $('from-launch'), quick: $('quick'),
   btnDevices: $('btn-devices'),
   btnRecord: $('btn-record'), recordInfo: $('record-info'),
+  recordAlert: $('record-alert'),
   markFilter: $('mark-filter'), marks: $('marks'), progress: $('mark-progress'),
   btnStop: $('btn-stop'), btnCheck: $('btn-check'), btnReset: $('btn-reset'),
   summary: $('summary'), results: $('results'),
@@ -75,10 +77,15 @@ ui.btnRecord.addEventListener('click', async () => {
       serial: ui.device.value, package: ui.pkg.value,
       from_launch: ui.fromLaunch.checked, quick: ui.quick.checked,
     });
-    ui.recordInfo.textContent = ui.quick.checked
-      ? 'đang ghi — thao tác trên máy rồi bấm Dừng ghi'
-      : 'đang ghi — bấm nút của bước sắp làm';
+    const label = ui.quick.checked
+      ? 'đang ghi, thao tác trên máy rồi bấm Dừng ghi'
+      : 'đang ghi, bấm nút của bước sắp làm';
+    ui.recordInfo.textContent = label;
+    ui.recordAlert.innerHTML = '';
     setStage(data.stage);
+    // Theo doi lien tuc: mat may giua phien phai biet NGAY, khong phai luc Cham.
+    watch.start({ info: ui.recordInfo, alert: ui.recordAlert }, label,
+                () => { ui.btnRecord.disabled = false; });
   } catch (error) {
     ui.recordInfo.textContent = '';
     fail(ui.spec.errors, error.message);
@@ -109,6 +116,7 @@ ui.markFilter.addEventListener('input', renderMarkPanel);
 
 ui.btnStop.addEventListener('click', async () => {
   ui.btnStop.disabled = true;
+  watch.stop();
   try {
     const data = await post('/event/stop');
     ui.recordInfo.textContent = data.quick
@@ -137,10 +145,12 @@ ui.btnCheck.addEventListener('click', async () => {
 });
 
 ui.btnReset.addEventListener('click', async () => {
+  watch.stop();                 // khong tat thi no con poll va ghi de len o info
   await post('/event/reset').catch(() => {});
   events = []; done.clear(); current = null;
   ui.spec.preview.innerHTML = ''; ui.spec.errors.innerHTML = '';
   ui.spec.info.textContent = ''; ui.recordInfo.textContent = '';
+  ui.recordAlert.innerHTML = '';
   ui.summary.innerHTML = ''; ui.results.innerHTML = '';
   ui.marks.innerHTML = ''; ui.progress.textContent = '';
   ui.linkReport.hidden = true; ui.linkXlsx.hidden = true;

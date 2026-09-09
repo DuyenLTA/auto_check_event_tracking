@@ -18,10 +18,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from dataclasses import dataclass, field
 
 from .adb_logcat import FA_TAG, MARK_TAG
 from .adb_parsers import AdbError
+from .event_recording import Recording
 
 log = logging.getLogger(__name__)
 
@@ -37,43 +37,6 @@ LAUNCH_SETTLE = 1.5
 # Cho task doc not phan con trong pipe sau khi kill. Khong cho mai: kill roi ma
 # task khong ket thuc la co gi sai, thoi con hon treo ca server.
 STOP_TIMEOUT = 5.0
-
-
-@dataclass(slots=True)
-class Recording:
-    """Mot phien ghi dang mo."""
-
-    serial: str
-    package: str
-    lines: list[str] = field(default_factory=list)
-    marks: list[str] = field(default_factory=list)
-    process: object | None = None
-    reader: object | None = None      # asyncio.Task doc stream lien tuc
-    stopped: bool = False
-    # Stream chet TRUOC khi ai bam Dung: rut may, USB ngu, mat authorize.
-    # Phan con lai cua phien khong duoc ghi -> KHONG duoc ket luan app thieu
-    # event. Cung nguyen tac voi fa_silent. Xem _pump.
-    stream_died: bool = False
-    # stop() da duoc goi -> EOF sap toi la CO Y, khong phai dut.
-    stopping: bool = False
-
-    @property
-    def fa_silent(self) -> bool:
-        """Khong co dong FA nao -> khong doc duoc log Firebase (R3).
-
-        Khac han "app khong ban event": voi truong hop nay tuyet doi KHONG duoc
-        ket luan app thieu event.
-        """
-        return not any("/FA" in line for line in self.lines)
-
-    def text(self) -> str:
-        return "\n".join(self.lines)
-
-    def payload(self) -> dict:
-        return {"serial": self.serial, "package": self.package,
-                "line_count": len(self.lines), "marks": list(self.marks),
-                "stopped": self.stopped, "fa_silent": self.fa_silent,
-                "stream_died": self.stream_died}
 
 
 async def enable_fa(client, serial: str) -> bool:

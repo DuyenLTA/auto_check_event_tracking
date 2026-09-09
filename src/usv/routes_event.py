@@ -9,21 +9,18 @@ event_spec_parse ve chuyen gop dong lam mat o rong.
 
 from __future__ import annotations
 
-import logging
-
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from . import event_check_runner, logcat_stream
+from . import logcat_stream
 from .adb_parsers import AdbError
 from .check_config import ConfigError, load as load_config
 from .event_spec_parse import parse_paste
-from .event_state import EventRun, now_vn, state
+from .event_state import state
 from .event_window import cut, mark_label, whole_session
 from .fa_event_parse import parse_log
 from .routes_device import client
 
-log = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -82,8 +79,13 @@ async def start_record(request: RecordRequest) -> dict:
         raise HTTPException(
             status_code=409,
             detail="Spec chua hop le - sua het loi o bang preview roi mới Ghi được.")
-    if state.recording is not None and not state.recording.stopped:
+    old = state.recording
+    if old is not None and old.live:
         raise HTTPException(status_code=409, detail="Đang ghi rồi.")
+    if old is not None and not old.stopped:
+        # Stream da chet (may rot khoi USB) ma chua ai bam Dung. Don xac cho
+        # tu te - task doc va process con treo o day - roi cho ghi phien moi.
+        await logcat_stream.stop(old)
 
     adb = client()
     try:
@@ -145,56 +147,3 @@ async def stop_record() -> dict:
         "event_count": len(events),
         "marker_count": len(markers),
     }
-
-
-@router.post("/event/check")
-async def run_check() -> dict:
-    if state.spec is None or not state.spec.ok:
-        raise HTTPException(status_code=409, detail="Chưa nạp spec hợp lệ.")
-    recording = state.recording
-    if recording is None or not recording.stopped:
-        raise HTTPException(status_code=409, detail="Chưa Dừng ghi.")
-
-    try:
-        config = load_config()
-    except ConfigError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    if state.quick:
-        # Mot phien dai vao ra cung mot man thi event do ban lai - dung, khong
-        # phai loi. Bat `duplicate` o che do nay la bao oan hang loat.
-        config = config.with_option("event_presence", "duplicate", False)
-
-    fa_silent = recording.fa_silent
-    stream_died = recording.stream_died
-    results, summary = event_check_runner.run(
-        state.spec, state.windows, config, fa_silent=fa_silent,
-        stream_died=stream_died)
-    events, _ = parse_log(recording.text())
-
-    state.run = EventRun(
-        results=results, summary=summary, spec=state.spec, package=state.package,
-        generated_at=now_vn(), fa_silent=fa_silent, stream_died=stream_died,
-        near_edge=tuple(dict.fromkeys(n for w in state.windows for n in w.near_edge)),
-        event_count=len(events), quick=state.quick,
-    )
-    return {
-        "stage": state.stage,
-        "quick": state.quick,
-        "summary": summary.payload(),
-        "fa_silent": fa_silent,
-        "stream_died": stream_died,
-        "near_edge": list(state.run.near_edge),
-        "config": config.payload(),
-        "results": [r.payload() for r in results],
-    }
-
-
-@router.post("/event/reset")
-async def reset() -> dict:
-    """Bo het de lam lai. Kill process logcat neu con dang chay."""
-    recording = state.recording
-    if recording is not None and not recording.stopped:
-        await logcat_stream.stop(recording)
-    state.reset()
-    return state.payload()

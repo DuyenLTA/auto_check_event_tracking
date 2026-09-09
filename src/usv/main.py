@@ -16,6 +16,7 @@ from fastapi.staticfiles import StaticFiles
 from .resources import web_dir
 from .routes_device import router as device_router
 from .routes_event import router as event_router
+from .routes_event_check import router as event_check_router
 from .routes_event_report import router as event_report_router
 
 WEB_DIR = web_dir()
@@ -28,6 +29,7 @@ log = logging.getLogger(__name__)
 app = FastAPI(title="Auto Check Event Tracking")
 app.include_router(device_router)
 app.include_router(event_router)
+app.include_router(event_check_router)
 app.include_router(event_report_router)
 
 

@@ -17,6 +17,10 @@ import pytest
 
 from usv import logcat_stream, routes_event
 
+# Thu tu nap co y nghia: event.js dung window.USV_* cua cac file truoc no.
+JS_FILES = ("event-marks.js", "event-api.js", "event-device.js",
+            "event-progress.js", "event-render.js", "event.js")
+
 FIXTURES = Path(__file__).parent / "fixtures"
 SPEC_TSV = (FIXTURES / "event-spec-rating.tsv").read_text(encoding="utf-8")
 BROKEN_TSV = (FIXTURES / "event-spec-broken.tsv").read_text(encoding="utf-8")
@@ -76,6 +80,9 @@ class FakeAdb:
     async def launch(self, serial, package): return None
 
     async def logcat_spawn(self, serial, tags):
+        # Ong MOI moi lan spawn, y nhu `adb logcat` that. Tra lai ong cu thi
+        # phien ghi thu hai thua luon trang thai dong cua phien truoc.
+        self.process = FakeProcess()
         return self.process
 
     async def shell_log(self, serial, tag, message):
@@ -271,15 +278,15 @@ def test_middleware_chan_non_loopback():
 
 
 def test_trang_chu_tra_ve_html_va_tro_dung_asset(client):
+    """Thieu mot the <script> la ca mot tinh nang im lang khong chay - khong co
+    loi nao hien ra. JS o day khong duoc test don vi nen chan o day."""
     response = client.get("/")
     assert response.status_code == 200
-    for asset in ("/static/style.css", "/static/event-marks.js",
-                  "/static/event-render.js", "/static/event.js"):
-        assert asset in response.text, f"index.html thieu {asset}"
+    for asset in ("style.css", *JS_FILES):
+        assert f"/static/{asset}" in response.text, f"index.html thieu {asset}"
 
 
-@pytest.mark.parametrize("name", ["style.css", "event.js", "event-marks.js",
-                                  "event-render.js"])
+@pytest.mark.parametrize("name", ["style.css", *JS_FILES])
 def test_asset_serve_duoc(client, name):
     assert client.get(f"/static/{name}").status_code == 200
 
@@ -359,13 +366,49 @@ def test_state_giu_co_quick(client, fake_adb):
     assert client.get("/event/state").json()["quick"] is False
 
 
-def test_index_tro_dung_ca_5_file_js(client):
-    response = client.get("/")
-    for asset in ("event-marks.js", "event-api.js", "event-device.js",
-                  "event-render.js", "event.js"):
-        assert f"/static/{asset}" in response.text, f"index.html thieu {asset}"
+def test_index_co_cho_hien_canh_bao_dut_giua_phien(client):
+    """Watcher ghi canh bao vao #record-alert. Thieu the do thi no nem loi vao
+    console va tester khong thay gi - dung kieu im lang can chan."""
+    assert 'id="record-alert"' in client.get("/").text
 
 
-@pytest.mark.parametrize("name", ["event-api.js", "event-device.js"])
-def test_asset_moi_serve_duoc(client, name):
-    assert client.get(f"/static/{name}").status_code == 200
+# --- may rot giua phien ghi ---
+
+def _record(client, fake_adb):
+    client.post("/event/spec", json={"text": SPEC_TSV})
+    return client.post("/event/record",
+                       json={"serial": "FAKE1", "package": "com.example.app"})
+
+
+def test_may_rot_thi_ghi_lai_duoc_ngay(client, fake_adb):
+    """Stream chet roi thi KHONG con dang ghi - phai cho Ghi lai.
+
+    Truoc day guard chi xem `stopped`, ma `stopped` chi bat o stop(). May rot
+    khoi USB -> stopped=False -> bam Ghi lai an 409 "Dang ghi roi" tren mot
+    phien ghi da chet. Thong bao sai su that, va tester phai Reset (mat luon
+    spec da dan) moi thoat ra duoc.
+    """
+    assert _record(client, fake_adb).status_code == 200
+    fake_adb.process.stdout.closed = True          # may rot khoi USB
+    for _ in range(50):                            # cho pump nhan ra EOF
+        if client.get("/event/state").json()["recording"]["stream_died"]:
+            break
+    assert client.get("/event/state").json()["recording"]["stream_died"] is True
+
+    again = client.post("/event/record",
+                        json={"serial": "FAKE1", "package": "com.example.app"})
+    assert again.status_code == 200, (
+        "stream da chet thi phai ghi lai duoc, khong duoc bao 'Dang ghi roi'")
+    assert again.json()["recording"]["stream_died"] is False, "phien moi phai sach"
+
+
+def test_dang_ghi_that_thi_van_chan(client, fake_adb):
+    """Chieu nguoc lai: phien con song thi Ghi lan hai phai bi chan.
+
+    Thieu test nay thi mot bug bo han guard cung xanh, va hai process logcat
+    cung doc mot may se an mat log cua nhau.
+    """
+    assert _record(client, fake_adb).status_code == 200
+    again = client.post("/event/record",
+                        json={"serial": "FAKE1", "package": "com.example.app"})
+    assert again.status_code == 409
