@@ -121,3 +121,37 @@ chạy tốt cho cả 5 và 60 event. Câu đó không phải câu hỏi.
 `/` 200 · `/static/*` 200 · `/event/state` · `/event/config` · `/devices` (thấy máy
 thật Pixel_4) · `POST /event/spec` (parse spec thật) · `/event/report` 409 khi chưa
 chấm. Đây là bước bắt được bug số 2 — 180 test không bắt được.
+
+## Bổ sung: chế độ nhanh (2026-09-09)
+
+User chốt cách dùng thực tế: *"tôi đưa nội dung bảng, tôi tự bấm vào màn đấy rồi bạn
+check log nó đúng đủ là được cho nhanh"*. Nên thêm chế độ **không đánh dấu từng bước**,
+và để làm **mặc định** — đó là cách sẽ dùng hằng ngày.
+
+`event_window.whole_session()` gom cả phiên thành **một cửa sổ cho mỗi event trong spec**.
+Không có nó thì cắt theo mốc ra 0 cửa sổ và mọi dòng thành *chưa test*.
+
+**Bắt buộc tắt `duplicate` ở chế độ này** — một phiên dài vào ra cùng một màn thì event
+đó bắn lại là **đúng**, bật lên là báo oan hàng loạt. Làm bằng
+`CheckConfig.with_option()` (bản sao, không sửa file config). Có test chứng minh cả hai
+chiều: tắt thì `track_ad_request` bắn 17 lần không thành fail, bật thì thành fail — nếu
+test chỉ kiểm chiều tắt thì nó xanh cả khi `whole_session` hỏng.
+
+**Report và xlsx đều phải nói ra.** Không nói thì người đọc tưởng đã kiểm cả thời điểm
+bắn — mà đó chính là thứ chế độ này đánh đổi đi. Callout trên HTML, dòng cảnh báo trong
+sheet tổng của xlsx.
+
+### Đánh đổi, ghi rõ để sau này không nhầm
+
+| | chế độ nhanh | đánh dấu từng bước |
+|---|---|---|
+| event có bắn / param đúng | ✅ | ✅ |
+| bắn đúng lúc | ❌ | ✅ |
+| bắn trùng | tắt | ✅ theo bước |
+
+### Web tách thêm 2 file
+`event.js` lên 217 LOC nên tách `event-api.js` (22) và `event-device.js` (52).
+Còn `event.js` 162 · `event-marks.js` 81 · `event-render.js` 82.
+
+### Test
++21 (12 chế độ nhanh, 9 qua route). Tổng **282**.

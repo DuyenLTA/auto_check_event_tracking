@@ -42,6 +42,12 @@
       <select id="package"></select>
     </div>
     <div class="row">
+      <label class="check"><input type="checkbox" id="quick" checked>
+        <b>Chế độ nhanh</b> — không đánh dấu từng bước</label>
+      <span class="hint">Bấm Ghi rồi thao tác tự do. Đổi lại: chỉ kết luận event
+        <b>có bắn</b> và param đúng hay không, <b>không</b> kết luận bắn đúng lúc.</span>
+    </div>
+    <div class="row">
       <label class="check"><input type="checkbox" id="from-launch" checked>
         Ghi từ lúc mở app</label>
       <span class="hint">Bắt được <code>first_open</code>, <code>session_start</code>
@@ -54,9 +60,11 @@
   </section>
 
   <section class="step" id="step-mark">
-    <h2><span class="num">3</span> Đánh dấu từng bước</h2>
-    <p class="hint">Bấm nút của bước sắp làm, <b>rồi mới</b> thao tác trên máy.
-      Mốc của bước sau chính là điểm kết của bước trước — không cần nút Xong.</p>
+    <h2><span class="num">3</span> <span id="step3-title">Đánh dấu từng bước</span></h2>
+    <p class="hint" id="mark-hint">Bấm nút của bước sắp làm, <b>rồi mới</b> thao tác
+      trên máy. Mốc của bước sau chính là điểm kết của bước trước — không cần nút Xong.</p>
+    <p class="hint" id="quick-hint" hidden>Thao tác trên máy cho hết các màn cần
+      test, xong bấm <b>Dừng ghi</b>.</p>
     <div class="row">
       <input id="mark-filter" placeholder="lọc event" size="28">
       <span id="mark-progress" class="info"></span>
@@ -78,6 +86,8 @@
   </section>
 </div>
 <script src="/static/event-marks.js"></script>
+<script src="/static/event-api.js"></script>
+<script src="/static/event-device.js"></script>
 <script src="/static/event-render.js"></script>
 <script src="/static/event.js"></script>
 </body>

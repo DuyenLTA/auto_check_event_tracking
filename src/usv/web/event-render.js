@@ -43,6 +43,11 @@ function renderSummary(node, data) {
     .map(([cls, text]) => `<span class="tag ${cls}">${esc(text)}</span>`)
     .join('')}</div>`;
 
+  if (data.quick) {
+    html += '<div class="alert warn"><b>Chế độ nhanh:</b> chỉ kết luận event có '
+      + 'bắn và param đúng hay không — <b>không</b> kết luận bắn đúng lúc. '
+      + 'Kiểm bắn trùng đã tắt.</div>';
+  }
   if (data.fa_silent) {
     html += '<div class="alert"><b>Không đọc được log Firebase.</b> Cả phiên ghi '
       + 'không có dòng <code>FA-SVC</code> nào — rất có thể bản này không in log '

@@ -7,43 +7,30 @@
 
 const { renderMarks, markProgress, escapeHtml } = window.USV_MARKS;
 const { renderPreview, renderSummary, renderResults } = window.USV_RENDER;
+const { api, post, fail } = window.USV_API;
+const { initDevice } = window.USV_DEVICE;
 const $ = (id) => document.getElementById(id);
 
 const ui = {
   spec: { text: $('spec-text'), btn: $('btn-spec'), info: $('spec-info'),
           errors: $('spec-errors'), preview: $('spec-preview') },
   device: $('device'), pkg: $('package'), pkgFilter: $('pkg-filter'),
-  fromLaunch: $('from-launch'), btnDevices: $('btn-devices'),
+  fromLaunch: $('from-launch'), quick: $('quick'),
+  btnDevices: $('btn-devices'),
   btnRecord: $('btn-record'), recordInfo: $('record-info'),
   markFilter: $('mark-filter'), marks: $('marks'), progress: $('mark-progress'),
   btnStop: $('btn-stop'), btnCheck: $('btn-check'), btnReset: $('btn-reset'),
   summary: $('summary'), results: $('results'),
   linkReport: $('link-report'), linkXlsx: $('link-xlsx'),
   steps: { device: $('step-device'), mark: $('step-mark'), check: $('step-check') },
+  step3Title: $('step3-title'), markHint: $('mark-hint'),
+  quickHint: $('quick-hint'),
 };
 
 let events = [];              // event trong spec
-let allPackages = [];
 const done = new Set();       // event da bam moc
 let current = null;
 let stage = 'need_spec';
-
-async function api(path, options) {
-  const response = await fetch(path, options);
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(body.detail || `${response.status} ${path}`);
-  return body;
-}
-
-const post = (path, data) => api(path, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(data ?? {}),
-});
-
-function fail(node, message) {
-  node.innerHTML = `<div class="alert">${escapeHtml(message)}</div>`;
-}
 
 function setStage(next) {
   stage = next;
@@ -74,47 +61,11 @@ ui.spec.btn.addEventListener('click', async () => {
     renderPreview(ui.spec.preview, events);
     renderMarkPanel();
     setStage(data.stage);
-    if (data.stage !== 'need_spec') loadDevices();
+    if (data.stage !== 'need_spec') deviceUi.loadDevices();
   } catch (error) {
     fail(ui.spec.errors, error.message);
   }
 });
-
-/* --- buoc 2: may va app --- */
-async function loadDevices() {
-  try {
-    const data = await api('/devices');
-    ui.device.innerHTML = data.devices
-      .map((d) => `<option value="${escapeHtml(d.serial)}"${d.usable ? '' : ' disabled'}>`
-        + `${escapeHtml(d.label)}${d.usable ? '' : ' — ' + escapeHtml(d.state)}</option>`)
-      .join('') || '<option value="">không thấy máy nào</option>';
-    if (ui.device.value) loadPackages();
-  } catch (error) {
-    fail(ui.spec.errors, error.message);
-  }
-}
-
-async function loadPackages() {
-  try {
-    const data = await api(`/packages?serial=${encodeURIComponent(ui.device.value)}`);
-    allPackages = data.packages || [];
-    renderPackages();
-  } catch (error) {
-    fail(ui.spec.errors, error.message);
-  }
-}
-
-function renderPackages() {
-  const needle = ui.pkgFilter.value.toLowerCase();
-  const list = allPackages.filter((p) => p.includes(needle));
-  ui.pkg.innerHTML = list.map((p) =>
-    `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('')
-    || '<option value="">không có app nào khớp</option>';
-}
-
-ui.btnDevices.addEventListener('click', loadDevices);
-ui.device.addEventListener('change', loadPackages);
-ui.pkgFilter.addEventListener('input', renderPackages);
 
 ui.btnRecord.addEventListener('click', async () => {
   ui.btnRecord.disabled = true;
@@ -122,9 +73,11 @@ ui.btnRecord.addEventListener('click', async () => {
   try {
     const data = await post('/event/record', {
       serial: ui.device.value, package: ui.pkg.value,
-      from_launch: ui.fromLaunch.checked,
+      from_launch: ui.fromLaunch.checked, quick: ui.quick.checked,
     });
-    ui.recordInfo.textContent = 'đang ghi — bấm nút của bước sắp làm';
+    ui.recordInfo.textContent = ui.quick.checked
+      ? 'đang ghi — thao tác trên máy rồi bấm Dừng ghi'
+      : 'đang ghi — bấm nút của bước sắp làm';
     setStage(data.stage);
   } catch (error) {
     ui.recordInfo.textContent = '';
@@ -158,8 +111,9 @@ ui.btnStop.addEventListener('click', async () => {
   ui.btnStop.disabled = true;
   try {
     const data = await post('/event/stop');
-    ui.recordInfo.textContent = `đã dừng — ${data.event_count} event, `
-      + `${data.window_count} bước đã đánh dấu`;
+    ui.recordInfo.textContent = data.quick
+      ? `đã dừng — đọc được ${data.event_count} event trong cả phiên`
+      : `đã dừng — ${data.event_count} event, ${data.window_count} bước đã đánh dấu`;
     setStage(data.stage);
   } catch (error) {
     fail(ui.spec.errors, error.message);
@@ -190,7 +144,19 @@ ui.btnReset.addEventListener('click', async () => {
   ui.summary.innerHTML = ''; ui.results.innerHTML = '';
   ui.marks.innerHTML = ''; ui.progress.textContent = '';
   ui.linkReport.hidden = true; ui.linkXlsx.hidden = true;
-  setStage('need_spec');
+  const deviceUi = initDevice({
+  device: ui.device, pkg: ui.pkg, pkgFilter: ui.pkgFilter,
+  refresh: ui.btnDevices, errorNode: ui.spec.errors,
 });
 
+applyMode();
+setStage('need_spec');
+});
+
+const deviceUi = initDevice({
+  device: ui.device, pkg: ui.pkg, pkgFilter: ui.pkgFilter,
+  refresh: ui.btnDevices, errorNode: ui.spec.errors,
+});
+
+applyMode();
 setStage('need_spec');

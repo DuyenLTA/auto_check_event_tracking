@@ -97,8 +97,21 @@ Bốn bước trên giao diện:
 
 1. **Dán bảng spec** → bấm *Đọc bảng*. Hàng nào sai số cột thì báo kèm số dòng. Còn lỗi thì không cho Ghi.
 2. **Chọn máy và app** → *Bắt đầu ghi*. Tool tự bật log Firebase, tắt rồi mở lại app.
-3. **Đánh dấu từng bước**: bấm nút của bước sắp làm **rồi mới** thao tác trên máy. Nút nhóm theo màn, có ô lọc và dấu đã-bấm. Mốc của bước sau là điểm kết của bước trước — không có nút Xong.
+3. **Thao tác trên máy** rồi bấm *Dừng ghi*.
 4. **Chấm** → xem report HTML hoặc tải xlsx.
+
+### Hai chế độ
+
+| | Chế độ nhanh (mặc định) | Đánh dấu từng bước |
+|---|---|---|
+| Cách làm | bấm Ghi rồi thao tác tự do | bấm nút của bước sắp làm **rồi mới** thao tác |
+| Event có bắn / param đúng | ✅ | ✅ |
+| Bắn **đúng lúc** | ❌ không có biên bước để so | ✅ |
+| Bắn trùng | tắt — phiên dài vào ra một màn thì bắn lại là đúng | ✅ theo từng bước |
+
+Chế độ đánh dấu: nút nhóm theo màn, có ô lọc và dấu đã-bấm. Mốc của bước sau là điểm kết của bước trước — không có nút Xong.
+
+Report và xlsx **luôn ghi rõ** đã chạy chế độ nào, để người đọc không tưởng đã kiểm cả thời điểm.
 
 ## Gọi từ Python
 
