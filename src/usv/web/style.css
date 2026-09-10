@@ -62,6 +62,10 @@ button,.btn{font-family:'Public Sans',sans-serif;font-size:.88rem;font-weight:60
   display:inline-block;}
 button:hover:not(:disabled),.btn:hover{border-color:var(--accent);}
 button:disabled{opacity:.45;cursor:not-allowed;}
+/* Nut artifact luc dang doi Claude publish: mo di va khong bam duoc, nhung
+   VAN doc duoc chu de nguoi dung biet co cai gi dang tren duong. */
+.btn[aria-disabled="true"]{opacity:.55;cursor:default;}
+.btn[aria-disabled="true"]:hover{border-color:var(--line);}
 button.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
 :root[data-theme="dark"] button.primary,
 :root:not([data-theme="light"]) button.primary{color:#08201f;}

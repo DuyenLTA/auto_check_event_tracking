@@ -1,15 +1,32 @@
 // MOT nut xem bao cao, va no phai tro vao LUOT VUA CHAM.
 //
-// Vi sao phai kiem bang node: hai nut an/hien theo trang thai mang, ma curl tra
-// 200 thi khong noi gi ve viec nut nao dang hien. Loi hay gap nhat la hien CA
-// HAI (nguoi doc phai tu doan cai nao moi) hoac hien artifact CU (gui bao cao
-// cu cho team, sai trong im lang).
+// Vi sao phai kiem bang node: nut an/hien va co/khong co href theo trang thai
+// mang, ma curl tra 200 thi khong noi gi ve viec nut nao dang hien. Hai loi
+// hay gap: hien CA HAI nut (nguoi doc phai tu doan cai nao moi), va cho bam
+// sang artifact CU (gui bao cao cu cho team, sai trong im lang).
+//
+// Bat bien so mot kiem theo HREF chu khong theo an/hien: nut artifact CO hien
+// luc dang doi publish - de nguoi dung biet co cai gi dang tren duong - nhung
+// luc do no khong duoc co href, vi href duy nhat co san la cua luot truoc.
 //
 // Chay tay:  node scripts/check-artifact-button.js
 const fs = require('fs');
 const dir = require('path').join(__dirname, '..', 'src', 'usv', 'web') + '/';
 
-function node() { return { href: '', hidden: true }; }
+function node() {
+  return {
+    href: '', hidden: true, textContent: '', attrs: {},
+    setAttribute(ten, giaTri) {
+      this.attrs[ten] = String(giaTri);
+      if (ten === 'href') this.href = String(giaTri);
+    },
+    removeAttribute(ten) {
+      delete this.attrs[ten];
+      if (ten === 'href') this.href = '';
+    },
+    getAttribute(ten) { return ten in this.attrs ? this.attrs[ten] : null; },
+  };
+}
 global.window = {};
 
 // Cac lan tra ve lien tiep cua GET /event/artifact.
@@ -44,18 +61,25 @@ function motNutThoi(link, local, canh) {
 }
 
 (async () => {
-  // 1. Chua publish -> chi co nut local
+  // 1. Chua publish -> hien nut artifact o trang thai doi, va KHONG co href.
+  //    Truoc day cho nay hien nut local; doi thanh nut doi de nguoi dung biet
+  //    artifact dang tren duong chu khong phai khong co.
   let t = moiLuot([{ khop: false, run_generated_at: '16:54' }]);
   await t.a.show();
   motNutThoi(t.link, t.local, 'chua publish');
-  if (t.local.hidden) fail('chua publish thi phai hien nut report local');
+  if (t.link.hidden) fail('chua publish thi phai hien nut o trang thai doi');
+  if (t.link.href !== '') fail('luc doi ma da co href - se bam sang bao cao cu');
+  if (t.link.getAttribute('aria-disabled') !== 'true') {
+    fail('nut luc doi phai danh dau aria-disabled, khong thi trong nhu bam duoc');
+  }
+  if (!t.link.textContent) fail('nut luc doi phai co chu, khong duoc de trong');
 
-  // 2. Artifact la LUOT CU -> KHONG duoc hien nut artifact
+  // 2. Artifact la LUOT CU -> tuyet doi khong co href tro sang no
   t = moiLuot([{ url: 'https://x/cu', khop: false, generated_at: '16:46',
                  run_generated_at: '16:54' }]);
   await t.a.show();
   motNutThoi(t.link, t.local, 'artifact luot cu');
-  if (!t.link.hidden) fail('artifact luot cu ma van hien - se gui bao cao cu cho team');
+  if (t.link.href !== '') fail('artifact luot cu ma co href - se gui bao cao cu cho team');
 
   // 3. Artifact DA la luot nay -> hien artifact, an local
   t = moiLuot([{ url: 'https://x/moi', khop: true, run_generated_at: '16:54' }]);
@@ -63,22 +87,31 @@ function motNutThoi(link, local, canh) {
   motNutThoi(t.link, t.local, 'artifact luot nay');
   if (t.link.hidden) fail('artifact khop luot nay ma khong hien');
   if (t.link.href !== 'https://x/moi') fail(`href sai: ${t.link.href}`);
+  if (t.link.getAttribute('aria-disabled') !== null) fail('khop roi ma nut con bi khoa');
 
-  // 4. Publish den SAU khi cham -> vong do phai tu doi nut, khong can F5
+  // 4. Publish den SAU khi cham -> vong do phai tu gan href, khong can F5
   t = moiLuot([
     { khop: false, run_generated_at: '16:54' },                       // luc bam Cham
     { url: 'https://x/moi', khop: true, run_generated_at: '16:54' },  // 3 giay sau
   ]);
   await t.a.show();
-  if (!t.link.hidden) fail('luc bam Cham chua co artifact ma da hien');
+  if (t.link.href !== '') fail('luc bam Cham chua co artifact ma da co href');
   await tick();
-  if (t.link.hidden) fail('publish xong roi ma nut khong tu doi - phai F5 moi thay');
+  if (t.link.href !== 'https://x/moi') fail('publish xong roi ma nut khong tu doi - phai F5 moi thay');
   if (!t.local.hidden) fail('doi sang artifact roi ma nut local con hien');
 
   // 5. Khop roi thi DUNG do - khong duoc poll mai
   if (hen !== null) fail('da khop ma van hen do tiep');
 
-  // 6. Lam lai -> an het, va huy vong do dang cho
+  // 6. Doi mai khong xong -> tra nut local lai, de con duong xem bao cao
+  t = moiLuot([{ khop: false, run_generated_at: '16:54' }]);
+  await t.a.show();
+  for (let i = 0; i < 25 && hen !== null; i += 1) await tick();
+  motNutThoi(t.link, t.local, 'doi qua lau');
+  if (t.local.hidden) fail('doi mai khong xong thi phai tra nut report local lai');
+  if (hen !== null) fail('het luot do ma van hen tiep');
+
+  // 7. Lam lai -> an het, va huy vong do dang cho
   t = moiLuot([{ khop: false, run_generated_at: '16:54' }]);
   await t.a.show();
   t.a.clear();
