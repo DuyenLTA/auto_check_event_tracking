@@ -31,7 +31,6 @@ const ui = {
   btnStop: $('btn-stop'), btnCheck: $('btn-check'), btnReset: $('btn-reset'),
   summary: $('summary'), results: $('results'),
   linkReport: $('link-report'), linkArtifact: $('link-artifact'),
-  artifactInfo: $('artifact-info'),
   steps: { mark: $('step-mark'), check: $('step-check') },
 };
 
@@ -148,7 +147,8 @@ ui.btnCheck.addEventListener('click', async () => {
     const data = await post('/event/check');
     renderSummary(ui.summary, data);
     renderResults(ui.results, data.results || []);
-    ui.linkReport.hidden = false;
+    // artifactUi so huu CA HAI nut xem bao cao - hien dung mot cai, xem
+    // event-artifact.js.
     artifactUi.show();
     setStage(data.stage);
   } catch (error) {
@@ -167,7 +167,6 @@ ui.btnReset.addEventListener('click', async () => {
   ui.recordAlert.innerHTML = '';
   ui.summary.innerHTML = ''; ui.results.innerHTML = '';
   ui.marks.innerHTML = ''; ui.progress.textContent = '';
-  ui.linkReport.hidden = true;
   artifactUi.clear();
   setStage('need_spec');
   deviceUi.loadDevices();       // may co the da doi giua chung
@@ -175,7 +174,7 @@ ui.btnReset.addEventListener('click', async () => {
 });
 
 const artifactUi = initArtifact({
-  link: ui.linkArtifact, info: ui.artifactInfo,
+  link: ui.linkArtifact, local: ui.linkReport,
 });
 
 const deviceUi = initDevice({

@@ -743,3 +743,34 @@ def test_url_khong_phai_https_bi_tu_choi(client, monkeypatch, tmp_path):
     monkeypatch.setattr(artifact_link, "duong_dan", lambda goc=None: tmp_path / "x.json")
     r = client.post("/event/artifact", json={"url": "javascript:alert(1)"})
     assert r.status_code == 400
+
+
+# --- day noi: route phai truyen event CA PHIEN vao check ---
+
+def test_route_cham_truyen_event_ca_phien_vao_check(client, fake_adb, monkeypatch):
+    """Thieu tham so nay thi tool im lang tro ve hanh vi bao THIEU OAN.
+
+    Check presence chi phan biet duoc "app khong ban" voi "app ban ngoai buoc
+    da danh dau" khi nhan duoc event cua ca phien. Quen truyen o tang route thi
+    unit test cua check van xanh ma nguoi dung van nhan fail oan - da la dung
+    benh nay o cho khac. Xem tests/test_event_ngoai_cua_so.py.
+    """
+    from usv import event_check_runner, routes_event_check
+
+    thay: dict = {}
+    goc = event_check_runner.run
+
+    def spy(*args, **kwargs):
+        thay.update(kwargs)
+        return goc(*args, **kwargs)
+
+    monkeypatch.setattr(routes_event_check.event_check_runner, "run", spy)
+    client.post("/event/spec", json={"text": SPEC_TSV})
+    client.post("/event/record", json={"serial": "FAKE1",
+                                       "package": "com.example.app"})
+    client.post("/event/mark", json={"spec_event": "rating_placement_viewed",
+                                     "note": ""})
+    client.post("/event/stop")
+    assert client.post("/event/check").status_code == 200
+    names = [e.name for e in thay.get("session_events", ())]
+    assert "rating_placement_viewed" in names, sorted(thay)

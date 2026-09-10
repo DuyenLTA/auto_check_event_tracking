@@ -17,7 +17,8 @@ from pathlib import Path
 import pytest
 
 SCRIPTS = Path(__file__).parent.parent / "scripts"
-CHECKS = ["check-web-loads.js", "check-device-watch.js"]
+CHECKS = ["check-web-loads.js", "check-device-watch.js",
+          "check-artifact-button.js"]
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="khong co node")

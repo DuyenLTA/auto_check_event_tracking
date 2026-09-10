@@ -39,7 +39,11 @@ def _looks_numeric(value: str) -> bool:
 
 def run(spec: SpecSheet, windows: tuple[Window, ...], config,
         *, fa_silent: bool = False, stream_died: bool = False,
-        app_seen_running: bool = True) -> list[CheckResult]:
+        app_seen_running: bool = True,
+        session_events: tuple = ()) -> list[CheckResult]:
+    # `session_events` khong dung o day - param chi doc duoc tu chinh dong log
+    # cua event DA BAT DUOC trong cua so. Nhan vao de runner goi moi check bang
+    # cung mot bo tham so.
     # stream_died khong doi gi o day: event NAO BAT DUOC thi param cua no van
     # doc duoc day du. Chi check presence moi phai than trong.
     #

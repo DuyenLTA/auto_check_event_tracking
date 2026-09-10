@@ -38,10 +38,13 @@ async def run_check() -> dict:
     fa_silent = recording.fa_silent
     stream_died = recording.stream_died
     app_seen = recording.app_seen
+    # Parse TRUOC khi cham: check presence can event ca phien de phan biet
+    # "app khong ban" voi "ban ngoai buoc da danh dau".
+    events, _ = parse_log(recording.text())
     results, summary = event_check_runner.run(
         state.spec, state.windows, config, fa_silent=fa_silent,
-        stream_died=stream_died, app_seen_running=app_seen)
-    events, _ = parse_log(recording.text())
+        stream_died=stream_died, app_seen_running=app_seen,
+        session_events=tuple(e for e in events if e.from_app))
 
     state.run = EventRun(
         results=results, summary=summary, spec=state.spec, package=state.package,

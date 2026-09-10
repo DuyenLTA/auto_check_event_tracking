@@ -5,6 +5,7 @@ Ba muc ket luan, va cai thu ba la quan trong nhat:
   - co cua so, ban 0 lan          -> FAIL_MISSING
   - co cua so, ban >1 lan         -> FAIL_DUPLICATE
   - KHONG cua so nao              -> NOT_TESTED (tester chua danh dau buoc)
+  - ban NGOAI cua so cua no       -> NOT_VERIFIABLE (xem _ngoai_cua_so)
 
 NOT_TESTED khong phai fail: tool chua do gi ca thi khong duoc ket luan gi ve app.
 Khong do duoc thi khong ket luan - khong bao fail.
@@ -22,7 +23,8 @@ from ..event_window import Window
 
 def run(spec: SpecSheet, windows: tuple[Window, ...], config,
         *, fa_silent: bool = False, stream_died: bool = False,
-        app_seen_running: bool = True) -> list[CheckResult]:
+        app_seen_running: bool = True,
+        session_events: tuple = ()) -> list[CheckResult]:
     setting = config.checks.get("event_presence")
     catch_duplicate = bool(setting.options.get("duplicate", True)) if setting else True
 
@@ -91,12 +93,29 @@ def run(spec: SpecSheet, windows: tuple[Window, ...], config,
                                  "Firebase, chứ không phải app thiếu event."),
                     ))
                     continue
+                ngoai = _ngoai_cua_so(event.name, session_events)
+                if ngoai:
+                    out.append(CheckResult(
+                        element=label, check="event_presence",
+                        verdict=Verdict.NOT_VERIFIABLE,
+                        expected="event được bắn ra",
+                        actual=f"bắn lúc {ngoai}, ngoài bước này",
+                        message=(
+                            "Event CÓ bắn trong phiên ghi nhưng không nằm trong "
+                            "bước đã đánh dấu. Hai khả năng, tool không phân "
+                            "biệt được: app bắn trước lúc bấm mốc (event bắn "
+                            "ngay khi mở app thì không bước nào chứa nó), hoặc "
+                            "app bắn ở bước khác. Muốn chấm chắc thì đừng đánh "
+                            "dấu bước — chỉ bấm Ghi rồi thao tác."),
+                    ))
+                    continue
                 out.append(CheckResult(
                     element=label, check="event_presence",
                     verdict=Verdict.FAIL_MISSING,
                     expected="event được bắn ra", actual="không bắn",
-                    message=(f"Bước này có {len(window.app_events)} event khác "
-                             f"được bắn nhưng không có {event.name!r}."),
+                    message=(f"Cả phiên ghi không có {event.name!r} lần nào; "
+                             f"riêng bước này có {len(window.app_events)} event "
+                             "khác được bắn."),
                 ))
                 continue
 
@@ -120,6 +139,29 @@ def run(spec: SpecSheet, windows: tuple[Window, ...], config,
             ))
 
     return out
+
+
+# Liet ke nhieu hon the nay thi mot dong bao cao thanh mot bai van.
+MAX_STAMP = 3
+
+
+def _ngoai_cua_so(name: str, session_events) -> str:
+    """Gio ma event ban trong CA PHIEN, khi cua so cua no khong chua lan nao.
+
+    Vi sao khong bao FAIL: moc do TESTER bam, con event do APP ban - tool khong
+    biet ai truoc ai sau. Da gap that: `daily_checkin_screen_view` ban ngay luc
+    app mo, tuc la TRUOC khi kip bam moc dau tien, va `cut()` bo moi event truoc
+    moc dau -> bao "thieu event" cho mot event app ban dung. Cham khong danh dau
+    thi cung app do PASS. Mot ket qua doi theo THU TU BAM NUT thi khong dung
+    duoc, nen o day tra "chua ket luan" chu khong tra fail.
+    """
+    stamps = [e.timestamp for e in session_events
+              if e.name == name and getattr(e, "from_app", True)]
+    if not stamps:
+        return ""
+    if len(stamps) > MAX_STAMP:
+        return ", ".join(stamps[:MAX_STAMP]) + f" (và {len(stamps) - MAX_STAMP} lần nữa)"
+    return ", ".join(stamps)
 
 
 def _label(name: str, window: Window, total: int) -> str:

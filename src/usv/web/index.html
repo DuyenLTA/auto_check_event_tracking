@@ -13,8 +13,8 @@
   <header>
     <p class="eyebrow">Firebase Analytics</p>
     <h1>Auto Check Event Tracking</h1>
-    <p class="lead">Dán bảng spec, đánh dấu từng bước trong lúc thao tác trên máy,
-      tool đối chiếu event app thật bắn ra rồi ra report.</p>
+    <p class="lead">Dán link spec, bấm Ghi rồi thao tác trên máy, tool đối chiếu
+      event app thật bắn ra với spec rồi ra report.</p>
   </header>
 
   <section class="step" id="step-spec">
@@ -67,11 +67,14 @@
 
   <section class="step" id="step-mark">
     <h2><span class="num">3</span> Thao tác trên máy</h2>
-    <p class="hint">Bấm hết các màn cần test rồi bấm <b>Dừng ghi</b>. Tool kết
-      luận event <b>có bắn</b> và param đúng hay không.</p>
-    <p class="hint">Muốn kiểm thêm <b>bắn đúng lúc</b> và <b>bắn trùng</b> thì bấm
-      nút của bước sắp làm <b>rồi mới</b> thao tác — mốc của bước sau chính là
-      điểm kết của bước trước. Không bấm nút nào cũng được.</p>
+    <p class="hint"><b>Không cần bấm nút nào ở đây.</b> Cứ thao tác trên máy cho
+      app bắn hết các event trong spec rồi bấm <b>Dừng ghi</b> — tool vẫn kết luận
+      event <b>có bắn</b> và param đúng hay không.</p>
+    <p class="hint">Các nút dưới là <b>tuỳ chọn</b>: bấm nút của bước <b>sắp</b> làm
+      rồi mới thao tác thì tool kiểm thêm được <b>bắn trùng trong một bước</b>.
+      Event bắn ngoài bước đã đánh dấu — hay gặp nhất là event bắn ngay lúc mở
+      app, trước cả khi kịp bấm mốc — sẽ ghi <b>chưa kết luận</b>, không tính là
+      lỗi app.</p>
     <div class="row">
       <input id="mark-filter" placeholder="lọc event" size="28">
       <span id="mark-progress" class="info"></span>
@@ -86,7 +89,6 @@
       <button id="btn-check" class="primary" disabled>Chấm</button>
       <a id="link-report" class="btn" href="/event/report" target="_blank" hidden>Xem report</a>
       <a id="link-artifact" class="btn" target="_blank" rel="noopener" hidden>Link artifact</a>
-      <span id="artifact-info" class="info"></span>
       <button id="btn-reset">Làm lại</button>
     </div>
     <div id="summary"></div>

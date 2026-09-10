@@ -30,14 +30,21 @@ def available_checks() -> list[str]:
 
 def run(spec: SpecSheet, windows: tuple[Window, ...], config: CheckConfig,
         *, fa_silent: bool = False, stream_died: bool = False,
-        app_seen_running: bool = True) -> tuple[list[CheckResult], Summary]:
+        app_seen_running: bool = True,
+        session_events: tuple = ()) -> tuple[list[CheckResult], Summary]:
+    """`session_events` la event cua CA PHIEN, khong cat theo cua so.
+
+    Can no de phan biet "app khong ban" voi "app co ban ma ngoai buoc da danh
+    dau" - hai chuyen nay khac han nhau ve ket luan. Xem event_presence.
+    """
     results: list[CheckResult] = []
     for name, run_check in _REGISTRY.items():
         if not config.enabled(name):
             continue
         results.extend(run_check(spec, windows, config, fa_silent=fa_silent,
                                  stream_died=stream_died,
-                                 app_seen_running=app_seen_running))
+                                 app_seen_running=app_seen_running,
+                                 session_events=session_events))
 
     ordered = sort_for_report(results)
     summary = Summary()
