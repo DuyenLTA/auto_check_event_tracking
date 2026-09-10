@@ -5,6 +5,9 @@
  */
 'use strict';
 
+/* Boc IIFE de khong ro ten ra pham vi toan cuc - xem event-marks.js. */
+(() => {
+
 const { renderMarks, markProgress, escapeHtml } = window.USV_MARKS;
 const { renderPreview, renderSummary, renderResults } = window.USV_RENDER;
 const { api, post, fail } = window.USV_API;
@@ -193,3 +196,4 @@ setStage('need_spec');
 // cung phai thay luc do.
 deviceUi.loadDevices();
 deviceUi.startWatch();
+})();

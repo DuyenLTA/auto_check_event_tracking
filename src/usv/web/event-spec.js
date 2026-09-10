@@ -6,6 +6,9 @@
  */
 'use strict';
 
+/* Boc IIFE de khong ro ten ra pham vi toan cuc - xem event-marks.js. */
+(() => {
+
 const { post: sPost, fail: sFail } = window.USV_API;
 
 function initSpec({ text, btn, info, url, urlBtn, urlInfo, errors, onLoaded }) {
@@ -34,3 +37,4 @@ function initSpec({ text, btn, info, url, urlBtn, urlInfo, errors, onLoaded }) {
 }
 
 window.USV_SPEC = { initSpec };
+})();

@@ -35,9 +35,15 @@ global.clearInterval = () => {};
 
 const order = ['event-marks.js', 'event-api.js', 'event-device.js',
                'event-spec.js', 'event-progress.js', 'event-render.js', 'event.js'];
+// MOT context dung chung cho ca 7 file - y het trinh duyet nap <script> thuong.
+// Bo moi file vao mot new Function() rieng thi moi file co pham vi rieng, va
+// bo sot dung loai loi nang nhat: hai file khai trung mot ten o tang ngoai
+// cung -> SyntaxError, ca file khong chay. Da gap that voi `renderMarks`.
+const vm = require('vm');
+const ctx = vm.createContext(global);
 for (const f of order) {
   try {
-    new Function(fs.readFileSync(path + f, 'utf8'))();
+    vm.runInContext(fs.readFileSync(path + f, 'utf8'), ctx, { filename: f });
   } catch (e) {
     console.log(`LOI khi nap ${f}:\n  ${e.constructor.name}: ${e.message}`);
     process.exit(1);

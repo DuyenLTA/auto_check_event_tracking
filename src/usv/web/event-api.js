@@ -1,6 +1,9 @@
 /* Goi API + hien loi. Tach ra vi ca ba file JS deu dung. */
 'use strict';
 
+/* Boc IIFE de khong ro ten ra pham vi toan cuc - xem event-marks.js. */
+(() => {
+
 async function api(path, options) {
   const response = await fetch(path, options);
   const body = await response.json().catch(() => ({}));
@@ -20,3 +23,4 @@ function fail(node, message) {
 }
 
 window.USV_API = { api, post, fail };
+})();

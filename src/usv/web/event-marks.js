@@ -9,6 +9,13 @@
  */
 'use strict';
 
+/* Boc trong IIFE: script thuong (khong phai module) dung CHUNG mot pham vi
+ * toan cuc, nen ham khai o day se dung ten voi file khac. Da gap that -
+ * event.js khai `const { renderMarks }` trong khi event-marks.js da co
+ * `function renderMarks`, va ca event.js khong chay duoc mot dong nao.
+ * Chi dua ra ngoai qua window.USV_*. */
+(() => {
+
 const KHONG_KHAI_MAN = 'Không khai màn';
 
 function escapeHtml(value) {
@@ -79,3 +86,4 @@ function markProgress(events, done) {
 }
 
 window.USV_MARKS = { renderMarks, markProgress, escapeHtml };
+})();

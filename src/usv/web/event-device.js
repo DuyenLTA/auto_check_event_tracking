@@ -5,6 +5,9 @@
  */
 'use strict';
 
+/* Boc IIFE de khong ro ten ra pham vi toan cuc - xem event-marks.js. */
+(() => {
+
 const { api: dApi, fail: dFail } = window.USV_API;
 const { escapeHtml: dEsc } = window.USV_MARKS;
 
@@ -112,3 +115,4 @@ function initDevice({ device, pkg, pkgFilter, refresh, errorNode, info, pick,
 }
 
 window.USV_DEVICE = { initDevice };
+})();
