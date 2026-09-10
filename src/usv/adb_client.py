@@ -14,9 +14,10 @@ import logging
 from .adb_appdata import AppDataMixin
 from .adb_input import InputMixin
 from .adb_logcat import LogcatMixin
+from .adb_foreground_parse import parse_current_focus
 from .adb_parsers import (
     AdbError, AdbTransportError, Device, check_package, check_serial, find_adb,
-    parse_current_focus, parse_devices, parse_packages, parse_wm_density, parse_wm_size,
+    parse_devices, parse_packages, parse_wm_density, parse_wm_size,
 )
 
 log = logging.getLogger(__name__)

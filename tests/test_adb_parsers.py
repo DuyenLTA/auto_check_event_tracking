@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import pytest
 
+from usv.adb_foreground_parse import parse_current_focus
 from usv.adb_parsers import (
-    AdbError, check_package, check_serial, parse_current_focus, parse_devices,
+    AdbError, check_package, check_serial, parse_devices,
     parse_packages, parse_wm_density, parse_wm_size,
 )
 
@@ -137,28 +138,28 @@ DUMPSYS = """
 
 
 def test_doc_duoc_package_dang_o_foreground():
-    from usv.adb_parsers import parse_resumed_package
+    from usv.adb_foreground_parse import parse_resumed_package
     assert parse_resumed_package(DUMPSYS) == "com.ai.aiimage.aivideogenerator"
 
 
 def test_khong_co_dong_resumed_thi_tra_None():
-    from usv.adb_parsers import parse_resumed_package
+    from usv.adb_foreground_parse import parse_resumed_package
     assert parse_resumed_package("Stack #0:\n  (khong co gi)") is None
 
 
 def test_khong_nham_sang_dong_khac_co_dau_gach_cheo():
-    from usv.adb_parsers import parse_resumed_package
+    from usv.adb_foreground_parse import parse_resumed_package
     rac = "  mLastPausedActivity: ActivityRecord{1 u0 com.khac.app/.Main t1}"
     assert parse_resumed_package(rac) is None, "chi doc dong *ResumedActivity*"
 
 
 def test_doc_duoc_package_launcher():
-    from usv.adb_parsers import parse_home_package
+    from usv.adb_foreground_parse import parse_home_package
     out = ("priority=0 preferredOrder=0 match=0x108000 isDefault=true\n"
            "com.google.android.apps.nexuslauncher/.NexusLauncherActivity\n")
     assert parse_home_package(out) == "com.google.android.apps.nexuslauncher"
 
 
 def test_khong_resolve_duoc_launcher_thi_tra_None():
-    from usv.adb_parsers import parse_home_package
+    from usv.adb_foreground_parse import parse_home_package
     assert parse_home_package("No activity found") is None

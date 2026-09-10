@@ -10,8 +10,8 @@ from __future__ import annotations
 import asyncio
 import re
 
-from .adb_parsers import (AdbError, check_package, check_serial,
-                          parse_home_package, parse_resumed_package)
+from .adb_foreground_parse import parse_home_package, parse_resumed_package
+from .adb_parsers import AdbError, check_package, check_serial
 
 # Chan chuoi la di vao dong lenh adb. Cung ly do voi check_serial/check_package
 # trong adb_parsers: moi arg di rieng vao subprocess nhung ten van phai sach.
