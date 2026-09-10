@@ -80,7 +80,11 @@ ui.btnRecord.addEventListener('click', async () => {
       serial: ui.device.value, package: ui.pkg.value,
       from_launch: ui.fromLaunch.checked,
     });
-    const label = 'đang ghi, thao tác trên máy rồi bấm Dừng ghi';
+    // Tat "tat va mo lai app" -> tool khong mo app. Phai nhac mo NGAY BAY GIO:
+    // log Firebase chi bat duoc tu lan app khoi dong sau khi tool set property.
+    const label = ui.fromLaunch.checked
+      ? 'đang ghi, thao tác trên máy rồi bấm Dừng ghi'
+      : 'đang ghi — MỞ APP trên máy bây giờ, rồi thao tác';
     ui.recordInfo.textContent = label;
     ui.recordAlert.innerHTML = '';
     setStage(data.stage);

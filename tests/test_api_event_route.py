@@ -537,3 +537,34 @@ def test_goi_y_app_gan_giong_khi_go_sai(client, fake_adb):
                                                   "package": "com.example.ap"})
     assert response.status_code == 400
     assert "com.example.app" in response.json()["detail"], "phai goi y ten gan giong"
+
+
+def test_tu_mo_app_bang_tay_thi_khong_chan_ten_package(client, fake_adb):
+    """Tat "tat va mo lai app" = tool KHONG mo app, tester tu mo tay.
+
+    Luc do khong con cai im lang can chan: chot chan ton tai vi `monkey` mo
+    app that bai ma tra exit 0. Khong mo thi khong the that bai am tham, nen
+    khong duoc chan - va do la cach duy nhat de ghi mot app tool khong tra ra
+    duoc (ten khac, app cho user khac, app vua cai).
+    """
+    client.post("/event/spec", json={"text": SPEC_TSV})
+    response = client.post("/event/record", json={
+        "serial": "FAKE1", "package": "com.khong.he.co", "from_launch": False})
+    assert response.status_code == 200, response.text
+    assert client.get("/event/state").json()["stage"] == "recording"
+
+
+def test_de_tool_mo_app_thi_van_chan(client, fake_adb):
+    """Chieu nguoc lai - noi long ca hai chieu thi PASS gia quay lai."""
+    client.post("/event/spec", json={"text": SPEC_TSV})
+    response = client.post("/event/record", json={
+        "serial": "FAKE1", "package": "com.khong.he.co", "from_launch": True})
+    assert response.status_code == 400
+
+
+def test_loi_chi_ra_cach_tu_mo_tay(client, fake_adb):
+    """Bao loi phai noi duong ra, khong chi noi "khong co"."""
+    client.post("/event/spec", json={"text": SPEC_TSV})
+    detail = client.post("/event/record", json={
+        "serial": "FAKE1", "package": "com.khong.he.co"}).json()["detail"]
+    assert "tự mở" in detail or "bỏ tick" in detail.lower(), detail

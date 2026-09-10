@@ -9,8 +9,6 @@ event_spec_parse ve chuyen gop dong lam mat o rong.
 
 from __future__ import annotations
 
-from difflib import get_close_matches
-
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
@@ -20,6 +18,7 @@ from .check_config import ConfigError, load as load_config
 from .confluence_client import (ConfluenceError, ConfluenceLinkError,
                                 fetch_page)
 from .event_spec_confluence import parse_page
+from .event_session import bo_phien_cu, phai_co_app
 from .event_spec_parse import parse_paste
 from .event_state import state
 from .event_window import mark_label, windows_for
@@ -66,49 +65,6 @@ async def read_config() -> dict:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-async def _phai_co_app(adb, serial: str, package: str) -> None:
-    """Tu choi ghi khi app khong co tren may.
-
-    Bat buoc phai chan o day: `adb shell monkey -p <app khong ton tai>` in ra
-    "No activities found to run" nhung EXIT CODE VAN LA 0, nen mo app that bai
-    trong IM LANG. Tool cu the ghi tiep va bao cao gan event cua app khac cho
-    app dang test - da ra "5 pass" cho mot app khong he duoc cai tren may.
-    PASS gia te hon FAIL gia: fail thi con di kiem tra, pass thi dong so.
-
-    Goi y ten gan giong: go lech mot chu la loi hay gap nhat, va tu do lai
-    mot chuoi 40 ky tu bang mat thi rat de bo qua.
-    """
-    try:
-        installed = await adb.packages(serial)
-    except AdbError:
-        return           # khong doc duoc danh sach thi de logcat_stream bao loi
-    if package in installed:
-        return
-    gan = get_close_matches(package, installed, n=3, cutoff=0.6)
-    raise HTTPException(status_code=400, detail=(
-        f"May {serial} khong co app {package!r}. "
-        + (f"Y ban la: {', '.join(gan)}?" if gan
-           else "Kiem lai ten package, hoac cai app len may truoc.")))
-
-
-async def _bo_phien_cu() -> None:
-    """Nap spec moi = lam lai tu dau, nen bo het ket qua cua phien truoc.
-
-    Bo ca `recording` chu khong chi `windows`/`run`: giu lai mot phien ghi da
-    dung thi stage ket o 'ready_to_check' - nut Ghi khoa, nut Cham mo, va
-    tester ket cung vi Reset se mat luon spec vua nap.
-
-    Con dang ghi thi phai KILL that: de treo thi process logcat cu doc song
-    song voi phien sau, hai ben an mat log cua nhau.
-    """
-    recording = state.recording
-    if recording is not None and not recording.stopped:
-        await logcat_stream.stop(recording)
-    state.recording = None
-    state.run = None
-    state.windows = ()
-
-
 @router.post("/event/spec")
 async def load_spec(request: SpecRequest) -> dict:
     """Dan bang spec -> parse -> tra ca events LAN errors cho bang preview.
@@ -118,7 +74,7 @@ async def load_spec(request: SpecRequest) -> dict:
     khong noi gi.
     """
     sheet = parse_paste(request.text)
-    await _bo_phien_cu()
+    await bo_phien_cu()
     state.spec = sheet
     return {"stage": state.stage, **sheet.payload()}
 
@@ -144,7 +100,7 @@ async def load_spec_confluence(request: ConfluenceRequest) -> dict:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     sheet = parse_page(html)
-    await _bo_phien_cu()
+    await bo_phien_cu()
     state.spec = sheet
     return {"stage": state.stage, "source": title, **sheet.payload()}
 
@@ -164,7 +120,8 @@ async def start_record(request: RecordRequest) -> dict:
         await logcat_stream.stop(old)
 
     adb = client()
-    await _phai_co_app(adb, request.serial, request.package)
+    await phai_co_app(adb, request.serial, request.package,
+                      from_launch=request.from_launch)
     try:
         recording = await logcat_stream.start(
             adb, request.serial, request.package, from_launch=request.from_launch)
