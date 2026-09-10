@@ -503,3 +503,37 @@ def test_dang_ghi_ma_nap_spec_moi_thi_dung_han_phien_cu(client, fake_adb):
     client.post("/event/spec", json={"text": SPEC_TSV})
     assert client.get("/event/state").json()["stage"] == "ready_to_record"
     assert fake_adb.process.returncode is not None, "phai kill process logcat cu"
+
+
+def test_app_chua_cai_thi_TU_CHOI_ghi(client, fake_adb):
+    """Ghi mot app khong co tren may = ghi log cua app KHAC.
+
+    Do that tren may: `adb shell monkey -p <app khong ton tai>` in ra
+    "No activities found to run" nhung EXIT CODE VAN LA 0. Nen tool mo app
+    that bai trong im lang roi ghi tiep, va bao cao gan event cua app khac cho
+    app dang test - da ra "5 pass" cho mot app khong he duoc cai. PASS gia con
+    te hon FAIL gia.
+    """
+    client.post("/event/spec", json={"text": SPEC_TSV})
+    response = client.post("/event/record", json={"serial": "FAKE1",
+                                                  "package": "com.khong.he.co"})
+    assert response.status_code == 400, "phai tu choi, khong duoc ghi"
+    detail = response.json()["detail"]
+    assert "com.khong.he.co" in detail
+    assert client.get("/event/state").json()["recording"] is None
+
+
+def test_app_co_cai_thi_ghi_binh_thuong(client, fake_adb):
+    """Chieu nguoc lai - kiem qua tay thi chan luon app hop le."""
+    client.post("/event/spec", json={"text": SPEC_TSV})
+    assert client.post("/event/record", json={"serial": "FAKE1",
+                                              "package": "com.example.app"}).status_code == 200
+
+
+def test_goi_y_app_gan_giong_khi_go_sai(client, fake_adb):
+    """Go lech mot chu thi chi ra ten dung, dung de tester tu do lai bang mat."""
+    client.post("/event/spec", json={"text": SPEC_TSV})
+    response = client.post("/event/record", json={"serial": "FAKE1",
+                                                  "package": "com.example.ap"})
+    assert response.status_code == 400
+    assert "com.example.app" in response.json()["detail"], "phai goi y ten gan giong"

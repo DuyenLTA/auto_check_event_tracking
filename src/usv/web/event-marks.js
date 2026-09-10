@@ -74,15 +74,22 @@ function renderMarks(container, events, { filter = '', done, current, onMark }) 
   }
 }
 
+/* Danh dau la TUY CHON, nen chua bam mot moc nao thi IM LANG.
+ *
+ * Truoc day in "0/2 buoc — con 2" ngay tu dau: doc vao tuong con viec phai
+ * lam, va bam het kich ban roi van thay 0/2 thi tuong tool khong ghi nhan gi.
+ * That ra 0/2 la dung - chi co nghia "chua danh dau buoc nao", ma khong danh
+ * dau van cham duoc event co ban va param.
+ */
 function markProgress(events, done) {
   const marked = done || new Set();
   const total = events.length;
   const hit = events.filter((e) => marked.has(e.name)).length;
-  if (!total) return '';
+  if (!total || !hit) return '';
   const left = total - hit;
   return left
-    ? `${hit}/${total} bước — còn ${left}`
-    : `${hit}/${total} bước — xong hết, bấm Dừng ghi`;
+    ? `đã đánh dấu ${hit}/${total} event — còn ${left}`
+    : `đã đánh dấu cả ${total} event, bấm Dừng ghi`;
 }
 
 window.USV_MARKS = { renderMarks, markProgress, escapeHtml };

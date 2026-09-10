@@ -178,10 +178,20 @@ class AdbClient(LogcatMixin, InputMixin, AppDataMixin):
         return png
 
     async def launch(self, serial: str, package: str) -> None:
-        """Mo app. Chi dung khi tester bam nut - tool KHONG tu dieu huong flow."""
+        """Mo app. Chi dung khi tester bam nut - tool KHONG tu dieu huong flow.
+
+        PHAI doc stdout: `monkey` in "No activities found to run" nhung tra
+        EXIT CODE 0, nen chi xem returncode thi mo app that bai trong im lang -
+        roi phien ghi bat log cua app dang mo san va bao cao gan event cua no
+        cho app dang test.
+        """
         check_serial(serial)
         check_package(package)
-        await self._run(
+        out, err, _ = await self._run(
             "-s", serial, "shell", "monkey", "-p", package,
             "-c", "android.intent.category.LAUNCHER", "1",
         )
+        if "No activities found to run" in (out + err):
+            raise AdbError(
+                f"Khong mo duoc {package}: may bao khong co man nao de mo. "
+                "App chua cai, hoac khong co launcher activity.")

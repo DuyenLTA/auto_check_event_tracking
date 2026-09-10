@@ -65,3 +65,41 @@ def test_check_package_va_serial_cho_gia_tri_that_di_qua():
     assert check_package("com.aihomedesign.aihomedecor.designidea.aiinterior")
     assert check_serial("99261FFAZ0077C")
     assert check_serial("emulator-5554")
+
+
+# --- mo app: monkey tra exit 0 ke ca khi that bai ---
+
+def test_launch_bao_loi_khi_may_noi_khong_co_man_nao_de_mo():
+    """`monkey -p <app khong ton tai>` in "No activities found to run" nhung
+    EXIT CODE VAN LA 0. Chi xem returncode thi mo app that bai trong im lang,
+    roi phien ghi bat log cua app dang mo san - bao cao gan event cua app khac
+    cho app dang test.
+    """
+    import asyncio
+
+    from usv.adb_client import AdbClient
+    from usv.adb_parsers import AdbError
+
+    adb = AdbClient("/fake/adb")
+
+    async def fake_run(*args, timeout=None):
+        return ("** No activities found to run, monkey aborted.", "", 0)
+
+    adb._run = fake_run
+    with pytest.raises(AdbError) as err:
+        asyncio.run(adb.launch("SERIAL1", "com.khong.he.co"))
+    assert "khong co man nao de mo" in str(err.value)
+
+
+def test_launch_im_lang_khi_mo_duoc():
+    import asyncio
+
+    from usv.adb_client import AdbClient
+
+    adb = AdbClient("/fake/adb")
+
+    async def fake_run(*args, timeout=None):
+        return ("Events injected: 1", "", 0)
+
+    adb._run = fake_run
+    asyncio.run(adb.launch("SERIAL1", "com.example.app"))   # khong duoc nem gi

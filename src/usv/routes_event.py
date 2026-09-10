@@ -9,6 +9,8 @@ event_spec_parse ve chuyen gop dong lam mat o rong.
 
 from __future__ import annotations
 
+from difflib import get_close_matches
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
@@ -62,6 +64,31 @@ async def read_config() -> dict:
         return load_config().payload()
     except ConfigError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+async def _phai_co_app(adb, serial: str, package: str) -> None:
+    """Tu choi ghi khi app khong co tren may.
+
+    Bat buoc phai chan o day: `adb shell monkey -p <app khong ton tai>` in ra
+    "No activities found to run" nhung EXIT CODE VAN LA 0, nen mo app that bai
+    trong IM LANG. Tool cu the ghi tiep va bao cao gan event cua app khac cho
+    app dang test - da ra "5 pass" cho mot app khong he duoc cai tren may.
+    PASS gia te hon FAIL gia: fail thi con di kiem tra, pass thi dong so.
+
+    Goi y ten gan giong: go lech mot chu la loi hay gap nhat, va tu do lai
+    mot chuoi 40 ky tu bang mat thi rat de bo qua.
+    """
+    try:
+        installed = await adb.packages(serial)
+    except AdbError:
+        return           # khong doc duoc danh sach thi de logcat_stream bao loi
+    if package in installed:
+        return
+    gan = get_close_matches(package, installed, n=3, cutoff=0.6)
+    raise HTTPException(status_code=400, detail=(
+        f"May {serial} khong co app {package!r}. "
+        + (f"Y ban la: {', '.join(gan)}?" if gan
+           else "Kiem lai ten package, hoac cai app len may truoc.")))
 
 
 async def _bo_phien_cu() -> None:
@@ -137,6 +164,7 @@ async def start_record(request: RecordRequest) -> dict:
         await logcat_stream.stop(old)
 
     adb = client()
+    await _phai_co_app(adb, request.serial, request.package)
     try:
         recording = await logcat_stream.start(
             adb, request.serial, request.package, from_launch=request.from_launch)

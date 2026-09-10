@@ -36,3 +36,13 @@ def test_id_js_dung_deu_co_trong_html(path: Path):
 def test_test_nay_bat_duoc_id_go_sai():
     """Tu chung minh: id bia ra phai bi bao thieu."""
     assert 'id="khong-ton-tai"' not in HTML
+
+
+def test_khong_con_dem_buoc_khi_chua_danh_dau_gi():
+    """Danh dau la tuy chon. In "0/2 buoc — con 2" ngay tu dau lam nguoi dung
+    tuong con viec phai lam, va bam het kich ban roi van thay 0/2 thi tuong
+    tool khong ghi nhan gi."""
+    js = (WEB / "event-marks.js").read_text(encoding="utf-8")
+    assert "if (!total || !hit) return '';" in js, (
+        "chua bam moc nao thi markProgress phai tra chuoi rong")
+    assert "bước — còn" not in js, "nhan cu ('N/M bước') gay hieu nham"
