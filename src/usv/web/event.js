@@ -20,13 +20,14 @@ const ui = {
   device: $('device'), pkg: $('package'), pkgFilter: $('pkg-filter'),
   fromLaunch: $('from-launch'), quick: $('quick'),
   btnDevices: $('btn-devices'),
+  deviceInfo: $('device-info'), devicePick: $('device-pick'),
   btnRecord: $('btn-record'), recordInfo: $('record-info'),
   recordAlert: $('record-alert'),
   markFilter: $('mark-filter'), marks: $('marks'), progress: $('mark-progress'),
   btnStop: $('btn-stop'), btnCheck: $('btn-check'), btnReset: $('btn-reset'),
   summary: $('summary'), results: $('results'),
   linkReport: $('link-report'), linkXlsx: $('link-xlsx'),
-  steps: { device: $('step-device'), mark: $('step-mark'), check: $('step-check') },
+  steps: { mark: $('step-mark'), check: $('step-check') },
   step3Title: $('step3-title'), markHint: $('mark-hint'),
   quickHint: $('quick-hint'),
 };
@@ -39,7 +40,6 @@ let stage = 'need_spec';
 function setStage(next) {
   stage = next;
   const recording = stage === 'recording';
-  ui.steps.device.setAttribute('aria-disabled', stage === 'need_spec');
   ui.steps.mark.setAttribute('aria-disabled', !recording);
   ui.steps.check.setAttribute('aria-disabled',
     !['ready_to_check', 'done'].includes(stage));
@@ -176,19 +176,19 @@ ui.btnReset.addEventListener('click', async () => {
   ui.summary.innerHTML = ''; ui.results.innerHTML = '';
   ui.marks.innerHTML = ''; ui.progress.textContent = '';
   ui.linkReport.hidden = true; ui.linkXlsx.hidden = true;
-  const deviceUi = initDevice({
-  device: ui.device, pkg: ui.pkg, pkgFilter: ui.pkgFilter,
-  refresh: ui.btnDevices, errorNode: ui.spec.errors,
-});
-
-applyMode();
-setStage('need_spec');
+  applyMode();
+  setStage('need_spec');
+  deviceUi.loadDevices();       // may co the da doi giua chung
 });
 
 const deviceUi = initDevice({
   device: ui.device, pkg: ui.pkg, pkgFilter: ui.pkgFilter,
   refresh: ui.btnDevices, errorNode: ui.spec.errors,
+  info: ui.deviceInfo, pick: ui.devicePick,
 });
 
 applyMode();
 setStage('need_spec');
+// Tim may NGAY khi mo trang, khong doi nap spec: may cam san thi khong co ly
+// do bat nguoi dung bam them mot nut.
+deviceUi.loadDevices();
