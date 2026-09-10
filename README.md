@@ -2,6 +2,11 @@
 
 Đối chiếu **event Firebase Analytics app Android thật bắn ra** với **bảng spec event tracking**, ra report pass/fail và note rõ sai ở đâu.
 
+📋 **[Sổ tay cho team](https://claude.ai/code/artifact/429439ba-4eb4-4a7a-8c46-d307dd964afb)**
+— bản hướng dẫn ngắn cho người mới: cài đặt, ba bước chạy, cách đọc report,
+cạm bẫy và lỗi thường gặp. Đọc trang đó trước; README này là bản chi tiết hơn
+cho người sửa code.
+
 > Đối chiếu **UI** với design Figma/pen.dev là tool khác: [ui-spec-verifier](https://github.com/DuyenLTA/ui-spec-verifier).
 
 ## Kiểm được gì
@@ -170,7 +175,7 @@ open("report.html", "w").write(
 
 ```bash
 .venv/bin/python -m pip install -e ".[dev]"   # lần đầu
-.venv/bin/python -m pytest                    # 424 test, ~1 giây
+.venv/bin/python -m pytest                    # ~1 giây, không cần cắm máy
 ```
 
 Cả suite chạy **không cần cắm máy** — adb được thay bằng bản giả trong test.
