@@ -57,6 +57,9 @@ async def run_check() -> dict:
         # So EVENT trong spec, tach khoi so DONG kiem: spec 2 event co the ra
         # 5 dong (2 dong event + 3 dong param), va nguoi doc dem dong roi hoi
         # "5 event o dau ra".
+        # Claude publish artifact xong thi POST lai moc nay -> nut artifact
+        # biet no dang la luot nao. Xem artifact_link.
+        "generated_at": state.run.generated_at,
         "spec_event_count": len(state.spec.events),
         "summary": summary.payload(),
         "fa_silent": fa_silent,

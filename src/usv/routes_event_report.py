@@ -11,8 +11,9 @@ import logging
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse, Response
+from pydantic import BaseModel, Field
 
-from . import report_event_html
+from . import artifact_link, report_event_html
 from .event_state import state
 
 log = logging.getLogger(__name__)
@@ -27,6 +28,36 @@ def _run():
         raise HTTPException(status_code=409,
                             detail="Chưa chấm lần nào - bấm Chấm trước đã.")
     return run
+
+
+class ArtifactRequest(BaseModel):
+    url: str = Field(default="", max_length=500)
+    generated_at: str = Field(default="", max_length=40)
+
+
+@router.get("/event/artifact")
+async def doc_artifact() -> dict:
+    """Link artifact + luot da publish, va no CO PHAI luot hien tai khong.
+
+    `khop=False` nghia la artifact dang la bao cao CU. Phai noi ra: gui cho
+    team mot bao cao cu ma tuong moi la kieu sai im lang.
+    """
+    ban = artifact_link.doc()
+    run = state.run
+    return {
+        **ban,
+        "khop": bool(ban and run and ban.get("generated_at") == run.generated_at),
+        "run_generated_at": run.generated_at if run else "",
+    }
+
+
+@router.post("/event/artifact")
+async def ghi_artifact(request: ArtifactRequest) -> dict:
+    """Claude goi sau khi publish xong. Tool khong tu publish duoc."""
+    if not request.url.startswith("https://"):
+        raise HTTPException(status_code=400,
+                            detail="URL artifact phải bắt đầu bằng https://")
+    return artifact_link.ghi(request.url, request.generated_at)
 
 
 @router.get("/event/report", response_class=HTMLResponse)

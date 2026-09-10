@@ -688,3 +688,58 @@ def test_doan_app_tra_rong_khi_chi_thay_launcher():
     rec.home_package = "com.launcher"
     rec.foreground_seen = {"com.launcher": 5, "com.android.systemui": 2}
     assert doan_app(rec) == "", "khong duoc cham cho launcher"
+
+
+# --- link artifact ---
+
+ARTIFACT = "https://claude.ai/code/artifact/43b243a5-cb0f-4482-9601-042ba7cacc73"
+
+
+def test_chua_publish_thi_khong_co_link(client, monkeypatch, tmp_path):
+    from usv import artifact_link
+    monkeypatch.setattr(artifact_link, "duong_dan", lambda goc=None: tmp_path / "x.json")
+    assert client.get("/event/artifact").json().get("url") is None
+
+
+def test_publish_roi_thi_tra_link_va_noi_ro_luot_nao(client, fake_adb, monkeypatch, tmp_path):
+    """`khop` phai phan biet artifact CUA LUOT NAY voi artifact luot cu.
+
+    Thieu no thi nut artifact luon trong nhu moi, va mot bao cao cu bi gui cho
+    team nhu bao cao cua lan chay vua roi - im lang va sai.
+    """
+    from usv import artifact_link
+    monkeypatch.setattr(artifact_link, "duong_dan", lambda goc=None: tmp_path / "x.json")
+    client.post("/event/spec", json={"text": SPEC_TSV})
+    client.post("/event/record", json={"serial": "FAKE1", "package": "com.example.app"})
+    client.post("/event/stop")
+    check = client.post("/event/check").json()
+    luot = client.get("/event/state").json()
+
+    # publish cho DUNG luot nay
+    client.post("/event/artifact", json={"url": ARTIFACT,
+                                         "generated_at": check.get("generated_at", "")})
+    body = client.get("/event/artifact").json()
+    assert body["url"] == ARTIFACT
+    assert body["khop"] is (body["generated_at"] == body["run_generated_at"])
+    assert luot["stage"] == "done"
+
+
+def test_artifact_luot_cu_thi_bao_KHONG_khop(client, fake_adb, monkeypatch, tmp_path):
+    from usv import artifact_link
+    monkeypatch.setattr(artifact_link, "duong_dan", lambda goc=None: tmp_path / "x.json")
+    client.post("/event/spec", json={"text": SPEC_TSV})
+    client.post("/event/record", json={"serial": "FAKE1", "package": "com.example.app"})
+    client.post("/event/stop")
+    client.post("/event/check")
+    client.post("/event/artifact", json={"url": ARTIFACT,
+                                         "generated_at": "2020-01-01 00:00"})
+    body = client.get("/event/artifact").json()
+    assert body["khop"] is False, "artifact cua luot khac phai bao khong khop"
+
+
+def test_url_khong_phai_https_bi_tu_choi(client, monkeypatch, tmp_path):
+    """Nut nay se duoc bam va gui cho nguoi khac - khong nhan url la."""
+    from usv import artifact_link
+    monkeypatch.setattr(artifact_link, "duong_dan", lambda goc=None: tmp_path / "x.json")
+    r = client.post("/event/artifact", json={"url": "javascript:alert(1)"})
+    assert r.status_code == 400
