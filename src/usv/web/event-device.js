@@ -11,7 +11,7 @@
 const { api: dApi, fail: dFail } = window.USV_API;
 const { escapeHtml: dEsc } = window.USV_MARKS;
 
-function initDevice({ device, pkg, pkgFilter, refresh, errorNode, info, pick,
+function initDevice({ device, pkg, pkgInfo, refresh, errorNode, info, pick,
                      onReady }) {
   let allPackages = [];
 
@@ -62,18 +62,28 @@ function initDevice({ device, pkg, pkgFilter, refresh, errorNode, info, pick,
     try {
       const data = await dApi(`/packages?serial=${encodeURIComponent(device.value)}`);
       allPackages = data.packages || [];
-      renderPackages();
+      checkPackage();
     } catch (error) {
       dFail(errorNode, error.message);
     }
   }
 
-  function renderPackages() {
-    const needle = pkgFilter.value.toLowerCase();
-    const list = allPackages.filter((p) => p.includes(needle));
-    pkg.innerHTML = list
-      .map((p) => `<option value="${dEsc(p)}">${dEsc(p)}</option>`).join('')
-      || '<option value="">không có app nào khớp</option>';
+  /* Package name go bang tay -> DOI CHIEU voi danh sach app tren may.
+   *
+   * Go sai mot chu thi khong bao gio thay event nao, va bao cao ra mot loat
+   * "Thieu" trong y het app hong thuc su. Noi ngay luc go re hon nhieu so voi
+   * de phat hien sau khi da bam het kich ban.
+   *
+   * Chi CANH BAO, khong chan: danh sach app co the chua nap (chua cam may),
+   * va chan thi nguoi dung ket ma khong hieu tai sao.
+   */
+  function checkPackage() {
+    const name = pkg.value.trim();
+    if (!name) { pkgInfo.textContent = ''; return; }
+    if (!allPackages.length) { pkgInfo.textContent = ''; return; }
+    pkgInfo.textContent = allPackages.includes(name)
+      ? '✓ có trên máy'
+      : '⚠ chưa thấy app này trên máy — kiểm lại tên package';
   }
 
   /* Do LIEN TUC: cam may luc nao la thay luc do, khong bat bam nut.
@@ -110,7 +120,7 @@ function initDevice({ device, pkg, pkgFilter, refresh, errorNode, info, pick,
 
   refresh.addEventListener('click', loadDevices);
   device.addEventListener('change', loadPackages);
-  pkgFilter.addEventListener('input', renderPackages);
+  pkg.addEventListener('input', checkPackage);
   return { loadDevices, startWatch, stopWatch };
 }
 

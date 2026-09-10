@@ -8,9 +8,10 @@
 const fs = require('fs');
 const dir = require('path').join(__dirname, '..', 'src', 'usv', 'web') + '/';
 
-function node() {
+let handlers_pkg = () => {};
+function node(tag) {
   return { innerHTML: '', textContent: '', value: '', hidden: false,
-           addEventListener() {} };
+           addEventListener(ev, fn) { if (tag === 'pkg') handlers_pkg = fn; } };
 }
 global.window = {};
 let ticker = null;
@@ -31,7 +32,7 @@ new Function(fs.readFileSync(dir + 'event-marks.js', 'utf8'))();
 new Function(fs.readFileSync(dir + 'event-api.js', 'utf8'))();
 new Function(fs.readFileSync(dir + 'event-device.js', 'utf8'))();
 
-const ui = { device: node(), pkg: node(), pkgFilter: node(), refresh: node(),
+const ui = { device: node(), pkg: node('pkg'), pkgInfo: node(), refresh: node(),
              errorNode: node(), info: node(), pick: node() };
 // <select> that: gan innerHTML co option thi value thanh option dau tien.
 Object.defineProperty(ui.device, 'innerHTML', {
@@ -75,5 +76,20 @@ const fail = (msg) => { console.log('SAI: ' + msg); process.exit(1); };
     fail(`rut may phai noi ra, dang la "${ui.info.textContent}"`);
   }
 
-  console.log('vong do may: dung ca 4 truong hop');
+  // 5. Doi chieu package name go bang tay
+  ui.pkg.value = 'com.a';
+  handlers_pkg();
+  if (!ui.pkgInfo.textContent.includes('có trên máy')) {
+    fail(`package dung phai xac nhan, dang la "${ui.pkgInfo.textContent}"`);
+  }
+  ui.pkg.value = 'com.a.go.sai';
+  handlers_pkg();
+  if (!ui.pkgInfo.textContent.includes('chưa thấy')) {
+    fail(`package sai phai canh bao, dang la "${ui.pkgInfo.textContent}"`);
+  }
+  ui.pkg.value = '';
+  handlers_pkg();
+  if (ui.pkgInfo.textContent !== '') fail('o rong thi khong noi gi');
+
+  console.log('vong do may + doi chieu package: dung ca 7 truong hop');
 })();

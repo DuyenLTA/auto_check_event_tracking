@@ -21,7 +21,7 @@ const ui = {
           errors: $('spec-errors'), preview: $('spec-preview') },
   specUrl: { input: $('spec-url'), btn: $('btn-spec-url'),
              info: $('spec-url-info') },
-  device: $('device'), pkg: $('package'), pkgFilter: $('pkg-filter'),
+  device: $('device'), pkg: $('package'), pkgInfo: $('package-info'),
   fromLaunch: $('from-launch'), quick: $('quick'),
   btnDevices: $('btn-devices'),
   deviceInfo: $('device-info'), devicePick: $('device-pick'),
@@ -183,7 +183,7 @@ ui.btnReset.addEventListener('click', async () => {
 });
 
 const deviceUi = initDevice({
-  device: ui.device, pkg: ui.pkg, pkgFilter: ui.pkgFilter,
+  device: ui.device, pkg: ui.pkg, pkgInfo: ui.pkgInfo,
   refresh: ui.btnDevices, errorNode: ui.spec.errors,
   info: ui.deviceInfo, pick: ui.devicePick,
 });

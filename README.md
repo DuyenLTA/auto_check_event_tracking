@@ -124,7 +124,7 @@ Lần đầu mất ~30 giây (tự tạo môi trường ảo + cài thư viện)
 Bốn bước trên giao diện:
 
 1. **Nạp spec**: dán link Confluence → *Đọc từ link*; hoặc mở phần dán tay. Hàng nào sai số cột thì báo kèm số dòng. Còn lỗi thì không cho Ghi.
-2. **Chọn máy và app** → *Bắt đầu ghi*. Tool tự bật log Firebase, tắt rồi mở lại app.
+2. **Dán package name** → *Bắt đầu ghi*. Máy thì tool tự nhận. Gõ sai tên package thì báo ngay tại chỗ, vì sai một chữ là report ra toàn `Thiếu` trông y hệt app hỏng thật. Tool tự bật log Firebase, tắt rồi mở lại app.
 3. **Thao tác trên máy** rồi bấm *Dừng ghi*.
 4. **Chấm** → xem report HTML.
 
