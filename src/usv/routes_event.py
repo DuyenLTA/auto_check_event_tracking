@@ -65,6 +65,24 @@ async def read_config() -> dict:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+async def _bo_phien_cu() -> None:
+    """Nap spec moi = lam lai tu dau, nen bo het ket qua cua phien truoc.
+
+    Bo ca `recording` chu khong chi `windows`/`run`: giu lai mot phien ghi da
+    dung thi stage ket o 'ready_to_check' - nut Ghi khoa, nut Cham mo, va
+    tester ket cung vi Reset se mat luon spec vua nap.
+
+    Con dang ghi thi phai KILL that: de treo thi process logcat cu doc song
+    song voi phien sau, hai ben an mat log cua nhau.
+    """
+    recording = state.recording
+    if recording is not None and not recording.stopped:
+        await logcat_stream.stop(recording)
+    state.recording = None
+    state.run = None
+    state.windows = ()
+
+
 @router.post("/event/spec")
 async def load_spec(request: SpecRequest) -> dict:
     """Dan bang spec -> parse -> tra ca events LAN errors cho bang preview.
@@ -74,9 +92,8 @@ async def load_spec(request: SpecRequest) -> dict:
     khong noi gi.
     """
     sheet = parse_paste(request.text)
+    await _bo_phien_cu()
     state.spec = sheet
-    state.run = None
-    state.windows = ()
     return {"stage": state.stage, **sheet.payload()}
 
 
@@ -101,9 +118,8 @@ async def load_spec_confluence(request: ConfluenceRequest) -> dict:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     sheet = parse_page(html)
+    await _bo_phien_cu()
     state.spec = sheet
-    state.run = None
-    state.windows = ()
     return {"stage": state.stage, "source": title, **sheet.payload()}
 
 

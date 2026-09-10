@@ -472,3 +472,45 @@ def test_trang_va_asset_bat_trinh_duyet_hoi_lai(client, path):
     va F5 khong hoi lai server. Da mat may luot debug vi tester chay ban JS cu
     trong khi ca hai cung soi code moi."""
     assert client.get(path).headers.get("cache-control") == "no-cache"
+
+
+def test_nap_spec_moi_thi_bo_luon_phien_ghi_cu(client, fake_adb, monkeypatch):
+    """Spec moi = lam lai tu dau. Giu lai phien ghi cu thi stage ket o
+    'ready_to_check': nut Ghi khoa, nut Cham mo, va tester ket cung - Reset thi
+    mat luon spec vua nap.
+
+    Da gap that: chay xong mot luot roi nap spec khac -> khong bam Ghi duoc nua.
+    """
+    client.post("/event/spec", json={"text": SPEC_TSV})
+    client.post("/event/record", json={"serial": "FAKE1", "package": "com.example.app"})
+    client.post("/event/stop")
+    assert client.get("/event/state").json()["stage"] == "ready_to_check"
+
+    client.post("/event/spec", json={"text": SPEC_TSV})
+    state = client.get("/event/state").json()
+    assert state["stage"] == "ready_to_record", "nap spec moi phai cho ghi lai"
+    assert state["recording"] is None
+
+
+def test_nap_spec_tu_link_cung_bo_phien_ghi_cu(client, fake_adb, monkeypatch):
+    """Hai duong nap spec phai hanh xu giong het nhau."""
+    monkeypatch.setattr(routes_event, "fetch_page",
+                        lambda url: ("T", CONFLUENCE_HTML))
+    client.post("/event/spec", json={"text": SPEC_TSV})
+    client.post("/event/record", json={"serial": "FAKE1", "package": "com.example.app"})
+    client.post("/event/stop")
+
+    client.post("/event/spec/confluence", json={"url": "https://x.vn/pages/1"})
+    assert client.get("/event/state").json()["stage"] == "ready_to_record"
+
+
+def test_dang_ghi_ma_nap_spec_moi_thi_dung_han_phien_cu(client, fake_adb):
+    """Khong dung han thi process logcat cu con treo, doc song song voi phien
+    sau va an mat log cua nhau."""
+    client.post("/event/spec", json={"text": SPEC_TSV})
+    client.post("/event/record", json={"serial": "FAKE1", "package": "com.example.app"})
+    assert client.get("/event/state").json()["stage"] == "recording"
+
+    client.post("/event/spec", json={"text": SPEC_TSV})
+    assert client.get("/event/state").json()["stage"] == "ready_to_record"
+    assert fake_adb.process.returncode is not None, "phai kill process logcat cu"
