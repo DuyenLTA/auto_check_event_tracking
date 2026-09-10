@@ -46,9 +46,8 @@ async def phai_co_app(adb, serial: str, package: str, *,
     raise HTTPException(status_code=400, detail=(
         f"May {serial} khong co app {package!r}. "
         + (f"Ý bạn là: {', '.join(gan)}? " if gan else "")
-        + "Nếu tên đúng mà máy không trả ra, hãy bỏ tick "
-          "\"Tắt và mở lại app trước khi ghi\" rồi tự mở app trên máy "
-          "sau khi bấm Ghi."))
+        + "Nếu tên đúng mà máy không trả ra, hãy bỏ tick \"Tool tự mở app\" "
+          "rồi tự mở app trên máy SAU khi bấm Ghi."))
 
 
 async def bo_phien_cu() -> None:

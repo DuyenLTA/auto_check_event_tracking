@@ -22,7 +22,7 @@ const ui = {
   specUrl: { input: $('spec-url'), btn: $('btn-spec-url'),
              info: $('spec-url-info') },
   device: $('device'), pkg: $('package'), pkgInfo: $('package-info'),
-  fromLaunch: $('from-launch'),
+  fromLaunch: $('from-launch'), launchHint: $('launch-hint'),
   btnDevices: $('btn-devices'),
   deviceInfo: $('device-info'), devicePick: $('device-pick'),
   btnRecord: $('btn-record'), recordInfo: $('record-info'),
@@ -49,6 +49,21 @@ function setStage(next) {
   ui.btnStop.disabled = !recording;
   ui.btnCheck.disabled = stage !== 'ready_to_check';
 }
+
+/* Noi ro AI mo app, theo dung trang thai o tick. Nhan tinh mo ta ca hai
+ * truong hop mot luc thi doc xong van khong biet minh dang o truong hop nao -
+ * nguoi dung da phai hoi lai. */
+function applyLaunchHint() {
+  ui.launchHint.innerHTML = ui.fromLaunch.checked
+    ? 'Tool tắt app rồi mở lại — bạn không phải chạm vào máy. Bắt được '
+      + '<code>first_open</code>, <code>session_start</code>, '
+      + '<code>placement_name=app_shortcut</code>.'
+    : '<b>Bạn tự mở app trên máy</b>, và phải mở <b>sau</b> khi bấm Ghi — log '
+      + 'Firebase chỉ bật được từ lần app khởi động sau đó. Dùng khi màn chỉ '
+      + 'hiện một lần, hoặc khi tool không tìm ra package.';
+}
+
+ui.fromLaunch.addEventListener('change', applyLaunchHint);
 
 /* --- buoc 1: spec --- */
 /* Nap xong (tu link hay dan tay deu vao day) -> dua vao trang thai app. */
@@ -94,7 +109,10 @@ ui.btnRecord.addEventListener('click', async () => {
                 () => { ui.btnRecord.disabled = false; });
   } catch (error) {
     ui.recordInfo.textContent = '';
-    fail(ui.spec.errors, error.message);
+    // Loi cua buoc GHI phai hien o buoc ghi. Truoc day day vao o loi cua buoc
+    // 1 (bang spec) - nguoi dung dang o buoc 2, bam Ghi khong thay gi, con
+    // loi thi nam tren cao co khi ngoai man hinh.
+    fail(ui.recordAlert, error.message);
     setStage(stage);
   }
 });
@@ -172,6 +190,7 @@ const deviceUi = initDevice({
   info: ui.deviceInfo, pick: ui.devicePick,
 });
 
+applyLaunchHint();   // thieu dong nay thi lan dau mo trang o goi y trong
 setStage('need_spec');
 // Tim may NGAY khi mo trang, khong doi nap spec: may cam san thi khong co ly
 // do bat nguoi dung bam them mot nut. Roi do tiep lien tuc - cam may luc nao

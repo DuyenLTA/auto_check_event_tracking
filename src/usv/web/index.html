@@ -57,12 +57,8 @@
     </div>
     <div class="row">
       <label class="check"><input type="checkbox" id="from-launch" checked>
-        Tắt và mở lại app trước khi ghi</label>
-      <span class="hint">Bật thì bắt được <code>first_open</code>,
-        <code>session_start</code>, <code>placement_name=app_shortcut</code>.
-        Tắt thì <b>bạn tự mở app</b> — cần khi màn chỉ hiện một lần, hoặc khi
-        tool không tìm ra package. Mở <b>sau</b> khi bấm Ghi: log Firebase chỉ
-        bật được từ lần app khởi động sau đó.</span>
+        <b>Tool tự mở app</b> (tắt app rồi mở lại)</label>
+      <span class="hint" id="launch-hint"></span>
     </div>
     <div class="row">
       <button id="btn-record" class="primary" disabled>Bắt đầu ghi</button>

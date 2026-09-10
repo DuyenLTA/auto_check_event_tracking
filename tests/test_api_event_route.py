@@ -573,3 +573,16 @@ def test_loi_chi_ra_cach_tu_mo_tay(client, fake_adb):
     detail = client.post("/event/record", json={
         "serial": "FAKE1", "package": "com.khong.he.co"}).json()["detail"]
     assert "tự mở" in detail or "bỏ tick" in detail.lower(), detail
+
+
+def test_loi_nhac_dung_ten_o_tick_dang_hien(client, fake_adb):
+    """Bao loi phai goi dung ten o tick tren trang. Doi nhan ma quen sua thong
+    bao thi nguoi dung di tim mot o khong con ten do."""
+    from pathlib import Path
+    html = (Path(__file__).parent.parent / "src" / "usv" / "web"
+            / "index.html").read_text(encoding="utf-8")
+    client.post("/event/spec", json={"text": SPEC_TSV})
+    detail = client.post("/event/record", json={
+        "serial": "FAKE1", "package": "com.khong.he.co"}).json()["detail"]
+    ten = detail.split('"')[1]
+    assert ten in html, f"thong bao nhac o tick {ten!r} ma trang khong co"
