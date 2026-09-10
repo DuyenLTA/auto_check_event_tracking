@@ -204,3 +204,19 @@ def test_callout_stream_dut_xuat_hien():
 
 def test_khong_dut_thi_khong_co_callout_do():
     assert "đứt giữa đường" not in HTML
+
+
+def test_ten_event_khong_lap_lai_o_dong_param():
+    """Spec 2 event ma bang 5 dong (2 dong event + 3 dong param) - lap ten
+    event o moi dong thi doc vao tuong 5 event, va nguoi doc di hoi "5 event o
+    dau ra". Chi in ten o dong DAU cua moi event."""
+    page = _build()
+    assert page.count("<code>rating_star_clicked</code>") == 1, (
+        "ten event chi duoc in mot lan cho ca nhom dong cua no")
+    assert page.count("<code>rating_placement_viewed</code>") == 1
+
+
+def test_bao_cao_noi_ro_bao_nhieu_event_va_bao_nhieu_muc_kiem():
+    """Con so dau tien nguoi doc thay phai la SO EVENT, khong phai so dong."""
+    page = _build()
+    assert "2 event trong spec" in page

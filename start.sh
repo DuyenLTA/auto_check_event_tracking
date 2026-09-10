@@ -117,6 +117,14 @@ if [ "${USV_NO_BROWSER:-0}" != "1" ]; then
   ) >/dev/null 2>&1 &
 fi
 
+# --reload: sua code Python la server tu nap lai.
+#
+# Bat buoc phai co. File JS/HTML duoc doc lai tu dia moi request nen F5 la thay
+# ngay, con module Python thi CHI NAP MOT LAN luc khoi dong. Sua code roi bao
+# nguoi dung F5 thi ho chay backend cu ma khong biet, va di bao mot bug da sua
+# roi - da mat mot luot dung nhu vay.
+#
 # Chi bind 127.0.0.1: cong cu noi bo, khong co auth, dieu khien duoc adb ->
 # KHONG duoc expose ra LAN. main.py con co middleware chan thu hai.
-"$VPY" -m uvicorn usv.main:app --host 127.0.0.1 --port "$FREE_PORT"
+"$VPY" -m uvicorn usv.main:app --host 127.0.0.1 --port "$FREE_PORT" \
+  --reload --reload-dir src

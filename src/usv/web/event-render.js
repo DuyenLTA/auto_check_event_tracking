@@ -46,6 +46,13 @@ function renderSummary(node, data) {
     .map(([cls, text]) => `<span class="tag ${cls}">${esc(text)}</span>`)
     .join('')}</div>`;
 
+  // Noi ro con so nao la EVENT, con so nao la dong kiem. Spec 2 event ra 5
+  // dong (2 dong event + 3 dong param) thi de tuong la 5 event.
+  if (data.spec_event_count) {
+    html += `<p class="hint">${data.spec_event_count} event trong spec · `
+      + `${s.total_checked ?? 0} mục đã kiểm (mỗi param là một mục riêng).</p>`;
+  }
+
   if (data.quick) {
     html += '<div class="alert warn"><b>Chế độ nhanh:</b> chỉ kết luận event có '
       + 'bắn và param đúng hay không — <b>không</b> kết luận bắn đúng lúc. '

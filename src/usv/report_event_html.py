@@ -46,16 +46,24 @@ def _triggered_of(spec: SpecSheet) -> dict[str, str]:
     return {e.name: e.triggered for e in spec.events}
 
 
-def _row(item: CheckResult, triggered: dict[str, str]) -> str:
+def _row(item: CheckResult, triggered: dict[str, str],
+         *, show_event: bool = True) -> str:
+    """Mot dong bang. `show_event=False` -> de trong o Event.
+
+    Spec 2 event nhung bang co 5 dong (2 dong event + 3 dong param). Lap ten
+    event o moi dong thi doc vao tuong 5 event - da co nguoi doc bao cao roi
+    hoi "5 event o dau ra". In ten o dong DAU cua moi event la du.
+    """
     event, param = _split_element(item.element)
     base = event.split(" (")[0]
     cls = _status_class(item.verdict)
     note = item.delta or item.message
     return (
         f"<tr{' class=\"row-fail\"' if cls == 'fail' else ''}>"
-        f"<td class='cell-ev'><code>{esc(event)}</code>"
-        f"<span class='trig'>{esc(triggered.get(base, ''))}</span></td>"
-        f"<td class='cell-mono'>{esc(param)}</td>"
+        + (f"<td class='cell-ev'><code>{esc(event)}</code>"
+           f"<span class='trig'>{esc(triggered.get(base, ''))}</span></td>"
+           if show_event else "<td class='cell-ev'></td>")
+        + f"<td class='cell-mono'>{esc(param)}</td>"
         f"<td class='cell-mono cell-want'>{esc(item.expected or '—')}</td>"
         f"<td class='cell-mono'>{esc(item.actual or '—')}</td>"
         f"<td><span class='status {cls}'><span class='dot'></span>"
@@ -70,7 +78,20 @@ def _section(name: str, rows: list[CheckResult], triggered: dict[str, str]) -> t
     ok = sum(1 for r in checked if r.verdict is Verdict.PASS)
     level = ("fail" if any(r.verdict in FAIL_VERDICTS for r in rows)
              else "pass" if checked and ok == len(checked) else "pending")
-    body = "".join(_row(r, triggered) for r in rows)
+    # Xep lai theo EVENT roi moi den param cua no, giu thu tu event nhu ban
+    # dau. Truoc day sap theo loai check nen dong presence cua ca hai event
+    # nam canh nhau roi moi den cac dong param - doc kieu do phai nhay mat len
+    # xuong de biet param nao cua event nao.
+    nhom: dict[str, list[CheckResult]] = {}
+    for item in rows:
+        nhom.setdefault(_split_element(item.element)[0], []).append(item)
+    parts = []
+    for ten, cua_event in nhom.items():
+        # Dong khong co param (kiem event co ban khong) len truoc.
+        cua_event.sort(key=lambda r: _split_element(r.element)[1] != "—")
+        for thu_tu, item in enumerate(cua_event):
+            parts.append(_row(item, triggered, show_event=thu_tu == 0))
+    body = "".join(parts)
     # Mau so 0 nghia la ca man CHUA test dong nao. In "0/0 khop" thi nguoi doc
     # khong hieu gi; noi thang "chua test" moi dung viec da xay ra.
     if not checked:
@@ -130,7 +151,8 @@ def build(spec: SpecSheet, results: list[CheckResult], summary: Summary, *,
   <header class="report-head">
     <p class="eyebrow">Event Tracking · Firebase Analytics</p>
     <h1>Event Tracking Diff</h1>
-    <p class="meta">{esc(package)} · {event_count} event đọc từ logcat · tag FA-SVC
+    <p class="meta">{esc(package)} · <b>{len(spec.events)} event trong spec</b>
+      · {checked} mục đã kiểm · {event_count} event đọc được từ logcat
       {f'· {esc(generated_at)}' if generated_at else ''}</p>
     <div class="scorecard">
       <div class="score-row"><span class="score-num">{summary.passed}</span>

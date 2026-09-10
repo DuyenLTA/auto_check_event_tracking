@@ -51,6 +51,10 @@ async def run_check() -> dict:
     return {
         "stage": state.stage,
         "quick": state.quick,
+        # So EVENT trong spec, tach khoi so DONG kiem: spec 2 event co the ra
+        # 5 dong (2 dong event + 3 dong param), va nguoi doc dem dong roi hoi
+        # "5 event o dau ra".
+        "spec_event_count": len(state.spec.events),
         "summary": summary.payload(),
         "fa_silent": fa_silent,
         "stream_died": stream_died,
