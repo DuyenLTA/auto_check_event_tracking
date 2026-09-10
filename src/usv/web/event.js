@@ -13,6 +13,7 @@ const { renderPreview, renderSummary, renderResults } = window.USV_RENDER;
 const { api, post, fail } = window.USV_API;
 const { initDevice } = window.USV_DEVICE;
 const { initSpec } = window.USV_SPEC;
+const { initArtifact } = window.USV_ARTIFACT;
 const watch = window.USV_PROGRESS;
 const $ = (id) => document.getElementById(id);
 
@@ -48,39 +49,6 @@ function setStage(next) {
   ui.btnRecord.disabled = stage !== 'ready_to_record';
   ui.btnStop.disabled = !recording;
   ui.btnCheck.disabled = stage !== 'ready_to_check';
-}
-
-/* Link artifact: bao cao da publish len claude.ai, bam la di luon.
- *
- * Tool KHONG publish duoc (chay o 127.0.0.1). URL thi CO DINH nen chi can
- * biet mot lan. Nhung PHAI noi ro artifact dang la luot nao: gui cho team mot
- * bao cao cu ma tuong moi la kieu sai im lang.
- */
-async function showArtifact() {
-  let data;
-  try {
-    data = await api('/event/artifact');
-  } catch (error) {
-    return;                       // tien nghi thoi, khong lam sap gi
-  }
-  if (!data.url) {
-    ui.linkArtifact.hidden = true;
-    ui.artifactInfo.textContent = '';
-    return;
-  }
-  ui.linkArtifact.href = data.url;
-  ui.linkArtifact.hidden = false;
-  // Chua cham luot nao thi KHONG bao "luot cu": khong co gi de so, va bao
-  // vay lam nguoi doc tuong artifact da lac hau so voi mot luot nao do.
-  if (!data.run_generated_at) {
-    ui.artifactInfo.textContent = `artifact: lượt ${data.generated_at || '?'}`;
-  } else if (data.khop) {
-    ui.artifactInfo.textContent = 'artifact = lượt này';
-  } else {
-    ui.artifactInfo.innerHTML = '<b>artifact là lượt cũ</b> ('
-      + escapeHtml(data.generated_at || '?')
-      + ') — xem report local cho lượt vừa chấm';
-  }
 }
 
 /* --- buoc 1: spec --- */
@@ -181,7 +149,7 @@ ui.btnCheck.addEventListener('click', async () => {
     renderSummary(ui.summary, data);
     renderResults(ui.results, data.results || []);
     ui.linkReport.hidden = false;
-    showArtifact();
+    artifactUi.show();
     setStage(data.stage);
   } catch (error) {
     fail(ui.summary, error.message);
@@ -200,11 +168,14 @@ ui.btnReset.addEventListener('click', async () => {
   ui.summary.innerHTML = ''; ui.results.innerHTML = '';
   ui.marks.innerHTML = ''; ui.progress.textContent = '';
   ui.linkReport.hidden = true;
-  ui.linkArtifact.hidden = true;
-  ui.artifactInfo.textContent = '';
+  artifactUi.clear();
   setStage('need_spec');
   deviceUi.loadDevices();       // may co the da doi giua chung
   deviceUi.startWatch();
+});
+
+const artifactUi = initArtifact({
+  link: ui.linkArtifact, info: ui.artifactInfo,
 });
 
 const deviceUi = initDevice({
