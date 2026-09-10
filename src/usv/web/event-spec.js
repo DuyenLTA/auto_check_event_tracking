@@ -6,7 +6,7 @@
  */
 'use strict';
 
-/* Boc IIFE de khong ro ten ra pham vi toan cuc - xem event-marks.js. */
+/* Boc IIFE de khong ro ten ra pham vi toan cuc - xem event-api.js. */
 (() => {
 
 const { post: sPost, fail: sFail } = window.USV_API;

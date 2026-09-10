@@ -119,3 +119,49 @@ def test_report_binh_thuong_khong_co_canh_bao_do():
     results, summary = event_check_runner.run(spec, windows, CONFIG)
     page = report_event_html.build(spec, results, summary, quick=False)
     assert "Chạy ở chế độ nhanh" not in page
+
+
+# --- ban trung: khong fail, nhung PHAI in ra so lan ---
+
+def test_ban_nhieu_lan_van_pass_nhung_in_ro_so_lan():
+    """Bo panel danh dau roi thi khong con bien buoc de bat ban trung.
+
+    Van khong duoc cham fail - mot phien dai vao ra cung mot man thi event do
+    ban lai la dung. Nhung im lang thi mot event ban 5 lan trong y het ban 1
+    lan, va tester biet ro minh chi vao man do MOT lan cung khong co gi de
+    nghi ngo. Nen so lan phai nam trong cot "App gui".
+    """
+    from usv import event_check_runner
+    from usv.event_spec_parse import parse_paste
+
+    spec = parse_paste(SPEC_TSV)
+    quick = CONFIG.with_option("event_presence", "duplicate", False)
+    # Vao ra man rating hai lan -> event do ban hai lan. Fixture that chi co
+    # mot lan moi event nen phai nhan doi o day.
+    hai_lan = [e for e in EVENTS if e.name == "rating_star_clicked"]
+    assert len(hai_lan) == 1, "fixture doi roi, xem lai test nay"
+    windows = whole_session(("rating_star_clicked",), EVENTS + hai_lan)
+    results, summary = event_check_runner.run(spec, windows, quick)
+
+    ban = [r for r in results if r.check == "event_presence"
+           and "lần:" in (r.actual or "")]
+    assert ban, "khong dong nao in so lan ban"
+    for muc in ban:
+        assert muc.verdict is Verdict.PASS, "ban trung khong duoc cham fail"
+    assert summary.failed == 0, summary.payload()
+
+
+def test_ban_dung_mot_lan_thi_khong_bia_them_so_lan():
+    """Chi noi so lan khi that su nhieu hon mot - khong thi moi dong deu dai ra."""
+    from usv import event_check_runner
+    from usv.event_spec_parse import parse_paste
+
+    spec = parse_paste(SPEC_TSV)
+    quick = CONFIG.with_option("event_presence", "duplicate", False)
+    mot_lan = [e for e in EVENTS if e.name == "rating_star_clicked"][:1]
+    windows = whole_session(("rating_star_clicked",), mot_lan)
+    results, _ = event_check_runner.run(spec, windows, quick)
+    muc = next(r for r in results if r.check == "event_presence"
+               and r.element.startswith("rating_star_clicked"))
+    assert muc.verdict is Verdict.PASS
+    assert "lần:" not in (muc.actual or ""), muc.actual

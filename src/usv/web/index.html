@@ -65,22 +65,13 @@
     </div>
   </section>
 
-  <section class="step" id="step-mark">
+  <section class="step" id="step-record">
     <h2><span class="num">3</span> Thao tác trên máy</h2>
-    <p class="hint"><b>Không cần bấm nút nào ở đây.</b> Cứ thao tác trên máy cho
-      app bắn hết các event trong spec rồi bấm <b>Dừng ghi</b> — tool vẫn kết luận
-      event <b>có bắn</b> và param đúng hay không.</p>
-    <p class="hint">Các nút dưới là <b>tuỳ chọn</b>: bấm nút của bước <b>sắp</b> làm
-      rồi mới thao tác thì tool kiểm thêm được <b>bắn trùng trong một bước</b>.
-      Event bắn ngoài bước đã đánh dấu — hay gặp nhất là event bắn ngay lúc mở
-      app, trước cả khi kịp bấm mốc — sẽ ghi <b>chưa kết luận</b>, không tính là
-      lỗi app.</p>
+    <p class="hint">Thao tác trên máy cho app bắn hết các event trong spec, rồi
+      bấm <b>Dừng ghi</b>. Không phải bấm gì khác ở đây.</p>
     <div class="row">
-      <input id="mark-filter" placeholder="lọc event" size="28">
-      <span id="mark-progress" class="info"></span>
       <button id="btn-stop" disabled>Dừng ghi</button>
     </div>
-    <div id="marks"></div>
   </section>
 
   <section class="step" id="step-check">
@@ -95,7 +86,6 @@
     <div id="results"></div>
   </section>
 </div>
-<script src="/static/event-marks.js"></script>
 <script src="/static/event-api.js"></script>
 <script src="/static/event-device.js"></script>
 <script src="/static/event-spec.js"></script>

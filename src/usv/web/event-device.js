@@ -5,11 +5,11 @@
  */
 'use strict';
 
-/* Boc IIFE de khong ro ten ra pham vi toan cuc - xem event-marks.js. */
+/* Boc IIFE de khong ro ten ra pham vi toan cuc - xem event-api.js. */
 (() => {
 
 const { api: dApi, fail: dFail } = window.USV_API;
-const { escapeHtml: dEsc } = window.USV_MARKS;
+const { escapeHtml: dEsc } = window.USV_API;
 
 function initDevice({ device, pkg, pkgInfo, refresh, errorNode, info, pick,
                      onReady }) {

@@ -38,14 +38,22 @@ def test_test_nay_bat_duoc_id_go_sai():
     assert 'id="khong-ton-tai"' not in HTML
 
 
-def test_khong_con_dem_buoc_khi_chua_danh_dau_gi():
-    """Danh dau la tuy chon. In "0/2 buoc — con 2" ngay tu dau lam nguoi dung
-    tuong con viec phai lam, va bam het kich ban roi van thay 0/2 thi tuong
-    tool khong ghi nhan gi."""
-    js = (WEB / "event-marks.js").read_text(encoding="utf-8")
-    assert "if (!total || !hit) return '';" in js, (
-        "chua bam moc nao thi markProgress phai tra chuoi rong")
-    assert "bước — còn" not in js, "nhan cu ('N/M bước') gay hieu nham"
+def test_khong_con_panel_danh_dau_tung_buoc():
+    """Bo panel roi thi khong duoc con nua vet nao.
+
+    Moc do TESTER bam con event do APP ban, hai cai khong dong bo duoc: app bat
+    man daily checkin ngay luc mo thi event ban truoc moc dau tien, va cung mot
+    app cho "1 pass 1 fail" khi bam moc, "2 pass" khi khong bam. De lai mot
+    nua - vi du trang khong con nut ma event.js van goi /event/mark - thi
+    client va server hieu khac nhau, kieu loi im lang nhat.
+    """
+    assert not (WEB / "event-marks.js").exists(), "file panel phai bi xoa han"
+    for ten in ("mark-filter", "mark-progress", "marks", "step-mark"):
+        assert f'id="{ten}"' not in HTML, f"index.html con o {ten}"
+    for path in JS_FILES:
+        js = path.read_text(encoding="utf-8")
+        assert "/event/mark" not in js, f"{path.name} con goi /event/mark"
+        assert "renderMarks" not in js, f"{path.name} con goi renderMarks"
 
 
 
@@ -79,7 +87,7 @@ def test_khong_con_nhan_khong_khai_man_o_dau():
     Nhan "Khong khai man — 0/2" noi ve chinh cai bang spec chu khong noi gi ve
     app, va 0/2 thi trung lap voi phan tong ket. Da bi hoi hai lan.
     """
-    for f in ["event-marks.js", "event-render.js", "event.js"]:
+    for f in ["event-render.js", "event.js"]:
         js = (WEB / f).read_text(encoding="utf-8")
         assert "Không khai màn'" not in js and 'Không khai màn"' not in js, f
     html = (WEB / "index.html").read_text(encoding="utf-8")

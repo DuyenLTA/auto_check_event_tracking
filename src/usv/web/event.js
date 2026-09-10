@@ -1,16 +1,21 @@
-/* Luong: dan spec -> chon may/app -> Ghi -> danh dau tung buoc -> Dung -> Cham.
+/* Luong: nap spec -> chon may/app -> Ghi -> thao tac tren may -> Dung -> Cham.
  *
  * KHONG cho Ghi khi spec con loi. Spec sai thi bao cao sai, va sai am tham -
  * day la ly do bang preview la buoc bat buoc chu khong phai tien nghi.
+ *
+ * KHONG con panel danh dau tung buoc. No cat log thanh cua so theo moc TESTER
+ * bam, ma event thi APP ban - hai cai khong dong bo duoc. Da gap that: app bat
+ * man daily checkin ngay luc mo, event ban truoc moc dau tien 5 giay, va cung
+ * mot app cho ra "1 pass 1 fail" khi co bam moc va "2 pass" khi khong bam.
+ * Mot verdict doi theo thu tu bam nut thi khong dung duoc.
  */
 'use strict';
 
-/* Boc IIFE de khong ro ten ra pham vi toan cuc - xem event-marks.js. */
+/* Boc IIFE de khong ro ten ra pham vi toan cuc - xem event-api.js. */
 (() => {
 
-const { renderMarks, markProgress, escapeHtml } = window.USV_MARKS;
 const { renderPreview, renderSummary, renderResults } = window.USV_RENDER;
-const { api, post, fail } = window.USV_API;
+const { post, fail, escapeHtml } = window.USV_API;
 const { initDevice } = window.USV_DEVICE;
 const { initSpec } = window.USV_SPEC;
 const { initArtifact } = window.USV_ARTIFACT;
@@ -27,22 +32,19 @@ const ui = {
   deviceInfo: $('device-info'), devicePick: $('device-pick'),
   btnRecord: $('btn-record'), recordInfo: $('record-info'),
   recordAlert: $('record-alert'),
-  markFilter: $('mark-filter'), marks: $('marks'), progress: $('mark-progress'),
   btnStop: $('btn-stop'), btnCheck: $('btn-check'), btnReset: $('btn-reset'),
   summary: $('summary'), results: $('results'),
   linkReport: $('link-report'), linkArtifact: $('link-artifact'),
-  steps: { mark: $('step-mark'), check: $('step-check') },
+  steps: { record: $('step-record'), check: $('step-check') },
 };
 
 let events = [];              // event trong spec
-const done = new Set();       // event da bam moc
-let current = null;
 let stage = 'need_spec';
 
 function setStage(next) {
   stage = next;
   const recording = stage === 'recording';
-  ui.steps.mark.setAttribute('aria-disabled', !recording);
+  ui.steps.record.setAttribute('aria-disabled', !recording);
   ui.steps.check.setAttribute('aria-disabled',
     !['ready_to_check', 'done'].includes(stage));
   ui.btnRecord.disabled = stage !== 'ready_to_record';
@@ -54,15 +56,12 @@ function setStage(next) {
 /* Nap xong (tu link hay dan tay deu vao day) -> dua vao trang thai app. */
 function applySpec(data, info) {
   events = data.events || [];
-  done.clear();
-  current = null;
   info.textContent = `${data.event_count} event · ${data.param_count} param`;
   if (data.errors?.length) {
     ui.spec.errors.innerHTML = '<div class="alert"><b>Bảng chưa đọc được:</b><ul>'
       + data.errors.map((e) => `<li>${escapeHtml(e)}</li>`).join('') + '</ul></div>';
   }
   renderPreview(ui.spec.preview, events);
-  renderMarkPanel();
   setStage(data.stage);
 }
 
@@ -104,36 +103,15 @@ ui.btnRecord.addEventListener('click', async () => {
   }
 });
 
-/* --- buoc 3: danh dau --- */
-function renderMarkPanel() {
-  renderMarks(ui.marks, events, {
-    filter: ui.markFilter.value, done, current, onMark: sendMark,
-  });
-  ui.progress.textContent = markProgress(events, done);
-}
-
-async function sendMark(event) {
-  try {
-    await post('/event/mark', { spec_event: event.name, note: event.triggered });
-    done.add(event.name);
-    current = event.name;
-    renderMarkPanel();
-  } catch (error) {
-    fail(ui.spec.errors, error.message);
-  }
-}
-
-ui.markFilter.addEventListener('input', renderMarkPanel);
-
+/* --- buoc 3: dung ghi --- */
 ui.btnStop.addEventListener('click', async () => {
   ui.btnStop.disabled = true;
   watch.stop();
   deviceUi.startWatch();
   try {
     const data = await post('/event/stop');
-    ui.recordInfo.textContent = data.quick
-      ? `đã dừng — đọc được ${data.event_count} event trong cả phiên`
-      : `đã dừng — ${data.event_count} event, ${data.window_count} bước đã đánh dấu`;
+    ui.recordInfo.textContent =
+      `đã dừng — đọc được ${data.event_count} event trong cả phiên`;
     setStage(data.stage);
   } catch (error) {
     fail(ui.spec.errors, error.message);
@@ -160,13 +138,12 @@ ui.btnCheck.addEventListener('click', async () => {
 ui.btnReset.addEventListener('click', async () => {
   watch.stop();                 // khong tat thi no con poll va ghi de len o info
   await post('/event/reset').catch(() => {});
-  events = []; done.clear(); current = null;
+  events = [];
   ui.spec.preview.innerHTML = ''; ui.spec.errors.innerHTML = '';
   ui.spec.info.textContent = ''; ui.recordInfo.textContent = '';
   ui.specUrl.info.textContent = '';
   ui.recordAlert.innerHTML = '';
   ui.summary.innerHTML = ''; ui.results.innerHTML = '';
-  ui.marks.innerHTML = ''; ui.progress.textContent = '';
   artifactUi.clear();
   setStage('need_spec');
   deviceUi.loadDevices();       // may co the da doi giua chung

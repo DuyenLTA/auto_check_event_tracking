@@ -132,6 +132,22 @@ def run(spec: SpecSheet, windows: tuple[Window, ...], config,
                 ))
                 continue
 
+            if len(hits) > 1:
+                # Den day nghia la check ban trung dang TAT. Van PASS - mot
+                # phien dai vao ra cung mot man thi event do ban lai la dung,
+                # bao fail la bao oan. Nhung phai IN RA so lan: khong thi mot
+                # event ban 5 lan trong nhung y het ban 1 lan, va tester biet
+                # ro minh chi vao man do mot lan cung khong co gi de nghi ngo.
+                out.append(CheckResult(
+                    element=label, check="event_presence", verdict=Verdict.PASS,
+                    expected="event được bắn ra",
+                    actual=f"bắn {len(hits)} lần: {_gio(hits)}",
+                    message=(f"Event có bắn. Nó bắn {len(hits)} lần trong phiên "
+                             "này — đúng nếu bạn vào ra màn đó nhiều lần, còn "
+                             "nếu chỉ vào một lần thì app đang bắn trùng."),
+                ))
+                continue
+
             out.append(CheckResult(
                 element=label, check="event_presence", verdict=Verdict.PASS,
                 expected="event được bắn ra", actual=f"bắn lúc {hits[0].timestamp}",
@@ -145,6 +161,14 @@ def run(spec: SpecSheet, windows: tuple[Window, ...], config,
 MAX_STAMP = 3
 
 
+def _gio(events) -> str:
+    """Chuoi gio, cat bot khi qua dai."""
+    stamps = [e.timestamp for e in events]
+    if len(stamps) > MAX_STAMP:
+        return ", ".join(stamps[:MAX_STAMP]) + f" (và {len(stamps) - MAX_STAMP} lần nữa)"
+    return ", ".join(stamps)
+
+
 def _ngoai_cua_so(name: str, session_events) -> str:
     """Gio ma event ban trong CA PHIEN, khi cua so cua no khong chua lan nao.
 
@@ -155,13 +179,9 @@ def _ngoai_cua_so(name: str, session_events) -> str:
     thi cung app do PASS. Mot ket qua doi theo THU TU BAM NUT thi khong dung
     duoc, nen o day tra "chua ket luan" chu khong tra fail.
     """
-    stamps = [e.timestamp for e in session_events
-              if e.name == name and getattr(e, "from_app", True)]
-    if not stamps:
-        return ""
-    if len(stamps) > MAX_STAMP:
-        return ", ".join(stamps[:MAX_STAMP]) + f" (và {len(stamps) - MAX_STAMP} lần nữa)"
-    return ", ".join(stamps)
+    hits = [e for e in session_events
+            if e.name == name and getattr(e, "from_app", True)]
+    return _gio(hits) if hits else ""
 
 
 def _label(name: str, window: Window, total: int) -> str:

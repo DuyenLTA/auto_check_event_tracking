@@ -33,7 +33,7 @@ global.fetch = async () => ({ ok: true, json: async () => ({ devices: [] }) });
 global.setInterval = () => 0;
 global.clearInterval = () => {};
 
-const order = ['event-marks.js', 'event-api.js', 'event-device.js',
+const order = ['event-api.js', 'event-device.js',
                'event-spec.js', 'event-artifact.js', 'event-progress.js', 'event-render.js', 'event.js'];
 // MOT context dung chung cho ca 7 file - y het trinh duyet nap <script> thuong.
 // Bo moi file vao mot new Function() rieng thi moi file co pham vi rieng, va

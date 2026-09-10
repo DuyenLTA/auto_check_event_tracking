@@ -79,8 +79,10 @@ def _callouts(results: list[CheckResult], fa_silent: bool,
             "<p>Không đánh dấu từng bước, nên báo cáo này <b>chỉ</b> kết luận "
             "event có bắn ra trong cả phiên và param có đúng hay không. Nó "
             "<b>không</b> kết luận event bắn đúng lúc — không có biên bước thì "
-            "không có gì để so. Kiểm bắn trùng cũng đã tắt, vì một phiên dài vào "
-            "ra cùng một màn thì event đó bắn lại là đúng.</p></div>")
+            "không có gì để so. Bắn trùng cũng không bị chấm fail, vì một phiên "
+            "dài vào ra cùng một màn thì event đó bắn lại là đúng — nhưng cột "
+            "<i>App gửi</i> có in số lần bắn, tự đối chiếu với số lần bạn thật "
+            "sự vào màn đó.</p></div>")
     if fa_silent:
         out.append(
             "<div class='callout alarm'><h3>Không đọc được log Firebase</h3>"

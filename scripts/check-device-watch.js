@@ -28,7 +28,6 @@ global.fetch = async (url) => ({
   },
 });
 
-new Function(fs.readFileSync(dir + 'event-marks.js', 'utf8'))();
 new Function(fs.readFileSync(dir + 'event-api.js', 'utf8'))();
 new Function(fs.readFileSync(dir + 'event-device.js', 'utf8'))();
 

@@ -18,7 +18,7 @@ import pytest
 from usv import logcat_stream, routes_event
 
 # Thu tu nap co y nghia: event.js dung window.USV_* cua cac file truoc no.
-JS_FILES = ("event-marks.js", "event-api.js", "event-device.js",
+JS_FILES = ("event-api.js", "event-device.js",
             "event-spec.js", "event-artifact.js", "event-progress.js", "event-render.js", "event.js")
 
 FIXTURES = Path(__file__).parent / "fixtures"

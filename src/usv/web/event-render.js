@@ -6,10 +6,10 @@
  */
 'use strict';
 
-/* Boc IIFE de khong ro ten ra pham vi toan cuc - xem event-marks.js. */
+/* Boc IIFE de khong ro ten ra pham vi toan cuc - xem event-api.js. */
 (() => {
 
-const { escapeHtml: esc } = window.USV_MARKS;
+const { escapeHtml: esc } = window.USV_API;
 
 /* Mot event nhieu param -> nhieu hang, chi hang dau in ten event. */
 function renderPreview(node, list) {
