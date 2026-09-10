@@ -36,6 +36,9 @@ class Recording:
     # luc dung. Chua tung thay -> event bat duoc la cua app KHAC, xem
     # checks/event_presence.py.
     app_seen: bool = False
+    # App dang o foreground luc Dung ghi, chi ghi khi app_seen=False. De bao
+    # cao chi thang ten dung cho tester thay vi de ho tu do lai bang mat.
+    foreground: str = ""
     # stop() da duoc goi -> EOF sap toi la CO Y, khong phai dut.
     stopping: bool = False
 
@@ -67,4 +70,5 @@ class Recording:
                 "line_count": len(self.lines), "marks": list(self.marks),
                 "stopped": self.stopped, "fa_silent": self.fa_silent,
                 "stream_died": self.stream_died,
-                "app_seen": self.app_seen}
+                "app_seen": self.app_seen,
+                "foreground": self.foreground}

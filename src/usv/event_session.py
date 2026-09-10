@@ -38,12 +38,25 @@ async def co_the_tu_mo(adb, serial: str, package: str) -> tuple[bool, str]:
                        "trên máy BÂY GIỜ.")
     if package in installed:
         return True, ""
+    # App DANG MO tren may la goi y manh hon nhieu so voi so khop chuoi: no la
+    # su that quan sat duoc, con so khop chi la phong doan. Da gap that: dan
+    # 'com.ai.aiimage.aivideo.generator' trong khi may co
+    # 'com.ai.aiimage.aivideogenerator' - sai mot dau cham.
+    try:
+        dang_mo = await adb.foreground_package(serial)
+    except AdbError:
+        dang_mo = None
     gan = get_close_matches(package, installed, n=3, cutoff=0.6)
+    goi_y = ""
+    if dang_mo and dang_mo != package and dang_mo in installed:
+        goi_y = f"Máy đang mở {dang_mo!r} — có phải bạn muốn dán tên này? "
+    elif gan:
+        goi_y = f"Ý bạn là: {', '.join(gan)}? "
     return False, (
-        f"Máy không có app {package!r} nên tool không tự mở. "
-        + (f"Ý bạn là: {', '.join(gan)}? " if gan else "")
-        + "Nếu tên đúng thì hãy tự MỞ APP trên máy BÂY GIỜ — phiên ghi đã bắt "
-          "đầu nên vẫn bắt được event từ lúc mở.")
+        f"Máy không có app {package!r} nên tool không tự mở. " + goi_y
+        + "Sai tên thì cả phiên sẽ KHÔNG kết luận được gì. Nếu tên đúng thì "
+          "hãy tự MỞ APP trên máy BÂY GIỜ — phiên ghi đã bắt đầu nên vẫn bắt "
+          "được event từ lúc mở.")
 
 
 async def bo_phien_cu() -> None:

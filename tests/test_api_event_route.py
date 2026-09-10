@@ -85,6 +85,11 @@ class FakeAdb:
         self.calls.append("force_stop")
         return None
 
+    foreground: str | None = None
+
+    async def foreground_package(self, serial):
+        return self.foreground
+
     async def app_running(self, serial, package):
         # App gia "dang chay" khi no co trong danh sach cai dat - du de phan
         # biet hai ca: app that va app go sai ten.
@@ -574,3 +579,19 @@ def test_stream_mo_TRUOC_khi_mo_app(client, fake_adb):
     calls = fake_adb.calls
     assert calls.index("spawn") < calls.index("launch")
     assert calls.index("clear") < calls.index("spawn")
+
+
+def test_goi_y_app_DANG_MO_khi_dan_sai_ten(client, fake_adb):
+    """App dang mo la su that quan sat duoc, manh hon so khop chuoi.
+
+    Da gap that: dan 'com.ai.aiimage.aivideo.generator' trong khi may co
+    'com.ai.aiimage.aivideogenerator' - thua mot dau cham, va ca phien ghi
+    khong ket luan duoc gi.
+    """
+    fake_adb.foreground = "com.other.app"
+    client.post("/event/spec", json={"text": SPEC_TSV})
+    body = client.post("/event/record", json={"serial": "FAKE1",
+                                              "package": "com.khong.he.co"}).json()
+    assert body["launched"] is False
+    assert "com.other.app" in body["hint"], body["hint"]
+    assert "KHÔNG kết luận được gì" in body["hint"]

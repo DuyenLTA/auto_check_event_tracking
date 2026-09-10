@@ -46,7 +46,7 @@ async def run_check() -> dict:
     state.run = EventRun(
         results=results, summary=summary, spec=state.spec, package=state.package,
         generated_at=now_vn(), fa_silent=fa_silent, stream_died=stream_died,
-        app_seen=app_seen,
+        app_seen=app_seen, foreground=recording.foreground,
         near_edge=tuple(dict.fromkeys(n for w in state.windows for n in w.near_edge)),
         event_count=len(events), quick=state.quick,
     )
@@ -61,6 +61,7 @@ async def run_check() -> dict:
         "fa_silent": fa_silent,
         "stream_died": stream_died,
         "app_seen": app_seen,
+        "foreground": recording.foreground,
         "near_edge": list(state.run.near_edge),
         "config": config.payload(),
         "results": [r.payload() for r in results],

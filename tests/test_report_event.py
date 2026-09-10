@@ -230,3 +230,27 @@ def test_callout_app_khong_chay_xuat_hien():
 
 def test_app_co_chay_thi_khong_co_callout_do():
     assert "không chạy lần nào" not in HTML
+
+
+NO_SCREEN_TSV = "\n".join([
+    "Event_Name\tParams\tValue Type\tValue",
+    "rating_placement_viewed\tplacement_name\tString\tresult, home",
+    "rating_star_clicked\tstar_value\tNumber\t1,2,3,4,5",
+])
+
+
+def test_spec_khong_khai_man_thi_khong_hien_nhom_man():
+    """Bang spec de trong cot Screen Name -> khong co gi de nhom.
+
+    Truoc day in mot nhom ten "Khong khai man — 0/2": mot cai nhan noi ve
+    chinh cai bang spec, khong noi gi ve app, va nguoi doc phai hoi no nghia
+    la gi.
+    """
+    page = _build(NO_SCREEN_TSV)
+    assert "Không khai màn" not in page
+
+
+def test_spec_co_khai_man_thi_van_nhom_theo_man():
+    """Chieu nguoc lai - bo nhom luon thi mat cach doc theo man khi spec co
+    khai (bang that hay co 40-60 event tren nhieu man)."""
+    assert "Home" in HTML, "spec mau co Screen Name = Home"

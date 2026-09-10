@@ -160,3 +160,23 @@ def parse_current_focus(output: str) -> str | None:
         if match:
             return match.group(1)
     return None
+
+
+def parse_resumed_package(output: str) -> str | None:
+    """Package cua Activity dang o foreground, tu 'dumpsys activity activities'.
+
+    Dung de CHI RA TEN DUNG khi tester dan sai package: sai mot dau cham la ca
+    phien ghi khong ket luan duoc gi, ma tu do lai mot chuoi 30 ky tu bang mat
+    thi rat de bo qua. Da gap that: dan 'com.ai.aiimage.aivideo.generator'
+    trong khi may co 'com.ai.aiimage.aivideogenerator'.
+
+    Dong that:
+        mResumedActivity: ActivityRecord{8a8d4a9 u0 com.foo.bar/.MainActivity t212}
+    """
+    for line in output.splitlines():
+        if "ResumedActivity" not in line:
+            continue
+        match = re.search(r"\bu\d+\s+([A-Za-z0-9._]+)/", line)
+        if match:
+            return match.group(1)
+    return None

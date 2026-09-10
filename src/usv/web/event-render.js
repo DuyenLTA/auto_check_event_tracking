@@ -62,7 +62,11 @@ function renderSummary(node, data) {
     html += '<div class="alert"><b>App dưới test không chạy lần nào.</b> Log '
       + 'Firebase do Google Play Services in ra nên không cho biết event thuộc '
       + 'app nào — event bắt được là của <b>app khác</b>. Kiểm lại tên package, '
-      + 'và nếu tự mở app bằng tay thì mở <b>sau</b> khi bấm Ghi.</div>';
+      + 'và nếu tự mở app bằng tay thì mở <b>sau</b> khi bấm Ghi.'
+      + (data.foreground
+        ? ` Lúc dừng ghi máy đang mở <code>${esc(data.foreground)}</code> — rất `
+          + 'có thể đây mới là tên package cần dán.' : '')
+      + '</div>';
   }
   if (data.stream_died) {
     html += '<div class="alert"><b>Phiên ghi bị đứt giữa đường.</b> Stream '

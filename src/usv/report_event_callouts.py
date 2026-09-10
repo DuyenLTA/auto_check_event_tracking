@@ -32,7 +32,8 @@ def esc(value: object) -> str:
 
 def _callouts(results: list[CheckResult], fa_silent: bool,
               near_edge: tuple[str, ...], quick: bool = False,
-              stream_died: bool = False, app_seen: bool = True) -> str:
+              stream_died: bool = False, app_seen: bool = True,
+              foreground: str = "") -> str:
     out = []
     if not app_seen:
         # Dat DAU TIEN, tren ca stream_died: neu app duoi test khong he chay
@@ -44,7 +45,11 @@ def _callouts(results: list[CheckResult], fa_silent: bool,
             "process của app, nên nó <b>không cho biết event thuộc app nào</b> "
             "— event bắt được ở đây là của <b>app khác</b>. Kiểm lại tên "
             "package, và nếu tự mở app bằng tay thì mở <b>sau</b> khi bấm "
-            "Ghi.</p></div>")
+            "Ghi.</p>"
+            + (f"<p>Lúc dừng ghi, máy đang mở <code>{esc(foreground)}</code> — "
+               "rất có thể đây mới là tên package cần dán.</p>"
+               if foreground else "")
+            + "</div>")
     if stream_died:
         # Dat DAU TIEN: neu phien ghi da chet thi moi ket luan phia duoi chi
         # noi ve phan dau cua phien, va nguoi doc phai biet dieu do truoc khi

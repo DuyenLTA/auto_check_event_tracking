@@ -98,14 +98,23 @@ def _section(name: str, rows: list[CheckResult], triggered: dict[str, str]) -> t
         level, tally = "pending", f"chưa test ({len(rows)})"
     else:
         tally = f"{ok}/{len(checked)} khớp"
+    bang = (
+        f"<div class='table-scroll'><table><thead><tr><th>Event</th><th>Param</th>"
+        f"<th>Spec cần</th><th>App gửi</th><th>Kết quả</th></tr></thead>"
+        f"<tbody>{body}</tbody></table></div>"
+    )
+    # Spec de trong cot Screen Name -> khong co gi de nhom, va mot nhom ten
+    # "Khong khai man" chi noi ve chinh cai bang spec chu khong noi gi ve app.
+    # Bo ca chip lan tieu de, hien thang bang.
+    if name == _NO_SCREEN:
+        return "", f"<div class='section'>{bang}</div>"
+
     chip = f"<span class='section-chip {level}'>{esc(name)} <b>{esc(tally)}</b></span>"
     section = (
         f"<details class='section' open><summary>"
         f"<span class='section-title'>{esc(name)}</span>"
         f"<span class='section-frac {level}'>{esc(tally)}</span></summary>"
-        f"<div class='table-scroll'><table><thead><tr><th>Event</th><th>Param</th>"
-        f"<th>Spec cần</th><th>App gửi</th><th>Kết quả</th></tr></thead>"
-        f"<tbody>{body}</tbody></table></div></details>"
+        f"{bang}</details>"
     )
     return chip, section
 
@@ -113,7 +122,7 @@ def _section(name: str, rows: list[CheckResult], triggered: dict[str, str]) -> t
 def build(spec: SpecSheet, results: list[CheckResult], summary: Summary, *,
           package: str = "", generated_at: str = "", event_count: int = 0,
           fa_silent: bool = False, stream_died: bool = False,
-          app_seen: bool = True,
+          app_seen: bool = True, foreground: str = "",
           near_edge: tuple[str, ...] = (),
           quick: bool = False) -> str:
     screens = _screen_of(spec)
@@ -129,7 +138,8 @@ def build(spec: SpecSheet, results: list[CheckResult], summary: Summary, *,
     chips, sections = [], []
     for name, rows in grouped.items():
         chip, section = _section(name, rows, triggered)
-        chips.append(chip)
+        if chip:
+            chips.append(chip)
         sections.append(section)
 
     checked = summary.total_checked
@@ -163,7 +173,7 @@ def build(spec: SpecSheet, results: list[CheckResult], summary: Summary, *,
     </div>
     <div class="section-chips">{''.join(chips)}</div>
   </header>
-  {_callouts(results, fa_silent, near_edge, quick, stream_died, app_seen)}
+  {_callouts(results, fa_silent, near_edge, quick, stream_died, app_seen, foreground)}
   <div class="sections">{''.join(sections)}</div>
 </div>
 """

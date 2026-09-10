@@ -125,3 +125,28 @@ def test_app_running_doc_pidof():
     out = "\n"
     assert asyncio.run(adb.app_running("SERIAL1", "com.example.app")) is False
     assert calls[0][-2:] == ("pidof", "com.example.app")
+
+
+# --- app dang o foreground ---
+
+DUMPSYS = """
+  Stack #0:
+    mResumedActivity: ActivityRecord{8a8d4a9 u0 com.ai.aiimage.aivideogenerator/.MainActivity t212}
+    topResumedActivity=ActivityRecord{8a8d4a9 u0 com.ai.aiimage.aivideogenerator/.MainActivity}
+"""
+
+
+def test_doc_duoc_package_dang_o_foreground():
+    from usv.adb_parsers import parse_resumed_package
+    assert parse_resumed_package(DUMPSYS) == "com.ai.aiimage.aivideogenerator"
+
+
+def test_khong_co_dong_resumed_thi_tra_None():
+    from usv.adb_parsers import parse_resumed_package
+    assert parse_resumed_package("Stack #0:\n  (khong co gi)") is None
+
+
+def test_khong_nham_sang_dong_khac_co_dau_gach_cheo():
+    from usv.adb_parsers import parse_resumed_package
+    rac = "  mLastPausedActivity: ActivityRecord{1 u0 com.khac.app/.Main t1}"
+    assert parse_resumed_package(rac) is None, "chi doc dong *ResumedActivity*"
