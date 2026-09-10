@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import re
 
+from .adb_foreground_parse import parse_home_package, parse_resumed_package
 from .adb_parsers import AdbError, check_package, check_serial
 
 # Chan chuoi la di vao dong lenh adb. Cung ly do voi check_serial/check_package
@@ -35,13 +36,13 @@ class LogcatMixin:
         """
         check_serial(serial)
         if not _PROP_KEY.fullmatch(key) or not _PROP_VALUE.fullmatch(value):
-            raise AdbError(f"Ten/gia tri property khong hop le: {key}={value}")
+            raise AdbError(f"Tên/giá trị property không hợp lệ: {key}={value}")
         await self._run("-s", serial, "shell", "setprop", key, value)
 
     async def getprop(self, serial: str, key: str) -> str:
         check_serial(serial)
         if not _PROP_KEY.fullmatch(key):
-            raise AdbError(f"Ten property khong hop le: {key}")
+            raise AdbError(f"Tên property không hợp lệ: {key}")
         out, _, _ = await self._run("-s", serial, "shell", "getprop", key)
         return out.strip()
 
@@ -63,7 +64,7 @@ class LogcatMixin:
         check_serial(serial)
         for tag in tags:
             if not _LOG_TAG.fullmatch(tag):
-                raise AdbError(f"Tag logcat khong hop le: {tag!r}")
+                raise AdbError(f"Tag logcat không hợp lệ: {tag!r}")
         args = ["-s", serial, "logcat", "-v", "time", "-s", *tags]
         try:
             return await asyncio.create_subprocess_exec(
@@ -72,7 +73,7 @@ class LogcatMixin:
                 stderr=asyncio.subprocess.PIPE,
             )
         except OSError as exc:
-            raise AdbError(f"Khong mo duoc stream logcat: {exc}") from exc
+            raise AdbError(f"Không mở được stream logcat: {exc}") from exc
 
     async def shell_log(self, serial: str, tag: str, message: str) -> None:
         """Chen mot dong vao logcat -> moc cat cua so.
@@ -82,8 +83,40 @@ class LogcatMixin:
         """
         check_serial(serial)
         if not _LOG_TAG.fullmatch(tag):
-            raise AdbError(f"Tag logcat khong hop le: {tag!r}")
+            raise AdbError(f"Tag logcat không hợp lệ: {tag!r}")
         await self._run("-s", serial, "shell", "log", "-p", "i", "-t", tag, message)
+
+    async def app_running(self, serial: str, package: str) -> bool:
+        """App co process dang chay khong.
+
+        Can vi log FA-SVC do Google Play Services in ra, KHONG phai process cua
+        app - do tren may: PID app 4524, moi dong "Logging event:" mang PID
+        31649 = com.google.android.gms. Nen logcat khong noi duoc event la cua
+        app nao, va neu app duoi test khong he chay thi moi "pass" bat duoc
+        deu la event cua app KHAC.
+        """
+        check_serial(serial)
+        check_package(package)
+        out, _, _ = await self._run("-s", serial, "shell", "pidof", package)
+        return bool(out.strip())
+
+    async def foreground_package(self, serial: str) -> str | None:
+        """App dang o foreground. Dung de CHI RA ten package dung khi tester
+        dan sai - xem parse_resumed_package."""
+        check_serial(serial)
+        out, _, _ = await self._run(
+            "-s", serial, "shell", "dumpsys", "activity", "activities")
+        return parse_resumed_package(out)
+
+    async def home_package(self, serial: str) -> str | None:
+        """Package cua launcher. Can de loai no ra khi doan app duoi test tu
+        foreground - xem parse_home_package."""
+        check_serial(serial)
+        out, _, _ = await self._run(
+            "-s", serial, "shell",
+            "cmd package resolve-activity --brief "
+            "-a android.intent.action.MAIN -c android.intent.category.HOME")
+        return parse_home_package(out)
 
     async def force_stop(self, serial: str, package: str) -> None:
         """Dung app. Can truoc khi mo lai de property log.tag co hieu luc."""

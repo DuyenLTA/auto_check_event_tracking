@@ -136,9 +136,25 @@ def test_callout_near_edge_xuat_hien_va_noi_khong_tu_doi():
     assert "không</b> tự đổi bước" in page
 
 
-def test_event_extra_vao_callout_chu_khong_lam_loang_bang():
-    assert "Không tính vào fail" in HTML
-    assert "track_ad_request" in HTML
+def test_bao_cao_khong_liet_ke_event_la_cua_app():
+    """Chi bao ve event co trong spec. Log that day event khong lien quan
+    (track_ad_request 22 lan, screen_view, ad_query...) - liet ke het thi thu
+    can doc bi chim."""
+    assert "track_ad_request" not in HTML
+    assert "screen_view" not in HTML
+
+
+def test_param_la_van_vao_callout_khong_tinh_vao_fail():
+    """Param duoc coi la global param cua app thi bao rieng, khong tinh fail -
+    duong nay con dung, chi tang EVENT la bo di."""
+    from usv.check_models import CheckResult, Summary, Verdict
+    extra = CheckResult(element="rating_star_clicked.ga_extra", check="event_params",
+                        verdict=Verdict.EXTRA, actual="x",
+                        message="Param nay co o moi event. Không tính vào fail.")
+    summary = Summary()
+    summary.add(extra)
+    page = report_event_html.build(parse_paste(SPEC_TSV), [extra], summary)
+    assert "Không tính vào fail" in page
 
 
 def test_gia_tri_tu_log_duoc_escape():
@@ -176,3 +192,65 @@ def test_section_toan_chua_test_noi_chua_test_chu_khong_phai_0_tren_0():
     page = report_event_html.build(spec, results, summary)
     assert "0/0 khớp" not in page
     assert "chưa test (1)" in page
+
+
+def test_callout_stream_dut_xuat_hien():
+    """Phien ghi chet ma bao cao im lang thi nguoi doc ket luan sai ve app."""
+    page = _build(stream_died=True)
+    assert "đứt giữa đường" in page
+    # Phai noi ro: "khong bat duoc" o day KHONG tinh la loi app.
+    assert "không tính là lỗi app" in page
+
+
+def test_khong_dut_thi_khong_co_callout_do():
+    assert "đứt giữa đường" not in HTML
+
+
+def test_ten_event_khong_lap_lai_o_dong_param():
+    """Spec 2 event ma bang 5 dong (2 dong event + 3 dong param) - lap ten
+    event o moi dong thi doc vao tuong 5 event, va nguoi doc di hoi "5 event o
+    dau ra". Chi in ten o dong DAU cua moi event."""
+    page = _build()
+    assert page.count("<code>rating_star_clicked</code>") == 1, (
+        "ten event chi duoc in mot lan cho ca nhom dong cua no")
+    assert page.count("<code>rating_placement_viewed</code>") == 1
+
+
+def test_bao_cao_noi_ro_bao_nhieu_event_va_bao_nhieu_muc_kiem():
+    """Con so dau tien nguoi doc thay phai la SO EVENT, khong phai so dong."""
+    page = _build()
+    assert "2 event trong spec" in page
+
+
+def test_callout_app_khong_chay_xuat_hien():
+    page = _build(app_seen=False)
+    assert "không chạy lần nào" in page
+    assert "app khác" in page
+
+
+def test_app_co_chay_thi_khong_co_callout_do():
+    assert "không chạy lần nào" not in HTML
+
+
+NO_SCREEN_TSV = "\n".join([
+    "Event_Name\tParams\tValue Type\tValue",
+    "rating_placement_viewed\tplacement_name\tString\tresult, home",
+    "rating_star_clicked\tstar_value\tNumber\t1,2,3,4,5",
+])
+
+
+def test_spec_khong_khai_man_thi_khong_hien_nhom_man():
+    """Bang spec de trong cot Screen Name -> khong co gi de nhom.
+
+    Truoc day in mot nhom ten "Khong khai man — 0/2": mot cai nhan noi ve
+    chinh cai bang spec, khong noi gi ve app, va nguoi doc phai hoi no nghia
+    la gi.
+    """
+    page = _build(NO_SCREEN_TSV)
+    assert "Không khai màn" not in page
+
+
+def test_spec_co_khai_man_thi_van_nhom_theo_man():
+    """Chieu nguoc lai - bo nhom luon thi mat cach doc theo man khi spec co
+    khai (bang that hay co 40-60 event tren nhieu man)."""
+    assert "Home" in HTML, "spec mau co Screen Name = Home"

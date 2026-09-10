@@ -88,11 +88,11 @@ def find(nodes: list[DeviceNode], selector: Selector) -> DeviceNode:
         hint = ("\n  Gan giong tren man: " + ", ".join(repr(x) for x in near)) \
             if near else "\n  Khong co gi gan giong tren man hinh."
         raise AdbError(
-            f"Khong thay element {selector.label()} tren man dang hien." + hint)
+            f"Không thấy element {selector.label()} trên màn đang hiện." + hint)
     if selector.index >= len(hits):
         raise AdbError(
-            f"{selector.label()} chi ra node thu {selector.index} nhung chi co "
-            f"{len(hits)} node khop. Dem tu 0.")
+            f"{selector.label()} chỉ ra node thứ {selector.index} nhưng chỉ có "
+            f"{len(hits)} node khớp. Đếm từ 0.")
     return hits[selector.index]
 
 
@@ -115,7 +115,7 @@ async def swipe(client, serial: str, nodes: list[DeviceNode], selector: Selector
     """
     if direction not in DIRECTIONS:
         raise AdbError(
-            f"Huong quet {direction!r} khong hieu. Chi nhan: "
+            f"Hướng quét {direction!r} không hiểu. Chỉ nhận: "
             + ", ".join(DIRECTIONS))
     node = find(nodes, selector)
     box = node.bounds_px

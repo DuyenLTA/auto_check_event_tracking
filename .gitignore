@@ -2,6 +2,9 @@
 .env.local
 __pycache__/
 *.egg-info/
+# setuptools de lai khi chay `pip install .`
+build/
+dist/
 .pytest_cache/
 out/
 .venv/

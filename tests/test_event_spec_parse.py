@@ -56,7 +56,7 @@ def test_ban_bi_gay_dong_bi_TU_CHOI():
     assert sheet.errors, "ban bi gay dong phai sinh loi"
     assert sheet.ok is False
     joined = " ".join(sheet.errors)
-    assert "Dong 2" in joined, "loi phai chi ro SO DONG de tester sua duoc"
+    assert "Dòng 2" in joined, "loi phai chi ro SO DONG de tester sua duoc"
 
 
 def test_ban_bi_gay_khong_sinh_ra_spec_sai():
@@ -97,7 +97,7 @@ def test_param_mo_coi_khong_co_event_phia_tren():
     text = ("Event_Name\tParams\tValue Type\tValue\n"
             "\tplacement_name\tString\thome\n")
     sheet = parse_paste(text)
-    assert any("chua co event nao" in e for e in sheet.errors)
+    assert any("chưa có event nào" in e for e in sheet.errors)
 
 
 def test_value_rong_la_free_form():
@@ -132,7 +132,7 @@ def test_param_khai_hai_lan_bao_loi():
             "rating_star_clicked\tstar_value\tNumber\t1,2\n"
             "\tstar_value\tNumber\t3,4\n")
     sheet = parse_paste(text)
-    assert any("hai lan" in e for e in sheet.errors)
+    assert any("hai lần" in e for e in sheet.errors)
 
 
 def test_o_nhieu_dong_boc_nguoc_kep_van_la_MOT_hang():

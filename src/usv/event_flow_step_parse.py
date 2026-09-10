@@ -31,7 +31,7 @@ NEEDLE_KEY = {"resource_id": "id", "text": "text", "desc": "desc"}
 
 def allowed_steps() -> str:
     names = sorted(set(TAPS) | set(BARE) | {"swipe", "wait", "wait_text", "key", "type"})
-    return "Chi co: " + ", ".join(names) + "."
+    return "Chỉ có: " + ", ".join(names) + "."
 
 
 def selector(arg, field: str, where: str, errors: list[str],
@@ -52,7 +52,7 @@ def selector(arg, field: str, where: str, errors: list[str],
     unknown_keys(arg, {key, "index"} | extra_keys, where, errors)
     clash = sorted(set(NEEDLE_KEY.values()) & set(arg) - {key})
     if clash:
-        errors.append(f"{where}: khai ca {key!r} lan {clash} - chon mot cai.")
+        errors.append(f"{where}: khai cả {key!r} lẫn {clash} - chọn một cái.")
         return None
     needle = text_value(arg.get(key), key, where, errors)
     if not needle:
@@ -61,7 +61,7 @@ def selector(arg, field: str, where: str, errors: list[str],
 
 
 def _missing(where: str, errors: list[str]) -> None:
-    errors.append(f"{where}: thieu gia tri de tim node.")
+    errors.append(f"{where}: thiếu giá trị để tìm node.")
     return None
 
 
@@ -70,7 +70,7 @@ def _swipe(arg, where: str, errors: list[str]) -> Step | None:
         arg = {"id": arg}
     given = sorted(set(NEEDLE_KEY.values()) & set(arg))
     if len(given) > 1:
-        errors.append(f"{where}: khai nhieu khoa tim kiem {given} - chon mot cai.")
+        errors.append(f"{where}: khai nhiều khóa tìm kiếm {given} - chọn một cái.")
         return None
     field = next((f for f, k in NEEDLE_KEY.items() if k in arg), "resource_id")
     direction = text_value(arg.get("dir") or arg.get("direction") or "up",
@@ -78,8 +78,8 @@ def _swipe(arg, where: str, errors: list[str]) -> Step | None:
     if direction is None:
         return None
     if direction.lower() not in DIRECTIONS:
-        errors.append(f"{where}: huong {direction!r} khong hieu. "
-                      f"Chi co: {', '.join(DIRECTIONS)}.")
+        errors.append(f"{where}: hướng {direction!r} không hiểu. "
+                      f"Chỉ có: {', '.join(DIRECTIONS)}.")
         return None
     found = selector(arg, field, where, errors, extra_keys={"dir", "direction"})
     return Step(kind="swipe", selector=found, text=direction.lower()) if found else None
@@ -91,7 +91,7 @@ def _wait_text(arg, where: str, errors: list[str]) -> Step | None:
     unknown_keys(arg, {"text", "timeout"}, where, errors)
     text = text_value(arg.get("text"), "text", where, errors)
     if not text:
-        errors.append(f"{where}: thieu chu can cho.")
+        errors.append(f"{where}: thiếu chữ cần chờ.")
         return None
     return Step(kind="wait_text", text=text,
                 timeout=duration(arg.get("timeout", 10.0), where, errors, default=10.0))
@@ -106,11 +106,11 @@ def _key(arg, where: str, errors: list[str]) -> Step | None:
     """
     name = text_value(arg, "key", where, errors)
     if not name:
-        errors.append(f"{where}: thieu ten phim.")
+        errors.append(f"{where}: thiếu tên phím.")
         return None
     if name.upper() not in KEYEVENTS:
-        errors.append(f"{where}: phim {name!r} khong duoc phep. "
-                      f"Chi co: {', '.join(sorted(KEYEVENTS))}.")
+        errors.append(f"{where}: phím {name!r} không được phép. "
+                      f"Chỉ có: {', '.join(sorted(KEYEVENTS))}.")
         return None
     return Step(kind="key", text=name.upper())
 
@@ -122,11 +122,11 @@ def parse_step(raw, where: str, errors: list[str]) -> Step | None:
         if name in BARE:
             kind, text = BARE[name]
             return Step(kind=kind, text=text)
-        errors.append(f"{where}: step {raw!r} khong hieu. {allowed_steps()}")
+        errors.append(f"{where}: step {raw!r} không hiểu. {allowed_steps()}")
         return None
     if not isinstance(raw, dict) or len(raw) != 1:
-        errors.append(f"{where}: mot step phai la mot khoa duy nhat, vd `- tap_id: btnHome`. "
-                      f"Nhan duoc {raw!r}.")
+        errors.append(f"{where}: một step phải là một khóa duy nhất, vd `- tap_id: btnHome`. "
+                      f"Nhận được {raw!r}.")
         return None
 
     (name, arg), = raw.items()
@@ -147,21 +147,21 @@ def parse_step(raw, where: str, errors: list[str]) -> Step | None:
     if name == "type":
         text = text_value(arg, "type", spot, errors)
         if not text:
-            errors.append(f"{spot}: thieu chu can go.")
+            errors.append(f"{spot}: thiếu chữ cần gõ.")
             return None
         if "'" in text or '"' in text:
             # adb_input.input_text tu choi dau nhay - bat o day cho som.
-            errors.append(f"{spot}: chuoi go vao khong duoc chua dau nhay.")
+            errors.append(f"{spot}: chuỗi gõ vào không được chứa dấu nháy.")
             return None
         return Step(kind="type", text=text)
     if name in BARE:
         # `launch: {package: x}` - package khai o cap flow, step khong nhan doi so.
         if arg not in (None, True):
-            errors.append(f"{spot}: step nay khong nhan doi so ({arg!r}). "
-                          f"Package khai o cap flow, khong o tung step.")
+            errors.append(f"{spot}: step này không nhận đối số ({arg!r}). "
+                          f"Package khai ở cấp flow, không ở từng step.")
             return None
         kind, text = BARE[name]
         return Step(kind=kind, text=text)
 
-    errors.append(f"{spot}: step khong hieu. {allowed_steps()}")
+    errors.append(f"{spot}: step không hiểu. {allowed_steps()}")
     return None

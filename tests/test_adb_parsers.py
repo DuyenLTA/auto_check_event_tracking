@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import pytest
 
+from usv.adb_foreground_parse import parse_current_focus
 from usv.adb_parsers import (
-    AdbError, check_package, check_serial, parse_current_focus, parse_devices,
+    AdbError, check_package, check_serial, parse_devices,
     parse_packages, parse_wm_density, parse_wm_size,
 )
 
@@ -65,3 +66,100 @@ def test_check_package_va_serial_cho_gia_tri_that_di_qua():
     assert check_package("com.aihomedesign.aihomedecor.designidea.aiinterior")
     assert check_serial("99261FFAZ0077C")
     assert check_serial("emulator-5554")
+
+
+# --- mo app: monkey tra exit 0 ke ca khi that bai ---
+
+def test_launch_bao_loi_khi_may_noi_khong_co_man_nao_de_mo():
+    """`monkey -p <app khong ton tai>` in "No activities found to run" nhung
+    EXIT CODE VAN LA 0. Chi xem returncode thi mo app that bai trong im lang,
+    roi phien ghi bat log cua app dang mo san - bao cao gan event cua app khac
+    cho app dang test.
+    """
+    import asyncio
+
+    from usv.adb_client import AdbClient
+    from usv.adb_parsers import AdbError
+
+    adb = AdbClient("/fake/adb")
+
+    async def fake_run(*args, timeout=None):
+        return ("** No activities found to run, monkey aborted.", "", 0)
+
+    adb._run = fake_run
+    with pytest.raises(AdbError) as err:
+        asyncio.run(adb.launch("SERIAL1", "com.khong.he.co"))
+    assert "không có màn nào để mở" in str(err.value)
+
+
+def test_launch_im_lang_khi_mo_duoc():
+    import asyncio
+
+    from usv.adb_client import AdbClient
+
+    adb = AdbClient("/fake/adb")
+
+    async def fake_run(*args, timeout=None):
+        return ("Events injected: 1", "", 0)
+
+    adb._run = fake_run
+    asyncio.run(adb.launch("SERIAL1", "com.example.app"))   # khong duoc nem gi
+
+
+def test_app_running_doc_pidof():
+    """pidof tra rong -> app khong chay. Can vi log FA-SVC do Play Services in
+    ra chu khong phai process app, nen khong the doi chieu PID."""
+    import asyncio
+
+    from usv.adb_client import AdbClient
+
+    adb = AdbClient("/fake/adb")
+    calls = []
+
+    async def fake_run(*args, timeout=None):
+        calls.append(args)
+        return (out, "", 0)
+
+    adb._run = fake_run
+    out = "4524\n"
+    assert asyncio.run(adb.app_running("SERIAL1", "com.example.app")) is True
+    out = "\n"
+    assert asyncio.run(adb.app_running("SERIAL1", "com.example.app")) is False
+    assert calls[0][-2:] == ("pidof", "com.example.app")
+
+
+# --- app dang o foreground ---
+
+DUMPSYS = """
+  Stack #0:
+    mResumedActivity: ActivityRecord{8a8d4a9 u0 com.ai.aiimage.aivideogenerator/.MainActivity t212}
+    topResumedActivity=ActivityRecord{8a8d4a9 u0 com.ai.aiimage.aivideogenerator/.MainActivity}
+"""
+
+
+def test_doc_duoc_package_dang_o_foreground():
+    from usv.adb_foreground_parse import parse_resumed_package
+    assert parse_resumed_package(DUMPSYS) == "com.ai.aiimage.aivideogenerator"
+
+
+def test_khong_co_dong_resumed_thi_tra_None():
+    from usv.adb_foreground_parse import parse_resumed_package
+    assert parse_resumed_package("Stack #0:\n  (khong co gi)") is None
+
+
+def test_khong_nham_sang_dong_khac_co_dau_gach_cheo():
+    from usv.adb_foreground_parse import parse_resumed_package
+    rac = "  mLastPausedActivity: ActivityRecord{1 u0 com.khac.app/.Main t1}"
+    assert parse_resumed_package(rac) is None, "chi doc dong *ResumedActivity*"
+
+
+def test_doc_duoc_package_launcher():
+    from usv.adb_foreground_parse import parse_home_package
+    out = ("priority=0 preferredOrder=0 match=0x108000 isDefault=true\n"
+           "com.google.android.apps.nexuslauncher/.NexusLauncherActivity\n")
+    assert parse_home_package(out) == "com.google.android.apps.nexuslauncher"
+
+
+def test_khong_resolve_duoc_launcher_thi_tra_None():
+    from usv.adb_foreground_parse import parse_home_package
+    assert parse_home_package("No activity found") is None

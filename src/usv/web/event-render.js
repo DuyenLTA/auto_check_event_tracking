@@ -6,7 +6,10 @@
  */
 'use strict';
 
-const { escapeHtml: esc } = window.USV_MARKS;
+/* Boc IIFE de khong ro ten ra pham vi toan cuc - xem event-api.js. */
+(() => {
+
+const { escapeHtml: esc } = window.USV_API;
 
 /* Mot event nhieu param -> nhieu hang, chi hang dau in ten event. */
 function renderPreview(node, list) {
@@ -43,6 +46,40 @@ function renderSummary(node, data) {
     .map(([cls, text]) => `<span class="tag ${cls}">${esc(text)}</span>`)
     .join('')}</div>`;
 
+  // Noi ro con so nao la EVENT, con so nao la dong kiem. Spec 2 event ra 5
+  // dong (2 dong event + 3 dong param) thi de tuong la 5 event.
+  if (data.spec_event_count) {
+    html += `<p class="hint">${data.spec_event_count} event trong spec · `
+      + `${s.total_checked ?? 0} mục đã kiểm (mỗi param là một mục riêng).</p>`;
+  }
+
+  if (data.quick) {
+    html += '<div class="alert warn"><b>Chế độ nhanh:</b> chỉ kết luận event có '
+      + 'bắn và param đúng hay không — <b>không</b> kết luận bắn đúng lúc. '
+      + 'Kiểm bắn trùng đã tắt.</div>';
+  }
+  if (data.checked_package && data.checked_package !== data.package) {
+    html += '<div class="alert warn"><b>Đã chấm cho app đang mở:</b> <code>'
+      + esc(data.checked_package) + '</code>. Tên bạn dán (<code>'
+      + esc(data.package || '') + '</code>) không có trên máy. Nếu không phải '
+      + 'app cần test thì dán lại tên đúng rồi ghi lại.</div>';
+  }
+  if (data.app_seen === false) {
+    html += '<div class="alert"><b>App dưới test không chạy lần nào.</b> Log '
+      + 'Firebase do Google Play Services in ra nên không cho biết event thuộc '
+      + 'app nào — event bắt được là của <b>app khác</b>. Kiểm lại tên package, '
+      + 'và nếu tự mở app bằng tay thì mở <b>sau</b> khi bấm Ghi.'
+      + (data.foreground
+        ? ` Lúc dừng ghi máy đang mở <code>${esc(data.foreground)}</code> — rất `
+          + 'có thể đây mới là tên package cần dán.' : '')
+      + '</div>';
+  }
+  if (data.stream_died) {
+    html += '<div class="alert"><b>Phiên ghi bị đứt giữa đường.</b> Stream '
+      + 'logcat dừng trước khi bấm Dừng ghi — thường là máy rớt khỏi USB. '
+      + 'Phần sau không được ghi, nên các mục "không bắn" chỉ là <b>không kiểm '
+      + 'được</b>, không phải lỗi app. Cắm lại máy và ghi lại.</div>';
+  }
   if (data.fa_silent) {
     html += '<div class="alert"><b>Không đọc được log Firebase.</b> Cả phiên ghi '
       + 'không có dòng <code>FA-SVC</code> nào — rất có thể bản này không in log '
@@ -75,3 +112,4 @@ function renderResults(node, list) {
 }
 
 window.USV_RENDER = { renderPreview, renderSummary, renderResults };
+})();

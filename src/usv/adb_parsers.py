@@ -62,24 +62,24 @@ def find_adb(explicit: str | None = None) -> str:
         if candidate and Path(candidate).is_file() and os.access(candidate, os.X_OK):
             return candidate
     raise AdbError(
-        "Khong tim thay adb. Cach sua:\n"
-        "  - Cai Android platform-tools, hoac\n"
-        "  - Them adb vao PATH, hoac\n"
-        "  - Dat bien moi truong ADB_PATH=/duong/dan/toi/adb"
+        "Không tìm thấy adb. Cách sửa:\n"
+        "  - Cài Android platform-tools, hoặc\n"
+        "  - Thêm adb vào PATH, hoặc\n"
+        "  - Đặt biến môi trường ADB_PATH=/đường/dẫn/tới/adb"
     )
 
 
 def check_serial(serial: str) -> str:
     """Chan serial la. Xem docstring module ve ly do."""
     if not serial or not SERIAL_RE.fullmatch(serial):
-        raise AdbError(f"Serial khong hop le: {serial!r}")
+        raise AdbError(f"Serial không hợp lệ: {serial!r}")
     return serial
 
 
 def check_package(package: str) -> str:
     """Chan ten package la. Xem docstring module ve ly do."""
     if not package or not PACKAGE_RE.fullmatch(package):
-        raise AdbError(f"Ten package khong hop le: {package!r}")
+        raise AdbError(f"Tên package không hợp lệ: {package!r}")
     return package
 
 
@@ -140,23 +140,3 @@ def parse_wm_density(output: str) -> int | None:
         elif "physical" in low:
             physical = value
     return override or physical
-
-
-def parse_current_focus(output: str) -> str | None:
-    """Lay package dang giu focus tu 'dumpsys window'.
-
-    Dung de canh bao khi tester bam Capture nhung notification shade / launcher
-    dang che app (da xay ra that trong luc spike: dump ra NotificationShade chu
-    khong phai app). Tra None neu khong doc duoc.
-    """
-    for line in output.splitlines():
-        if "mCurrentFocus" not in line:
-            continue
-        match = re.search(r"([A-Za-z0-9._]+)/[A-Za-z0-9._$]+", line)
-        if match:
-            return match.group(1)
-        # Window khong thuoc app nao, vd 'Window{... NotificationShade}'
-        match = re.search(r"\bu\d+\s+(\w+)\}", line)
-        if match:
-            return match.group(1)
-    return None

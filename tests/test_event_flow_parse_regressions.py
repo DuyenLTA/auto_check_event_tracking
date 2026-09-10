@@ -28,7 +28,7 @@ def test_khoa_la_o_cap_case__go_thieu_s_thanh_param_la_PASS_GIA():
     flow = parse_flow("- event: e\n  cases:\n    - param: {placement_name: home}\n"
                       "      steps: [launch]\n")
     assert not flow.ok
-    assert any("param" in e and "khoa la" in e for e in flow.errors)
+    assert any("param" in e and "khóa lạ" in e for e in flow.errors)
 
 
 def test_khoa_la_trong_selector__indx_lam_bam_sai_card():
@@ -48,7 +48,7 @@ def test_khoa_la_trong_swipe_va_wait_text():
 def test_khai_hai_khoa_tim_kiem__bao_loi_chu_khong_chon_ngam():
     flow = parse_flow(_one_case("        - tap_text: {id: btnX, text: Home}\n"))
     assert not flow.ok
-    assert any("chon mot cai" in e for e in flow.errors)
+    assert any("chọn một cái" in e for e in flow.errors)
 
 
 # --- Kieu du lieu YAML --------------------------------------------------------
@@ -85,7 +85,7 @@ def test_timeout_am():
     ma report doc ra nhu 'khong cho duoc chu do xuat hien'."""
     flow = parse_flow(_one_case("        - wait_text: {text: Home, timeout: -5}\n"))
     assert not flow.ok
-    assert any("am" in e for e in flow.errors)
+    assert any("âm" in e for e in flow.errors)
 
 
 def test_khoa_YAML_trung__khong_im_lang_lay_cai_sau():
@@ -93,7 +93,7 @@ def test_khoa_YAML_trung__khong_im_lang_lay_cai_sau():
     flow = parse_flow("- event: e\n  cases:\n    - steps: [launch, back]\n"
                       "      steps: [home]\n")
     assert not flow.ok
-    assert any("khai hai lan" in e for e in flow.errors)
+    assert any("khai hai lần" in e for e in flow.errors)
 
 
 # --- Bat bien ma runner dua vao nhung parser truoc day khong thuc thi --------
@@ -105,7 +105,7 @@ def test_nhan_case_trung__expectations_khoa_theo_nhan():
                       "      steps: [launch]\n    - params: {p: home}\n"
                       "      steps: [back]\n")
     assert not flow.ok
-    assert any("trung voi case truoc" in e for e in flow.errors)
+    assert any("trùng với case trước" in e for e in flow.errors)
 
 
 def test_nhan_khac_nhau_thi_khong_bi_chan():
@@ -126,8 +126,8 @@ def test_case_co_step_loi_thi_bo_CA_case():
 
 def test_steps_rong_bao_dung_noi_dung_chu_khong_bao_sai_kieu():
     flow = parse_flow("- event: e\n  cases:\n    - steps: []\n")
-    assert any("steps rong" in e for e in flow.errors)
-    assert not any("phai la mot danh sach" in e for e in flow.errors)
+    assert any("steps rỗng" in e for e in flow.errors)
+    assert not any("phải là một danh sách" in e for e in flow.errors)
 
 
 def test_loi_reset_khong_bi_mat_khi_case_thieu_step():
@@ -147,7 +147,7 @@ def test_phim_ngoai_whitelist_bi_chan_NGAY_LUC_PARSE():
     for name in ("POWER", "BAKC", "SLEEP"):
         flow = parse_flow(_one_case(f"        - key: {name}\n"))
         assert not flow.ok, name
-        assert any(name in e and "khong duoc phep" in e for e in flow.errors), name
+        assert any(name in e and "không được phép" in e for e in flow.errors), name
 
 
 def test_whitelist_phim_lay_tu_adb_input_chu_khong_khai_lai():
@@ -159,14 +159,14 @@ def test_dau_nhay_trong_type_bi_chan_som():
     # `adb_input.input_text` raise vi dau nhay - bat luc doc file cho re hon.
     flow = parse_flow(_one_case('        - type: "it\'s me"\n'))
     assert not flow.ok
-    assert any("dau nhay" in e for e in flow.errors)
+    assert any("dấu nháy" in e for e in flow.errors)
 
 
 def test_launch_kem_doi_so__package_khai_o_cap_flow():
     # Dang nay co trong vi du cua tai lieu phase nen tester se go dung the.
     flow = parse_flow(_one_case("        - launch: {package: com.other.app}\n"))
     assert not flow.ok
-    assert any("khong nhan doi so" in e for e in flow.errors)
+    assert any("không nhận đối số" in e for e in flow.errors)
 
 
 def test_package_sai_dinh_dang_bi_bao():

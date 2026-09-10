@@ -48,7 +48,7 @@ def test_index_chon_dung_node_thu_may(nodes):
 def test_index_vuot_so_node_khop_bao_loi_ro(nodes):
     with pytest.raises(AdbError) as info:
         find(nodes, Selector(resource_id="borderContainer", index=9))
-    assert "chi co 4 node" in str(info.value)
+    assert "chỉ có 4 node" in str(info.value)
 
 
 def test_tim_theo_text(nodes):

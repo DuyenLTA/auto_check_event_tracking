@@ -94,7 +94,7 @@ async def run_step(client, serial: str, metrics, package: str, step: Step) -> No
     if step.kind == "wait_text":
         if not await _wait_text(client, serial, metrics, step.text, step.timeout):
             raise AdbError(
-                f"Cho {step.text!r} xuat hien trong {step.timeout:g}s ma khong thay.")
+                f"Chờ {step.text!r} xuất hiện trong {step.timeout:g}s mà không thấy.")
         return
     if step.kind == "tap":
         await tap(client, serial, await _nodes(client, serial, metrics), step.selector)
@@ -103,7 +103,7 @@ async def run_step(client, serial: str, metrics, package: str, step: Step) -> No
         await swipe(client, serial, await _nodes(client, serial, metrics),
                     step.selector, step.text or "up")
         return
-    raise AdbError(f"Step {step.kind!r} khong hieu.")
+    raise AdbError(f"Step {step.kind!r} không hiểu.")
 
 
 async def prepare(client, serial: str, package: str,

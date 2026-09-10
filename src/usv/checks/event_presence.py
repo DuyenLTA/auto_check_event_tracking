@@ -5,9 +5,10 @@ Ba muc ket luan, va cai thu ba la quan trong nhat:
   - co cua so, ban 0 lan          -> FAIL_MISSING
   - co cua so, ban >1 lan         -> FAIL_DUPLICATE
   - KHONG cua so nao              -> NOT_TESTED (tester chua danh dau buoc)
+  - ban NGOAI cua so cua no       -> NOT_VERIFIABLE (xem _ngoai_cua_so)
 
 NOT_TESTED khong phai fail: tool chua do gi ca thi khong duoc ket luan gi ve app.
-Cung nguyen tac voi EXTRA: khong do duoc thi khong ket luan.
+Khong do duoc thi khong ket luan - khong bao fail.
 
 BAN TRUNG cham theo TUNG CUA SO, khong theo ca phien. Do that: `track_ad_request`
 ban 17 lan trong mot lan mo app la binh thuong. Cham theo phien la bao oan.
@@ -21,7 +22,9 @@ from ..event_window import Window
 
 
 def run(spec: SpecSheet, windows: tuple[Window, ...], config,
-        *, fa_silent: bool = False) -> list[CheckResult]:
+        *, fa_silent: bool = False, stream_died: bool = False,
+        app_seen_running: bool = True,
+        session_events: tuple = ()) -> list[CheckResult]:
     setting = config.checks.get("event_presence")
     catch_duplicate = bool(setting.options.get("duplicate", True)) if setting else True
 
@@ -29,6 +32,23 @@ def run(spec: SpecSheet, windows: tuple[Window, ...], config,
     by_event: dict[str, list[Window]] = {}
     for window in windows:
         by_event.setdefault(window.spec_event, []).append(window)
+
+    if not app_seen_running:
+        # Phai chan o NGOAI cung, truoc ca nhanh "co thay event": log FA-SVC do
+        # Google Play Services in ra, KHONG phai process cua app (do tren may:
+        # PID app 4524, moi dong "Logging event:" mang PID 31649 =
+        # com.google.android.gms). Nen logcat khong noi duoc event thuoc app
+        # nao. App khong he chay thi khong con gi de gan - "thay event" luc do
+        # la thay event cua app KHAC, va bao PASS la PASS GIA.
+        return [CheckResult(
+            element=event.name, check="event_presence",
+            verdict=Verdict.NOT_VERIFIABLE, expected="event được bắn ra",
+            message=("App dưới test không chạy lần nào trong phiên ghi. Log "
+                     "Firebase do Google Play Services in ra nên không cho "
+                     "biết event thuộc app nào — event bắt được ở đây là của "
+                     "app khác, không kết luận được gì về app này. Kiểm lại "
+                     "tên package, và mở app SAU khi bấm Ghi."),
+        ) for event in spec.events]
 
     for event in spec.events:
         found = by_event.get(event.name, [])
@@ -49,6 +69,20 @@ def run(spec: SpecSheet, windows: tuple[Window, ...], config,
             if not hits:
                 # fa_silent: khong doc duoc log Firebase thi khong the noi app
                 # thieu event. Phan biet hai chuyen nay la ly do R3 ton tai.
+                if stream_died:
+                    # Phien ghi chet giua duong (rut may/adb dut) nen phan sau
+                    # khong duoc ghi. "Khong thay event" luc nay khong noi gi
+                    # ve app. Dat TRUOC fa_silent: dut stream la ly do manh hon.
+                    out.append(CheckResult(
+                        element=label, check="event_presence",
+                        verdict=Verdict.NOT_VERIFIABLE,
+                        expected="event được bắn ra",
+                        message=("Phiên ghi bị đứt giữa đường (máy rớt khỏi "
+                                 "USB hoặc adb dừng) nên phần sau không được "
+                                 "ghi — không kết luận được là app thiếu "
+                                 "event. Cắm lại máy và ghi lại."),
+                    ))
+                    continue
                 if fa_silent:
                     out.append(CheckResult(
                         element=label, check="event_presence",
@@ -59,12 +93,29 @@ def run(spec: SpecSheet, windows: tuple[Window, ...], config,
                                  "Firebase, chứ không phải app thiếu event."),
                     ))
                     continue
+                ngoai = _ngoai_cua_so(event.name, session_events)
+                if ngoai:
+                    out.append(CheckResult(
+                        element=label, check="event_presence",
+                        verdict=Verdict.NOT_VERIFIABLE,
+                        expected="event được bắn ra",
+                        actual=f"bắn {ngoai}, ngoài bước này",
+                        message=(
+                            "Event CÓ bắn trong phiên ghi nhưng không nằm trong "
+                            "bước đã đánh dấu. Hai khả năng, tool không phân "
+                            "biệt được: app bắn trước lúc bấm mốc (event bắn "
+                            "ngay khi mở app thì không bước nào chứa nó), hoặc "
+                            "app bắn ở bước khác. Muốn chấm chắc thì đừng đánh "
+                            "dấu bước — chỉ bấm Ghi rồi thao tác."),
+                    ))
+                    continue
                 out.append(CheckResult(
                     element=label, check="event_presence",
                     verdict=Verdict.FAIL_MISSING,
                     expected="event được bắn ra", actual="không bắn",
-                    message=(f"Bước này có {len(window.app_events)} event khác "
-                             f"được bắn nhưng không có {event.name!r}."),
+                    message=(f"Cả phiên ghi không có {event.name!r} lần nào; "
+                             f"riêng bước này có {len(window.app_events)} event "
+                             "khác được bắn."),
                 ))
                 continue
 
@@ -81,14 +132,49 @@ def run(spec: SpecSheet, windows: tuple[Window, ...], config,
                 ))
                 continue
 
+            # LUON in so lan, ke ca 1 lan. Den day nghia la check ban trung
+            # dang TAT nen tool khong tu ket luan duoc - nguoi doc phai tu doi
+            # chieu voi so lan minh that su vao man do. Chi in so lan khi >1
+            # thi mot dong "ban luc 17:45:05" khong noi duoc la da dem hay
+            # chua, va nguoi doc khong biet co nen tin con so do khong.
             out.append(CheckResult(
                 element=label, check="event_presence", verdict=Verdict.PASS,
-                expected="event được bắn ra", actual=f"bắn lúc {hits[0].timestamp}",
-                message="Event được bắn đúng ở bước này.",
+                expected="event được bắn ra",
+                actual=f"bắn {len(hits)} lần: {_gio(hits)}",
+                message=("Event được bắn đúng ở bước này." if len(hits) == 1 else
+                         f"Event có bắn, {len(hits)} lần trong phiên này — đúng "
+                         "nếu bạn vào ra màn đó nhiều lần, còn nếu chỉ vào một "
+                         "lần thì app đang bắn trùng."),
             ))
 
-    out.extend(_extras(spec, windows))
     return out
+
+
+# Liet ke nhieu hon the nay thi mot dong bao cao thanh mot bai van.
+MAX_STAMP = 3
+
+
+def _gio(events) -> str:
+    """Chuoi gio, cat bot khi qua dai."""
+    stamps = [e.timestamp for e in events]
+    if len(stamps) > MAX_STAMP:
+        return ", ".join(stamps[:MAX_STAMP]) + f" (và {len(stamps) - MAX_STAMP} lần nữa)"
+    return ", ".join(stamps)
+
+
+def _ngoai_cua_so(name: str, session_events) -> str:
+    """Gio ma event ban trong CA PHIEN, khi cua so cua no khong chua lan nao.
+
+    Vi sao khong bao FAIL: moc do TESTER bam, con event do APP ban - tool khong
+    biet ai truoc ai sau. Da gap that: `daily_checkin_screen_view` ban ngay luc
+    app mo, tuc la TRUOC khi kip bam moc dau tien, va `cut()` bo moi event truoc
+    moc dau -> bao "thieu event" cho mot event app ban dung. Cham khong danh dau
+    thi cung app do PASS. Mot ket qua doi theo THU TU BAM NUT thi khong dung
+    duoc, nen o day tra "chua ket luan" chu khong tra fail.
+    """
+    hits = [e for e in session_events
+            if e.name == name and getattr(e, "from_app", True)]
+    return f"{len(hits)} lần: {_gio(hits)}" if hits else ""
 
 
 def _label(name: str, window: Window, total: int) -> str:
@@ -96,32 +182,3 @@ def _label(name: str, window: Window, total: int) -> str:
     if total <= 1 or not window.note:
         return name
     return f"{name} ({window.note})"
-
-
-def _extras(spec: SpecSheet, windows: tuple[Window, ...]) -> list[CheckResult]:
-    """Event app ban ma spec khong khai -> EXTRA, KHONG phai fail.
-
-    Co the spec chua cap nhat, khong han app sai. `origin=auto`/`am` la Firebase
-    tu thu (screen_view, session_start, ad_query) - cang khong phai loi app.
-    """
-    known = {e.name for e in spec.events}
-    counts: dict[str, int] = {}
-    origins: dict[str, str] = {}
-    for window in windows:
-        for event in window.events:
-            if event.name in known and event.from_app:
-                continue
-            counts[event.name] = counts.get(event.name, 0) + 1
-            origins[event.name] = event.origin
-
-    out = []
-    for name, count in sorted(counts.items()):
-        origin = origins[name]
-        source = ("app tự gọi" if origin == "app"
-                  else f"Firebase tự thu (origin={origin})")
-        out.append(CheckResult(
-            element=name, check="event_presence", verdict=Verdict.EXTRA,
-            actual=f"bắn {count} lần",
-            message=f"Spec không khai event này — {source}. Không tính vào fail.",
-        ))
-    return out

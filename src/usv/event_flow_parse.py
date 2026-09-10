@@ -44,7 +44,7 @@ class _NoDuplicateLoader(yaml.SafeLoader):
             key = self.construct_object(key_node, deep=deep)
             if key in seen:
                 raise yaml.constructor.ConstructorError(
-                    None, None, f"khoa {key!r} khai hai lan", key_node.start_mark)
+                    None, None, f"khóa {key!r} khai hai lần", key_node.start_mark)
             seen.add(key)
         return super().construct_mapping(node, deep=deep)
 
@@ -54,8 +54,8 @@ def _string_list(raw, where: str, field: str, errors: list[str]) -> tuple[str, .
     if isinstance(raw, str):
         return (raw,)
     if not isinstance(raw, list):
-        errors.append(f"{where}: {field} phai la mot chuoi hoac danh sach chuoi, "
-                      f"nhan duoc {raw!r}.")
+        errors.append(f"{where}: {field} phải là một chuỗi hoặc danh sách chuỗi, "
+                      f"nhận được {raw!r}.")
         return ()
     out = tuple(text_value(item, field, where, errors) or "" for item in raw)
     return tuple(item for item in out if item)
@@ -66,13 +66,13 @@ def _reset(raw, where: str, errors: list[str]) -> Reset:
     if raw is None:
         return Reset()
     if not isinstance(raw, dict):
-        errors.append(f"{where}: reset phai co khoa {sorted(RESET_KEYS)}. "
-                      f"Nhan duoc {raw!r}.")
+        errors.append(f"{where}: reset phải có khóa {sorted(RESET_KEYS)}. "
+                      f"Nhận được {raw!r}.")
         return Reset()
     unknown_keys(raw, RESET_KEYS, f"{where} reset", errors)
     config = raw.get("remote_config") or {}
     if not isinstance(config, dict):
-        errors.append(f"{where}: remote_config phai la cap khoa-gia tri.")
+        errors.append(f"{where}: remote_config phải là cặp khóa-giá trị.")
         config = {}
     values = {}
     for key, value in config.items():
@@ -87,7 +87,7 @@ def _reset(raw, where: str, errors: list[str]) -> Reset:
 
 def _params(raw, where: str, errors: list[str]) -> dict[str, str]:
     if not isinstance(raw, dict):
-        errors.append(f"{where}: params phai la cap khoa-gia tri, nhan duoc {raw!r}.")
+        errors.append(f"{where}: params phải là cặp khóa-giá trị, nhận được {raw!r}.")
         return {}
     out = {}
     for key, value in raw.items():
@@ -99,19 +99,19 @@ def _params(raw, where: str, errors: list[str]) -> dict[str, str]:
 
 def _steps(raw, where: str, errors: list[str]) -> tuple:
     if raw is None:
-        errors.append(f"{where}: thieu `steps` - case nay khong lai app di dau.")
+        errors.append(f"{where}: thiếu `steps` - case này không lái app đi đâu.")
         return ()
     if not isinstance(raw, list):
-        errors.append(f"{where}: steps phai la mot danh sach, nhan duoc {raw!r}.")
+        errors.append(f"{where}: steps phải là một danh sách, nhận được {raw!r}.")
         return ()
     if not raw:
-        errors.append(f"{where}: steps rong - case nay khong lai app di dau.")
+        errors.append(f"{where}: steps rỗng - case này không lái app đi đâu.")
         return ()
     parsed = [parse_step(item, where, errors) for item in raw]
     if any(step is None for step in parsed):
         # Bo CA case: chay mot case thieu buoc con te hon khong chay - no ra
         # ket luan ve app dua tren duong di khong phai duong tester mo ta.
-        errors.append(f"{where}: co step khong doc duoc - bo ca case nay.")
+        errors.append(f"{where}: có step không đọc được - bỏ cả case này.")
         return ()
     return tuple(parsed)
 
@@ -119,7 +119,7 @@ def _steps(raw, where: str, errors: list[str]) -> tuple:
 def _case(raw, event: str, position: int, errors: list[str]) -> FlowCase | None:
     where = f"event {event!r} case {position}"
     if not isinstance(raw, dict):
-        errors.append(f"{where}: case phai la mot mapping.")
+        errors.append(f"{where}: case phải là một mapping.")
         return None
     unknown_keys(raw, CASE_KEYS, where, errors)
     # Doc reset TRUOC khi bo case vi thieu step: bo som thi loi reset bi mat,
@@ -147,7 +147,7 @@ def parse_flow(text: str, package: str = "") -> Flow:
     try:
         document = yaml.load(text or "", Loader=_NoDuplicateLoader) or []
     except yaml.YAMLError as exc:
-        return Flow(package=package, errors=(f"YAML sai cu phap: {exc}",))
+        return Flow(package=package, errors=(f"YAML sai cú pháp: {exc}",))
 
     groups, package = _groups(document, package)
     if package:
@@ -157,22 +157,22 @@ def parse_flow(text: str, package: str = "") -> Flow:
             errors.append(str(exc))
     if not isinstance(groups, list):
         return Flow(package=package,
-                    errors=("Flow phai la danh sach cac event, moi event co `cases`.",))
+                    errors=("Flow phải là danh sách các event, mỗi event có `cases`.",))
 
     cases: list[FlowCase] = []
     labels: set[str] = set()
     for index, group in enumerate(groups, start=1):
         if not isinstance(group, dict):
-            errors.append(f"Event thu {index}: phai la mapping co `event` va `cases`.")
+            errors.append(f"Event thứ {index}: phải là mapping có `event` và `cases`.")
             continue
-        unknown_keys(group, {"event", "cases"}, f"Event thu {index}", errors)
-        event = text_value(group.get("event"), "event", f"Event thu {index}", errors)
+        unknown_keys(group, {"event", "cases"}, f"Event thứ {index}", errors)
+        event = text_value(group.get("event"), "event", f"Event thứ {index}", errors)
         if not event:
-            errors.append(f"Event thu {index}: thieu ten event.")
+            errors.append(f"Event thứ {index}: thiếu tên event.")
             continue
         raw_cases = group.get("cases")
         if not isinstance(raw_cases, list) or not raw_cases:
-            errors.append(f"Event {event!r}: khong co case nao.")
+            errors.append(f"Event {event!r}: không có case nào.")
             continue
         for position, raw_case in enumerate(raw_cases, start=1):
             case = _case(raw_case, event, position, errors)
@@ -181,13 +181,13 @@ def parse_flow(text: str, package: str = "") -> Flow:
             # `event_flow_run.expectations` khoa theo nhan: hai case cung nhan
             # thi mot cai de mat expectations cua cai kia.
             if case.label in labels:
-                errors.append(f"event {event!r} case {position}: nhan "
-                              f"{case.label!r} trung voi case truoc - dat `name` "
-                              f"khac nhau de phan biet cua so.")
+                errors.append(f"event {event!r} case {position}: nhãn "
+                              f"{case.label!r} trùng với case trước - đặt `name` "
+                              f"khác nhau để phân biệt cửa sổ.")
                 continue
             labels.add(case.label)
             cases.append(case)
 
     if not cases and not errors:
-        errors.append("Flow rong - chua khai case nao.")
+        errors.append("Flow rỗng - chưa khai case nào.")
     return Flow(package=package, cases=tuple(cases), errors=tuple(errors))

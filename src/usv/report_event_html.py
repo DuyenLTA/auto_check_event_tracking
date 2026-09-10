@@ -11,11 +11,10 @@ report ads.
 
 from __future__ import annotations
 
-import html
-
 from .check_models import (FAIL_VERDICTS, CheckResult, Summary, Verdict,
                            verdict_label)
 from .event_spec_models import SpecSheet
+from .report_event_callouts import _callouts, esc
 from .report_event_css import CSS, FONTS
 
 _NO_SCREEN = "Không khai màn"
@@ -27,14 +26,6 @@ _STATUS = {
     Verdict.NOT_TESTED: "muted",
     Verdict.EXTRA: "muted",
 }
-
-
-def esc(value) -> str:
-    """Gia tri den TU LOG - du lieu khong kiem soat, phai escape het.
-
-    Do that: `error_msg` chua backtick, dau ngoac, dau hai cham.
-    """
-    return html.escape(str(value if value is not None else ""))
 
 
 def _status_class(verdict: Verdict) -> str:
@@ -55,16 +46,24 @@ def _triggered_of(spec: SpecSheet) -> dict[str, str]:
     return {e.name: e.triggered for e in spec.events}
 
 
-def _row(item: CheckResult, triggered: dict[str, str]) -> str:
+def _row(item: CheckResult, triggered: dict[str, str],
+         *, show_event: bool = True) -> str:
+    """Mot dong bang. `show_event=False` -> de trong o Event.
+
+    Spec 2 event nhung bang co 5 dong (2 dong event + 3 dong param). Lap ten
+    event o moi dong thi doc vao tuong 5 event - da co nguoi doc bao cao roi
+    hoi "5 event o dau ra". In ten o dong DAU cua moi event la du.
+    """
     event, param = _split_element(item.element)
     base = event.split(" (")[0]
     cls = _status_class(item.verdict)
     note = item.delta or item.message
     return (
         f"<tr{' class=\"row-fail\"' if cls == 'fail' else ''}>"
-        f"<td class='cell-ev'><code>{esc(event)}</code>"
-        f"<span class='trig'>{esc(triggered.get(base, ''))}</span></td>"
-        f"<td class='cell-mono'>{esc(param)}</td>"
+        + (f"<td class='cell-ev'><code>{esc(event)}</code>"
+           f"<span class='trig'>{esc(triggered.get(base, ''))}</span></td>"
+           if show_event else "<td class='cell-ev'></td>")
+        + f"<td class='cell-mono'>{esc(param)}</td>"
         f"<td class='cell-mono cell-want'>{esc(item.expected or '—')}</td>"
         f"<td class='cell-mono'>{esc(item.actual or '—')}</td>"
         f"<td><span class='status {cls}'><span class='dot'></span>"
@@ -79,62 +78,54 @@ def _section(name: str, rows: list[CheckResult], triggered: dict[str, str]) -> t
     ok = sum(1 for r in checked if r.verdict is Verdict.PASS)
     level = ("fail" if any(r.verdict in FAIL_VERDICTS for r in rows)
              else "pass" if checked and ok == len(checked) else "pending")
-    body = "".join(_row(r, triggered) for r in rows)
+    # Xep lai theo EVENT roi moi den param cua no, giu thu tu event nhu ban
+    # dau. Truoc day sap theo loai check nen dong presence cua ca hai event
+    # nam canh nhau roi moi den cac dong param - doc kieu do phai nhay mat len
+    # xuong de biet param nao cua event nao.
+    nhom: dict[str, list[CheckResult]] = {}
+    for item in rows:
+        nhom.setdefault(_split_element(item.element)[0], []).append(item)
+    parts = []
+    for ten, cua_event in nhom.items():
+        # Dong khong co param (kiem event co ban khong) len truoc.
+        cua_event.sort(key=lambda r: _split_element(r.element)[1] != "—")
+        for thu_tu, item in enumerate(cua_event):
+            parts.append(_row(item, triggered, show_event=thu_tu == 0))
+    body = "".join(parts)
     # Mau so 0 nghia la ca man CHUA test dong nao. In "0/0 khop" thi nguoi doc
     # khong hieu gi; noi thang "chua test" moi dung viec da xay ra.
     if not checked:
         level, tally = "pending", f"chưa test ({len(rows)})"
     else:
         tally = f"{ok}/{len(checked)} khớp"
+    bang = (
+        f"<div class='table-scroll'><table><thead><tr><th>Event</th><th>Param</th>"
+        f"<th>Spec cần</th><th>App gửi</th><th>Kết quả</th></tr></thead>"
+        f"<tbody>{body}</tbody></table></div>"
+    )
+    # Spec de trong cot Screen Name -> khong co gi de nhom, va mot nhom ten
+    # "Khong khai man" chi noi ve chinh cai bang spec chu khong noi gi ve app.
+    # Bo ca chip lan tieu de, hien thang bang.
+    if name == _NO_SCREEN:
+        return "", f"<div class='section'>{bang}</div>"
+
     chip = f"<span class='section-chip {level}'>{esc(name)} <b>{esc(tally)}</b></span>"
     section = (
         f"<details class='section' open><summary>"
         f"<span class='section-title'>{esc(name)}</span>"
         f"<span class='section-frac {level}'>{esc(tally)}</span></summary>"
-        f"<div class='table-scroll'><table><thead><tr><th>Event</th><th>Param</th>"
-        f"<th>Spec cần</th><th>App gửi</th><th>Kết quả</th></tr></thead>"
-        f"<tbody>{body}</tbody></table></div></details>"
+        f"{bang}</details>"
     )
     return chip, section
 
 
-def _callouts(results: list[CheckResult], fa_silent: bool,
-              near_edge: tuple[str, ...]) -> str:
-    out = []
-    if fa_silent:
-        out.append(
-            "<div class='callout alarm'><h3>Không đọc được log Firebase</h3>"
-            "<p>Cả phiên ghi không có một dòng <code>FA-SVC</code> nào. Rất có thể "
-            "build này strip log Firebase, <b>không phải</b> app thiếu event — "
-            "đừng kết luận app sai từ báo cáo này. Thử lại với build debug, hoặc "
-            "kiểm tra <code>setprop log.tag.FA-SVC VERBOSE</code> đã ăn chưa "
-            "(property không sống qua reboot, và app phải khởi động lại sau khi "
-            "set).</p></div>")
-
-    extras = [r for r in results if r.verdict is Verdict.EXTRA]
-    if extras:
-        chips = "".join(f"<span class='chip'>{esc(r.element)} {esc(r.actual)}</span>"
-                        for r in extras)
-        out.append(
-            "<div class='callout'><h3>Không tính vào fail</h3>"
-            "<p>Event/param app có mà spec không khai. Có thể spec chưa cập nhật, "
-            "không hẳn app sai.</p>"
-            f"<div class='chip-list'>{chips}</div></div>")
-
-    if near_edge:
-        chips = "".join(f"<span class='chip'>{esc(n)}</span>" for n in near_edge)
-        out.append(
-            "<div class='callout'><h3>Event bắn sát mốc đánh dấu</h3>"
-            "<p>Những event này bắn rất gần lúc bấm mốc nên có thể thuộc bước "
-            "liền kề. Tool <b>không</b> tự đổi bước cho chúng — xem lại bằng mắt "
-            "nếu kết quả của chúng bất thường.</p>"
-            f"<div class='chip-list'>{chips}</div></div>")
-    return "".join(out)
-
-
 def build(spec: SpecSheet, results: list[CheckResult], summary: Summary, *,
           package: str = "", generated_at: str = "", event_count: int = 0,
-          fa_silent: bool = False, near_edge: tuple[str, ...] = ()) -> str:
+          fa_silent: bool = False, stream_died: bool = False,
+          app_seen: bool = True, foreground: str = "",
+          checked_package: str = "",
+          near_edge: tuple[str, ...] = (),
+          quick: bool = False) -> str:
     screens = _screen_of(spec)
     triggered = _triggered_of(spec)
 
@@ -148,7 +139,8 @@ def build(spec: SpecSheet, results: list[CheckResult], summary: Summary, *,
     chips, sections = [], []
     for name, rows in grouped.items():
         chip, section = _section(name, rows, triggered)
-        chips.append(chip)
+        if chip:
+            chips.append(chip)
         sections.append(section)
 
     checked = summary.total_checked
@@ -171,7 +163,8 @@ def build(spec: SpecSheet, results: list[CheckResult], summary: Summary, *,
   <header class="report-head">
     <p class="eyebrow">Event Tracking · Firebase Analytics</p>
     <h1>Event Tracking Diff</h1>
-    <p class="meta">{esc(package)} · {event_count} event đọc từ logcat · tag FA-SVC
+    <p class="meta">{esc(package)} · <b>{len(spec.events)} event trong spec</b>
+      · {checked} mục đã kiểm · {event_count} event đọc được từ logcat
       {f'· {esc(generated_at)}' if generated_at else ''}</p>
     <div class="scorecard">
       <div class="score-row"><span class="score-num">{summary.passed}</span>
@@ -181,7 +174,8 @@ def build(spec: SpecSheet, results: list[CheckResult], summary: Summary, *,
     </div>
     <div class="section-chips">{''.join(chips)}</div>
   </header>
-  {_callouts(results, fa_silent, near_edge)}
+  {_callouts(results, fa_silent, near_edge, quick, stream_died, app_seen,
+               foreground, package, checked_package)}
   <div class="sections">{''.join(sections)}</div>
 </div>
 """

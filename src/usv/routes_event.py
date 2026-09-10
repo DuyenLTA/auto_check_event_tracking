@@ -9,22 +9,22 @@ event_spec_parse ve chuyen gop dong lam mat o rong.
 
 from __future__ import annotations
 
-import logging
-
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from . import event_check_runner, logcat_stream
+from . import logcat_stream
 from .adb_parsers import AdbError
 from .check_config import ConfigError, load as load_config
-from .event_flow_parse import parse_flow
+from .confluence_client import (ConfluenceError, ConfluenceLinkError,
+                                fetch_page)
+from .event_session import bo_phien_cu, co_the_tu_mo, lay_mau_app
+from .event_spec_confluence import parse_page
 from .event_spec_parse import parse_paste
-from .event_state import EventRun, now_vn, state
-from .event_window import cut, mark_label
+from .event_state import state
+from .event_window import mark_label, windows_for
 from .fa_event_parse import parse_log
 from .routes_device import client
 
-log = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -32,15 +32,17 @@ class SpecRequest(BaseModel):
     text: str = Field(default="", max_length=2_000_000)
 
 
-class FlowRequest(BaseModel):
-    text: str = Field(default="", max_length=2_000_000)
-    package: str = ""
+class ConfluenceRequest(BaseModel):
+    url: str = Field(default="", max_length=2000)
 
 
 class RecordRequest(BaseModel):
     serial: str
     package: str
-    from_launch: bool = True
+    # KHONG co `from_launch`. Luon ghi tu dau; tool tu mo app khi tim thay
+    # package, khong thay thi de tester tu mo - xem co_the_tu_mo().
+    # KHONG co tham so `quick`. Cham ca phien hay cat theo moc duoc SUY RA luc
+    # Dung ghi, tu viec co moc hay khong - xem stop_record.
 
 
 class MarkRequest(BaseModel):
@@ -73,24 +75,35 @@ async def load_spec(request: SpecRequest) -> dict:
     khong noi gi.
     """
     sheet = parse_paste(request.text)
+    await bo_phien_cu()
     state.spec = sheet
-    state.run = None
-    state.windows = ()
     return {"stage": state.stage, **sheet.payload()}
 
 
-@router.post("/event/flow")
-async def load_flow(request: FlowRequest) -> dict:
-    """Doc flow YAML -> tra case va loi cho bang preview. KHONG chay gi tren may.
+@router.post("/event/spec/confluence")
+async def load_spec_confluence(request: ConfluenceRequest) -> dict:
+    """Nap spec THANG tu link Confluence.
 
-    Tra 200 ke ca khi co loi, cung ly do `/event/spec`: flow sai la loi du lieu
-    cua tester, can thay het cho sai mot luot de sua.
+    Hon han duong dan TSV o mot cho khong the vuot qua bang cach dan: bang
+    that dung `rowspan`, hang thu hai cua mot event chi co 2 o trong khi bang
+    rong 8 cot. Ranh gioi o lay tu luoi HTML thi chuyen do bien mat; dem o
+    theo dau tab thi khong.
 
-    Khong luu vao state: buoc nay chi de tester soi flow truoc khi chay. Cai
-    `fragile` trong payload la canh bao selector khop theo chu - vo khi doi
-    ngon ngu, bao chu khong chan.
+    Loi mang/token tra 502 (loi HE THONG, khong phai loi cua tester), con bang
+    doc duoc ma sai thi tra 200 kem `errors` - giong duong dan dan tay.
     """
-    return parse_flow(request.text, request.package).payload()
+    try:
+        title, html = fetch_page(request.url)
+    except ConfluenceLinkError as exc:
+        # Link go sai la loi cua nguoi dung -> 400, dung bao nhu su co mang.
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except ConfluenceError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    sheet = parse_page(html)
+    await bo_phien_cu()
+    state.spec = sheet
+    return {"stage": state.stage, "source": title, **sheet.payload()}
 
 
 @router.post("/event/record")
@@ -98,21 +111,34 @@ async def start_record(request: RecordRequest) -> dict:
     if state.spec is None or not state.spec.ok:
         raise HTTPException(
             status_code=409,
-            detail="Spec chua hop le - sua het loi o bang preview roi mới Ghi được.")
-    if state.recording is not None and not state.recording.stopped:
+            detail="Spec chưa hợp lệ — sửa hết lỗi ở bảng preview rồi mới Ghi được.")
+    old = state.recording
+    if old is not None and old.live:
         raise HTTPException(status_code=409, detail="Đang ghi rồi.")
+    if old is not None and not old.stopped:
+        # Stream da chet (may rot khoi USB) ma chua ai bam Dung. Don xac cho
+        # tu te - task doc va process con treo o day - roi cho ghi phien moi.
+        await logcat_stream.stop(old)
 
     adb = client()
+    tu_mo, nhac = await co_the_tu_mo(adb, request.serial, request.package)
     try:
         recording = await logcat_stream.start(
-            adb, request.serial, request.package, from_launch=request.from_launch)
+            adb, request.serial, request.package, from_launch=tu_mo)
     except AdbError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
+    # Lay mau ngay sau khi mo app. Tu mo tay thi luc nay chua chay - con mau
+    # o /event/stop.
+    recording.package_found = tu_mo
+    await lay_mau_app(adb, recording, ten_co_tren_may=tu_mo)
     state.recording = recording
     state.serial, state.package = request.serial, request.package
+    state.quick = False
     state.run, state.windows = None, ()
-    return {"stage": state.stage, "recording": recording.payload()}
+    return {"stage": state.stage, "quick": state.quick,
+            "launched": tu_mo, "hint": nhac,
+            "recording": recording.payload()}
 
 
 @router.post("/event/mark")
@@ -142,56 +168,18 @@ async def stop_record() -> dict:
     if not recording.stopped:
         await logcat_stream.stop(recording)
 
+    await lay_mau_app(client(), recording,
+                      ten_co_tren_may=recording.package_found)
+
     events, markers = parse_log(recording.text())
-    state.windows = cut(events, markers)
+    state.windows, state.quick = windows_for(
+        tuple(e.name for e in (state.spec.events if state.spec else ())),
+        events, markers)
     return {
         "stage": state.stage,
+        "quick": state.quick,
         "recording": recording.payload(),
         "window_count": len(state.windows),
         "event_count": len(events),
         "marker_count": len(markers),
     }
-
-
-@router.post("/event/check")
-async def run_check() -> dict:
-    if state.spec is None or not state.spec.ok:
-        raise HTTPException(status_code=409, detail="Chưa nạp spec hợp lệ.")
-    recording = state.recording
-    if recording is None or not recording.stopped:
-        raise HTTPException(status_code=409, detail="Chưa Dừng ghi.")
-
-    try:
-        config = load_config()
-    except ConfigError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    fa_silent = recording.fa_silent
-    results, summary = event_check_runner.run(
-        state.spec, state.windows, config, fa_silent=fa_silent)
-    events, _ = parse_log(recording.text())
-
-    state.run = EventRun(
-        results=results, summary=summary, spec=state.spec, package=state.package,
-        generated_at=now_vn(), fa_silent=fa_silent,
-        near_edge=tuple(dict.fromkeys(n for w in state.windows for n in w.near_edge)),
-        event_count=len(events),
-    )
-    return {
-        "stage": state.stage,
-        "summary": summary.payload(),
-        "fa_silent": fa_silent,
-        "near_edge": list(state.run.near_edge),
-        "config": config.payload(),
-        "results": [r.payload() for r in results],
-    }
-
-
-@router.post("/event/reset")
-async def reset() -> dict:
-    """Bo het de lam lai. Kill process logcat neu con dang chay."""
-    recording = state.recording
-    if recording is not None and not recording.stopped:
-        await logcat_stream.stop(recording)
-    state.reset()
-    return state.payload()

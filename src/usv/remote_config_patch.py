@@ -34,9 +34,9 @@ def patch_activate_json(text: str, values: dict[str, str], now_ms: int) -> str:
     try:
         data = json.loads(text) if text.strip() else {}
     except json.JSONDecodeError as exc:
-        raise ValueError(f"frc activate json khong doc duoc: {exc}") from exc
+        raise ValueError(f"frc activate json không đọc được: {exc}") from exc
     if not isinstance(data, dict):
-        raise ValueError("frc activate json phai la mot object.")
+        raise ValueError("frc activate json phải là một object.")
 
     configs = data.get(CONFIGS_KEY)
     if not isinstance(configs, dict):

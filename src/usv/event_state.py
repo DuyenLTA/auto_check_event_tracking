@@ -33,8 +33,14 @@ class EventRun:
     package: str = ""
     generated_at: str = ""
     fa_silent: bool = False
+    # Phien ghi bi dut giua duong -> bao cao phai noi ra, xem report_event_html.
+    stream_died: bool = False
+    app_seen: bool = True
+    foreground: str = ""
+    checked_package: str = ""
     near_edge: tuple[str, ...] = ()
     event_count: int = 0
+    quick: bool = False
 
 
 @dataclass(slots=True)
@@ -45,6 +51,7 @@ class State:
     run: EventRun | None = None
     serial: str = ""
     package: str = ""
+    quick: bool = False
 
     @property
     def stage(self) -> str:
@@ -66,10 +73,12 @@ class State:
         self.run = None
         self.serial = ""
         self.package = ""
+        self.quick = False
 
     def payload(self) -> dict:
         return {
             "stage": self.stage,
+            "quick": self.quick,
             "serial": self.serial,
             "package": self.package,
             "spec": self.spec.payload() if self.spec else None,

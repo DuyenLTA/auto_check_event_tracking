@@ -1,7 +1,7 @@
 """Verdict cho domain event tracking.
 
 Khoa mot regression THAT, khong phai phong xa: `Summary.add` ket thuc bang
-`else: self.failed += 1`, `exporter._tone` va `render.js` cung roi xuong nhanh
+`else: self.failed += 1` va `render.js` cung roi xuong nhanh
 fail mac dinh. Nen them NOT_TESTED ma khong sua 4 cho do thi no bi dem thanh
 FAIL - vi pham nguyen tac 1 cua repo (khong ghep duoc / chua test KHONG phai loi
 cua app).
@@ -11,13 +11,12 @@ from __future__ import annotations
 
 import pytest
 
-from usv import exporter
 from usv.check_models import (
     FAIL_VERDICTS, CheckResult, Summary, Verdict, icon, verdict_label,
 )
 
 NEW_FAILS = ["FAIL_VALUE", "FAIL_TYPE", "FAIL_DUPLICATE", "FAIL_PARAM_EXTRA"]
-# Gia tri enum di vao file xlsx xuat ra va vao report da luu - doi la cac ban cu
+# Gia tri enum di vao report da luu - doi la cac ban cu
 # doc khong khop nua. Xem check_models.py phan VERDICT_LABEL.
 ALL_VERDICTS = [
     "PASS", "FAIL_MISSING", "FAIL_VALUE", "FAIL_TYPE", "FAIL_DUPLICATE",
@@ -36,7 +35,7 @@ def test_verdict_moi_ton_tai():
 
 
 def test_gia_tri_verdict_khong_doi():
-    """Doi gia tri enum -> xlsx va report da luu doc khong khop nua."""
+    """Doi gia tri enum -> report da luu doc khong khop nua."""
     for name in ALL_VERDICTS:
         assert str(getattr(Verdict, name)) == name
 
@@ -76,14 +75,6 @@ def test_checkresult_failed_dung_cho_verdict_moi():
     assert _result(Verdict.NOT_TESTED).failed is False
 
 
-def test_tone_xlsx_not_tested_khac_fail():
-    """O xlsx cua NOT_TESTED khong duoc to do nhu loi that."""
-    assert exporter._tone(Verdict.NOT_TESTED) != exporter._tone(Verdict.FAIL_VALUE)
-
-
-def test_tone_xlsx_fail_moi_la_fail():
-    for name in NEW_FAILS:
-        assert exporter._tone(getattr(Verdict, name)) == exporter._tone(Verdict.FAIL_VALUE)
 
 
 def test_nhan_tieng_viet_cho_ca_5_verdict_moi():

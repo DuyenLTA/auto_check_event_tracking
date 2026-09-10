@@ -105,7 +105,7 @@ def test_wait_text_timeout_mac_dinh_10s_va_khai_lai_duoc():
 def test_step_la_bi_tu_choi_kem_danh_sach_cho_phep():
     flow = parse_flow("- event: e\n  cases:\n    - steps:\n        - tap_di: btnHome\n")
     assert not flow.ok
-    assert any("tap_di" in e and "Chi co:" in e for e in flow.errors)
+    assert any("tap_di" in e and "Chỉ có:" in e for e in flow.errors)
 
 
 def test_message_loi_liet_ke_du_ten_step_de_tester_tu_sua():
@@ -127,7 +127,7 @@ def test_huong_swipe_la_bi_tu_choi():
 def test_selector_rong_bi_bao():
     flow = parse_flow("- event: e\n  cases:\n    - steps:\n        - tap_id: ''\n")
     assert not flow.ok
-    assert any("thieu gia tri de tim node" in e for e in flow.errors)
+    assert any("thiếu giá trị để tìm node" in e for e in flow.errors)
 
 
 def test_index_am_bi_bao():
@@ -148,18 +148,18 @@ def test_thieu_ten_event_bi_bao():
 
 def test_event_khong_co_case_bi_bao():
     flow = parse_flow("- event: rating_star_clicked\n")
-    assert any("khong co case nao" in e for e in flow.errors)
+    assert any("không có case nào" in e for e in flow.errors)
 
 
 def test_case_khong_co_step_bi_bao__khong_lai_app_di_dau():
     flow = parse_flow("- event: e\n  cases:\n    - params: {a: b}\n")
-    assert any("khong lai app di dau" in e for e in flow.errors)
+    assert any("không lái app đi đâu" in e for e in flow.errors)
 
 
 def test_yaml_sai_cu_phap_bao_loi_chu_khong_raise():
     flow = parse_flow("- event: e\n   cases: [\n")
     assert not flow.ok
-    assert any("YAML sai cu phap" in e for e in flow.errors)
+    assert any("YAML sai cú pháp" in e for e in flow.errors)
 
 
 def test_flow_rong_bao_loi_chu_khong_tra_ok():

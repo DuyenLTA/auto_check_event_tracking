@@ -18,10 +18,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from dataclasses import dataclass, field
 
 from .adb_logcat import FA_TAG, MARK_TAG
 from .adb_parsers import AdbError
+from .event_recording import Recording
 
 log = logging.getLogger(__name__)
 
@@ -37,36 +37,6 @@ LAUNCH_SETTLE = 1.5
 # Cho task doc not phan con trong pipe sau khi kill. Khong cho mai: kill roi ma
 # task khong ket thuc la co gi sai, thoi con hon treo ca server.
 STOP_TIMEOUT = 5.0
-
-
-@dataclass(slots=True)
-class Recording:
-    """Mot phien ghi dang mo."""
-
-    serial: str
-    package: str
-    lines: list[str] = field(default_factory=list)
-    marks: list[str] = field(default_factory=list)
-    process: object | None = None
-    reader: object | None = None      # asyncio.Task doc stream lien tuc
-    stopped: bool = False
-
-    @property
-    def fa_silent(self) -> bool:
-        """Khong co dong FA nao -> khong doc duoc log Firebase (R3).
-
-        Khac han "app khong ban event": voi truong hop nay tuyet doi KHONG duoc
-        ket luan app thieu event.
-        """
-        return not any("/FA" in line for line in self.lines)
-
-    def text(self) -> str:
-        return "\n".join(self.lines)
-
-    def payload(self) -> dict:
-        return {"serial": self.serial, "package": self.package,
-                "line_count": len(self.lines), "marks": list(self.marks),
-                "stopped": self.stopped, "fa_silent": self.fa_silent}
 
 
 async def enable_fa(client, serial: str) -> bool:
@@ -96,12 +66,41 @@ async def start(client, serial: str, package: str, *,
     # Bat doc NGAY, truoc khi mo app: khong thi event dau tien (first_open,
     # session_start) ban ra ma chua ai doc.
     recording.reader = asyncio.create_task(_pump(recording))
+    try:
+        recording.home_package = await client.home_package(serial) or ""
+    except AdbError:
+        recording.home_package = ""
+    recording.watcher = asyncio.create_task(_watch_foreground(client, recording))
 
     if from_launch and package:
         await client.force_stop(serial, package)
         await client.launch(serial, package)
         await asyncio.sleep(LAUNCH_SETTLE)
     return recording
+
+
+FOREGROUND_MS = 2.0
+
+
+async def _watch_foreground(client, recording: Recording) -> None:
+    """Dem app nao o foreground, suot phien ghi.
+
+    Lay mau MOT LAN luc Dung ghi thi cai gi dang tren man luc do thang - da do
+    duoc: bat ra com.google.android.apps.nexuslauncher va bao cao ghi "da cham
+    cho launcher". Dem suot phien roi lay app xuat hien nhieu nhat thi khong bi
+    mot khoanh khac lam lech.
+
+    Loi adb khong duoc lam sap phien ghi - bo qua mau do, vong sau thu lai.
+    """
+    while not recording.stopping:
+        try:
+            now = await client.foreground_package(recording.serial)
+        except Exception:      # noqa: BLE001 - mau nay chi de goi y, khong ket luan
+            now = None
+        if now:
+            recording.foreground_seen[now] = \
+                recording.foreground_seen.get(now, 0) + 1
+        await asyncio.sleep(FOREGROUND_MS)
 
 
 async def _pump(recording: Recording) -> None:
@@ -126,18 +125,29 @@ async def _pump(recording: Recording) -> None:
         while True:
             raw = await process.stdout.readline()
             if not raw:            # EOF - process da dung
+                if not recording.stopping:
+                    # Chua ai bam Dung ma ong da dong -> adb dut. Ghi lai:
+                    # khong ghi thi phien ghi chet am tham, va check ket luan
+                    # "app thieu event" tren du lieu chi co phan dau.
+                    recording.stream_died = True
+                    log.warning(
+                        "Stream logcat dut truoc khi Dung ghi - chi doc duoc "
+                        "%d dong.", len(recording.lines))
                 return
             recording.lines.append(raw.decode("utf-8", "replace").rstrip("\n"))
     except asyncio.CancelledError:
         raise
     except Exception as exc:       # noqa: BLE001 - doc log hong khong duoc lam sap phien
+        # Doc loi = mat log tu day tro di, khong khac gi EOF som.
+        if not recording.stopping:
+            recording.stream_died = True
         log.warning("Doc stream logcat that bai: %s", exc)
 
 
 async def mark(client, recording: Recording, label: str) -> None:
     """Chen moc vao logcat. MOT nut mot buoc: moc sau la diem ket cua buoc truoc."""
     if recording.stopped:
-        raise AdbError("Phien ghi da dung - khong chen moc duoc nua.")
+        raise AdbError("Phiên ghi đã dừng — không chèn mốc được nữa.")
     # KHONG doc stream o day - task nen dang doc lien tuc. Doc o ca hai cho la
     # hai ben gianh cung mot stdout.
     await client.shell_log(recording.serial, MARK_TAG, label)
@@ -151,6 +161,10 @@ async def stop(recording: Recording) -> Recording:
     doc het phan con dong trong pipe roi tu ket thuc - khong mat dong nao. Huy
     task truoc khi kill thi mat dung phan cuoi.
     """
+    # Bao truoc y dinh TRUOC khi kill: kill lam stdout ve EOF, va `_pump` phai
+    # biet EOF do la co y - khong thi moi lan Dung binh thuong deu bi gan co
+    # "da dut", canh bao keu oan thi tester hoc cach bo qua no.
+    recording.stopping = True
     process = recording.process
     if process is not None and process.returncode is None:
         try:
@@ -158,6 +172,11 @@ async def stop(recording: Recording) -> Recording:
             await process.wait()
         except ProcessLookupError:
             pass
+
+    watcher = recording.watcher
+    if watcher is not None:
+        watcher.cancel()
+        recording.watcher = None
 
     reader = recording.reader
     if reader is not None:

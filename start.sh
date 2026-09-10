@@ -43,7 +43,7 @@ VPY="$ENV_DIR/bin/python"
 # Cai lai khi thieu thu vien HOAC khi pyproject.toml moi hon lan cai truoc
 STAMP="$ENV_DIR/.usv-installed"
 NEEDS_INSTALL=0
-"$VPY" -c "import usv, fastapi, yaml, openpyxl" >/dev/null 2>&1 || NEEDS_INSTALL=1
+"$VPY" -c "import usv, fastapi, yaml" >/dev/null 2>&1 || NEEDS_INSTALL=1
 [ -f "$STAMP" ] && [ pyproject.toml -nt "$STAMP" ] && NEEDS_INSTALL=1
 
 # `usv` phai tro vao CHINH repo nay. Doi ten thu muc du an lam file .pth cua
@@ -88,6 +88,18 @@ else
   echo "adb : ${ADB_PATH:-$(command -v adb)}"
 fi
 
+# --- 3b. Confluence (canh bao thoi, khong chan) ------------------------------
+# Nap spec bang link Confluence can hai bien nay. Khong co thi o dan tay van
+# chay binh thuong - nen chi nhac, khong chan.
+if [ -z "${CONFLUENCE_TOKEN:-}" ] || [ -z "${CONFLUENCE_BASE_URL:-}" ]; then
+  echo "CANH BAO: chua co CONFLUENCE_BASE_URL/CONFLUENCE_TOKEN - o 'Đọc từ link'"
+  echo "          se bao loi. Dat trong ~/.bashrc roi mo lai terminal:"
+  echo "          export CONFLUENCE_BASE_URL=https://confluence.cong-ty.vn"
+  echo "          export CONFLUENCE_TOKEN=<personal access token>"
+else
+  echo "confluence : $CONFLUENCE_BASE_URL"
+fi
+
 # --- 4. Chon cong con trong ---------------------------------------------------
 FREE_PORT=$("$VPY" scripts/find-free-port.py "$PORT")
 [ "$FREE_PORT" = "0" ] && die "Khong con cong trong tu $PORT den $((PORT + 19))."
@@ -105,6 +117,14 @@ if [ "${USV_NO_BROWSER:-0}" != "1" ]; then
   ) >/dev/null 2>&1 &
 fi
 
+# --reload: sua code Python la server tu nap lai.
+#
+# Bat buoc phai co. File JS/HTML duoc doc lai tu dia moi request nen F5 la thay
+# ngay, con module Python thi CHI NAP MOT LAN luc khoi dong. Sua code roi bao
+# nguoi dung F5 thi ho chay backend cu ma khong biet, va di bao mot bug da sua
+# roi - da mat mot luot dung nhu vay.
+#
 # Chi bind 127.0.0.1: cong cu noi bo, khong co auth, dieu khien duoc adb ->
 # KHONG duoc expose ra LAN. main.py con co middleware chan thu hai.
-"$VPY" -m uvicorn usv.main:app --host 127.0.0.1 --port "$FREE_PORT"
+"$VPY" -m uvicorn usv.main:app --host 127.0.0.1 --port "$FREE_PORT" \
+  --reload --reload-dir src

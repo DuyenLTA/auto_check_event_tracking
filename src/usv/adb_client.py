@@ -14,9 +14,10 @@ import logging
 from .adb_appdata import AppDataMixin
 from .adb_input import InputMixin
 from .adb_logcat import LogcatMixin
+from .adb_foreground_parse import parse_current_focus
 from .adb_parsers import (
     AdbError, AdbTransportError, Device, check_package, check_serial, find_adb,
-    parse_current_focus, parse_devices, parse_packages, parse_wm_density, parse_wm_size,
+    parse_devices, parse_packages, parse_wm_density, parse_wm_size,
 )
 
 log = logging.getLogger(__name__)
@@ -55,14 +56,14 @@ class AdbClient(LogcatMixin, InputMixin, AppDataMixin):
                 stderr=asyncio.subprocess.PIPE,
             )
         except OSError as exc:
-            raise AdbError(f"Khong chay duoc adb ({self.adb}): {exc}") from exc
+            raise AdbError(f"Không chạy được adb ({self.adb}): {exc}") from exc
 
         try:
             out, err = await asyncio.wait_for(proc.communicate(), timeout=timeout)
         except asyncio.TimeoutError as exc:
             proc.kill()
             await proc.wait()
-            raise AdbError(f"adb {' '.join(args)} qua {timeout:g}s khong tra ve.") from exc
+            raise AdbError(f"adb {' '.join(args)} qua {timeout:g}s không trả về.") from exc
 
         stderr = err.decode("utf-8", "replace")
         self._raise_if_transport(stderr)
@@ -77,14 +78,14 @@ class AdbClient(LogcatMixin, InputMixin, AppDataMixin):
                 stderr=asyncio.subprocess.PIPE,
             )
         except OSError as exc:
-            raise AdbError(f"Khong chay duoc adb ({self.adb}): {exc}") from exc
+            raise AdbError(f"Không chạy được adb ({self.adb}): {exc}") from exc
 
         try:
             out, err = await asyncio.wait_for(proc.communicate(), timeout=timeout)
         except asyncio.TimeoutError as exc:
             proc.kill()
             await proc.wait()
-            raise AdbError(f"adb {' '.join(args)} qua {timeout:g}s khong tra ve.") from exc
+            raise AdbError(f"adb {' '.join(args)} qua {timeout:g}s không trả về.") from exc
 
         self._raise_if_transport(err.decode("utf-8", "replace"))
         return out
@@ -95,8 +96,8 @@ class AdbClient(LogcatMixin, InputMixin, AppDataMixin):
         for hint in _TRANSPORT_HINTS:
             if hint in low:
                 raise AdbTransportError(
-                    f"Mat ket noi voi device: {stderr.strip()}\n"
-                    "Kiem tra cap USB, bat lai USB debugging, hoac bam Allow tren may."
+                    f"Mất kết nối với device: {stderr.strip()}\n"
+                    "Kiểm tra cáp USB, bật lại USB debugging, hoặc bấm Allow trên máy."
                 )
 
     # --- API nghiep vu --------------------------------------------------------
@@ -121,7 +122,7 @@ class AdbClient(LogcatMixin, InputMixin, AppDataMixin):
         density = parse_wm_density(density_out)
         if size is None or density is None:
             raise AdbError(
-                "Khong doc duoc kich thuoc/density man hinh.\n"
+                "Không đọc được kích thước/density màn hình.\n"
                 f"  wm size    -> {size_out.strip()!r}\n"
                 f"  wm density -> {density_out.strip()!r}"
             )
@@ -158,13 +159,13 @@ class AdbClient(LogcatMixin, InputMixin, AppDataMixin):
         )
         if "dumped to" not in out.lower() and "dumped to" not in err.lower():
             raise AdbError(
-                "uiautomator dump khong thanh cong.\n"
+                "uiautomator dump không thành công.\n"
                 f"  stdout: {out.strip()!r}\n  stderr: {err.strip()!r}\n"
-                "Thuong do man hinh dang tat, hoac dang o man hinh khong cho dump."
+                "Thường do màn hình đang tắt, hoặc đang ở màn hình không cho dump."
             )
         xml, _, _ = await self._run("-s", serial, "shell", "cat", remote, timeout=DUMP_TIMEOUT)
         if "<hierarchy" not in xml:
-            raise AdbError("Doc duoc file dump nhung khong phai XML hierarchy.")
+            raise AdbError("Đọc được file dump nhưng không phải XML hierarchy.")
         return xml
 
     async def screencap(self, serial: str) -> bytes:
@@ -174,14 +175,24 @@ class AdbClient(LogcatMixin, InputMixin, AppDataMixin):
             "-s", serial, "exec-out", "screencap", "-p", timeout=SCREENCAP_TIMEOUT
         )
         if not png.startswith(b"\x89PNG"):
-            raise AdbError("screencap khong tra ve PNG hop le.")
+            raise AdbError("screencap không trả về PNG hợp lệ.")
         return png
 
     async def launch(self, serial: str, package: str) -> None:
-        """Mo app. Chi dung khi tester bam nut - tool KHONG tu dieu huong flow."""
+        """Mo app. Chi dung khi tester bam nut - tool KHONG tu dieu huong flow.
+
+        PHAI doc stdout: `monkey` in "No activities found to run" nhung tra
+        EXIT CODE 0, nen chi xem returncode thi mo app that bai trong im lang -
+        roi phien ghi bat log cua app dang mo san va bao cao gan event cua no
+        cho app dang test.
+        """
         check_serial(serial)
         check_package(package)
-        await self._run(
+        out, err, _ = await self._run(
             "-s", serial, "shell", "monkey", "-p", package,
             "-c", "android.intent.category.LAUNCHER", "1",
         )
+        if "No activities found to run" in (out + err):
+            raise AdbError(
+                f"Không mở được {package}: máy báo không có màn nào để mở. "
+                "App chưa cài, hoặc không có launcher activity.")

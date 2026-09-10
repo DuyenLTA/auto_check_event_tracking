@@ -13,20 +13,32 @@
   <header>
     <p class="eyebrow">Firebase Analytics</p>
     <h1>Auto Check Event Tracking</h1>
-    <p class="lead">Dán bảng spec, đánh dấu từng bước trong lúc thao tác trên máy,
-      tool đối chiếu event app thật bắn ra rồi ra report.</p>
+    <p class="lead">Dán link spec, bấm Ghi rồi thao tác trên máy, tool đối chiếu
+      event app thật bắn ra với spec rồi ra report.</p>
   </header>
 
   <section class="step" id="step-spec">
     <h2><span class="num">1</span> Bảng spec</h2>
+    <p class="hint">Dán <b>link Confluence</b> của trang có bảng event tracking.
+      Tool tự tìm bảng trên trang và đọc cả ô gộp (rowspan) — thứ mà dán tay
+      không xử lý được.</p>
+    <div class="row">
+      <input id="spec-url" size="52" spellcheck="false"
+        placeholder="https://confluence.../display/VL/Ten+Trang">
+      <button id="btn-spec-url" class="primary">Đọc từ link</button>
+      <span id="spec-url-info" class="info"></span>
+    </div>
+    <details id="spec-paste">
+      <summary>Hoặc dán bảng bằng tay (khi trang không nằm trên Confluence)</summary>
     <p class="hint">Copy từ Excel/Google Sheet rồi dán vào đây — <b>một hàng một dòng</b>,
       ô rỗng để tab liên tiếp. Dòng đầu phải là dòng tiêu đề cột.</p>
     <textarea id="spec-text" rows="8" spellcheck="false"
       placeholder="Screen Name&#9;Event_Name&#9;Triggered&#9;Params&#9;Param Description&#9;Value Type&#9;Value&#9;Value Description"></textarea>
     <div class="row">
-      <button id="btn-spec" class="primary">Đọc bảng</button>
+      <button id="btn-spec">Đọc bảng đã dán</button>
       <span id="spec-info" class="info"></span>
     </div>
+    </details>
     <div id="spec-errors"></div>
     <div id="spec-preview"></div>
   </section>
@@ -34,50 +46,44 @@
   <section class="step" id="step-device">
     <h2><span class="num">2</span> Máy và app</h2>
     <div class="row">
-      <label>Máy <select id="device"></select></label>
+      <span id="device-info" class="info">đang tìm máy…</span>
+      <label id="device-pick" hidden>Máy <select id="device"></select></label>
       <button id="btn-devices">Tìm lại máy</button>
     </div>
     <div class="row">
-      <label>App <input id="pkg-filter" placeholder="lọc theo tên package" size="24"></label>
-      <select id="package"></select>
+      <label>App <input id="package" size="46" spellcheck="false"
+        placeholder="dán package name, vd com.example.app"></label>
+      <span id="package-info" class="info"></span>
     </div>
-    <div class="row">
-      <label class="check"><input type="checkbox" id="from-launch" checked>
-        Ghi từ lúc mở app</label>
-      <span class="hint">Bắt được <code>first_open</code>, <code>session_start</code>
-        và <code>placement_name=app_shortcut</code>. Tool tự tắt rồi mở lại app.</span>
-    </div>
+    <p class="hint">Luôn ghi <b>từ lúc app mở</b>. Tìm thấy app trên máy thì
+      tool tự tắt–mở lại; không tìm thấy thì tool vẫn ghi và bạn tự mở app —
+      lúc đó mở <b>sau</b> khi bấm Ghi. Bấm Ghi xong thì thao tác trên máy cho
+      app bắn hết các event trong spec, rồi quay lại bấm <b>Dừng ghi</b>.</p>
     <div class="row">
       <button id="btn-record" class="primary" disabled>Bắt đầu ghi</button>
-      <span id="record-info" class="info"></span>
-    </div>
-  </section>
-
-  <section class="step" id="step-mark">
-    <h2><span class="num">3</span> Đánh dấu từng bước</h2>
-    <p class="hint">Bấm nút của bước sắp làm, <b>rồi mới</b> thao tác trên máy.
-      Mốc của bước sau chính là điểm kết của bước trước — không cần nút Xong.</p>
-    <div class="row">
-      <input id="mark-filter" placeholder="lọc event" size="28">
-      <span id="mark-progress" class="info"></span>
       <button id="btn-stop" disabled>Dừng ghi</button>
+      <span id="record-info" class="info"></span>
+      <div id="record-alert"></div>
     </div>
-    <div id="marks"></div>
   </section>
 
   <section class="step" id="step-check">
-    <h2><span class="num">4</span> Kết quả</h2>
+    <h2><span class="num">3</span> Kết quả</h2>
     <div class="row">
       <button id="btn-check" class="primary" disabled>Chấm</button>
       <a id="link-report" class="btn" href="/event/report" target="_blank" hidden>Xem report</a>
-      <a id="link-xlsx" class="btn" href="/event/report.xlsx" hidden>Tải xlsx</a>
+      <a id="link-artifact" class="btn" target="_blank" rel="noopener" hidden>Link artifact</a>
       <button id="btn-reset">Làm lại</button>
     </div>
     <div id="summary"></div>
     <div id="results"></div>
   </section>
 </div>
-<script src="/static/event-marks.js"></script>
+<script src="/static/event-api.js"></script>
+<script src="/static/event-device.js"></script>
+<script src="/static/event-spec.js"></script>
+<script src="/static/event-artifact.js"></script>
+<script src="/static/event-progress.js"></script>
 <script src="/static/event-render.js"></script>
 <script src="/static/event.js"></script>
 </body>

@@ -16,6 +16,8 @@ from fastapi.staticfiles import StaticFiles
 from .resources import web_dir
 from .routes_device import router as device_router
 from .routes_event import router as event_router
+from .routes_event_check import router as event_check_router
+from .routes_event_flow import router as event_flow_router
 from .routes_event_report import router as event_report_router
 
 WEB_DIR = web_dir()
@@ -28,6 +30,8 @@ log = logging.getLogger(__name__)
 app = FastAPI(title="Auto Check Event Tracking")
 app.include_router(device_router)
 app.include_router(event_router)
+app.include_router(event_check_router)
+app.include_router(event_flow_router)
 app.include_router(event_report_router)
 
 
@@ -58,7 +62,16 @@ async def loopback_only(request: Request, call_next):
         # tester dang mo cung goi duoc API neu khong chan Origin.
         return JSONResponse({"detail": "Origin khong duoc phep."}, status_code=403)
 
-    return await call_next(request)
+    response = await call_next(request)
+    # Bat trinh duyet HOI LAI moi lan. Khong co Cache-Control thi trinh duyet
+    # tu suy doan thoi han ~10% tuoi file: file sua hom qua duoc giu cache
+    # hang gio, va F5 KHONG hoi lai server. Da gap that - tester refresh nhung
+    # van nhan ban JS cu bi loi, roi ca hai cung di tim bug trong code moi.
+    #
+    # ETag van con nen hoi lai thuong chi ton mot 304 vai chuc byte.
+    if request.url.path == "/" or request.url.path.startswith("/static"):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
 
 
 @app.get("/")

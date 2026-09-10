@@ -35,11 +35,14 @@ def _log(*extra: str) -> str:
 
 
 def _run(spec_tsv: str = SPEC_TSV, log_text: str | None = None,
-         *, fa_silent: bool = False):
+         *, fa_silent: bool = False, stream_died: bool = False,
+         app_seen_running: bool = True):
     spec = parse_paste(spec_tsv)
     assert spec.errors == (), spec.errors
     windows = cut_log(log_text if log_text is not None else _log())
-    return event_check_runner.run(spec, windows, CONFIG, fa_silent=fa_silent)
+    return event_check_runner.run(spec, windows, CONFIG, fa_silent=fa_silent,
+                                  stream_died=stream_died,
+                                  app_seen_running=app_seen_running)
 
 
 def _by_verdict(results):
@@ -80,11 +83,11 @@ def test_A_param_he_thong_khong_bi_bao_thua():
     assert extras == []
 
 
-def test_A_event_ngoai_spec_vao_EXTRA_khong_vao_fail():
-    results, summary = _run()
-    extra = [r for r in results if r.verdict is Verdict.EXTRA]
-    assert extra, "phai co event EXTRA (track_ad_request, screen_view...)"
-    assert summary.extra == len(extra)
+def test_A_event_ngoai_spec_khong_lam_bao_cao_thanh_fail():
+    """Log that day event khong lien quan (track_ad_request, screen_view,
+    ad_query...). Chung khong duoc lam bao cao xau di - va tu ban 260910 cung
+    khong duoc liet ke ra nua, xem test_khong_liet_ke_event_la_cua_app."""
+    _, summary = _run()
     assert summary.failed == 0
 
 
@@ -239,3 +242,72 @@ def test_case_doi_hoi_gia_tri_NGOAI_spec_van_bao_sai():
     windows = _window_with_expect("home", {"placement_name": "khong_co_trong_spec"})
     results, _ = event_check_runner.run(spec, windows, CONFIG)
     assert [r for r in results if r.verdict is Verdict.FAIL_VALUE]
+
+
+def test_stream_dut_thi_khong_ket_luan_app_thieu_event():
+    """May rot khoi USB giua phien -> phan sau khong duoc ghi.
+
+    Do that: may rot luc 14:31, tester bam tiep 69 phut, log dong bang o 315
+    dong, va tool bao 2 FAIL_MISSING - mot ket luan sai ve app tren mot phien
+    ghi da chet. Cung nguyen tac voi fa_silent: khong doc duoc thi khong ket
+    luan, chu khong bao FAIL.
+    """
+    only_marks = "\n".join([MARK_VIEWED, MARK_STAR])
+    results, summary = _run(log_text=only_marks, stream_died=True)
+    assert summary.failed == 0
+    nv = [r for r in results if r.verdict is Verdict.NOT_VERIFIABLE]
+    assert nv and any("đứt giữa đường" in r.message for r in nv)
+
+
+def test_stream_khong_dut_thi_van_bao_thieu_event():
+    """Chieu nguoc lai - thieu test nay thi mot bug lam co luon-bat cung xanh."""
+    only_marks = "\n".join([MARK_VIEWED, MARK_STAR])
+    results, summary = _run(log_text=only_marks, stream_died=False)
+    assert summary.failed == 2
+
+
+def test_khong_liet_ke_event_la_cua_app():
+    """Chi cham event CO TRONG SPEC.
+
+    App that ban hang chuc event khong lien quan (ad_load 22 lan,
+    track_ad_request 22 lan, splash_view, session_start...). Liet ke het ra thi
+    bao cao loang, va thu can doc bi chim giua dong event vo thuong vo phat.
+    """
+    results, summary = _run()
+    la = [r for r in results if r.verdict is Verdict.EXTRA]
+    assert not la, f"khong duoc liet ke event la: {[r.element for r in la]}"
+    assert summary.extra == 0
+    trong_spec = {"rating_placement_viewed", "rating_star_clicked"}
+    for item in results:
+        goc = item.element.split(".")[0].split(" (")[0]
+        assert goc in trong_spec, f"{item.element!r} khong co trong spec"
+
+
+def test_van_cham_du_event_trong_spec():
+    """Chieu nguoc lai - bo loc qua tay thi mat luon event can cham."""
+    results, _ = _run()
+    assert {r.element.split(".")[0].split(" (")[0] for r in results} == {
+        "rating_placement_viewed", "rating_star_clicked"}
+
+
+def test_app_khong_he_chay_thi_khong_ket_luan_PASS():
+    """App duoi test khong chay trong ca phien -> event bat duoc la cua app KHAC.
+
+    Log FA-SVC do Google Play Services in ra (do that: PID app 4524, moi dong
+    "Logging event:" mang PID 31649 = com.google.android.gms), nen logcat
+    khong noi duoc event thuoc app nao. Neu app khong he chay thi khong con gi
+    de gan - bao PASS luc do la PASS GIA.
+
+    Da xay ra: package go sai -> `monkey` that bai ma tra exit 0 -> tool ghi
+    log cua app dang mo san va bao "5 pass" cho mot app khong duoc cai.
+    """
+    results, summary = _run(app_seen_running=False)
+    assert summary.passed == 0, "khong duoc co pass nao"
+    nv = [r for r in results if r.verdict is Verdict.NOT_VERIFIABLE]
+    assert nv and any("không chạy" in r.message for r in nv)
+
+
+def test_app_co_chay_thi_cham_binh_thuong():
+    """Chieu nguoc lai - guard qua tay thi moi phien deu thanh khong ket luan."""
+    _, summary = _run(app_seen_running=True)
+    assert summary.passed == 5
