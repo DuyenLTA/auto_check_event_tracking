@@ -19,10 +19,19 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["src"]
 
-# Dong goi config/ vao package -> `pip install .` (khong -e) van chay.
-# web/* giu san cho tab web o phase 6.
+# web/* phai di theo package, khong thi `pip install .` xong mo trang ra 404.
+#
+# config/ thi KHONG dong goi duoc: no nam o goc repo, ngoai src/, ma
+# package-data chi lay file BEN TRONG package. Da tung khai "data/*.yaml" o
+# day nhung thu muc src/usv/data/ khong he ton tai, nen dong khai do khong
+# lam gi ca ngoai viec lam nguoi doc tuong da co.
+#
+# Hau qua: cai kieu `pip install .` thi khong thay config/, tool chay bang gia
+# tri mac dinh trong code. Hai ben dang TRUNG NHAU tung gia tri va co test giu
+# (test_config_mac_dinh_khop_file.py). Duong chay chinh la ./start.sh, no cai
+# `-e` nen doc thang config/ o goc repo.
 [tool.setuptools.package-data]
-usv = ["web/*", "data/*.yaml"]
+usv = ["web/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
