@@ -412,3 +412,55 @@ def test_dang_ghi_that_thi_van_chan(client, fake_adb):
     again = client.post("/event/record",
                         json={"serial": "FAKE1", "package": "com.example.app"})
     assert again.status_code == 409
+
+
+# --- nap spec tu link Confluence ---
+
+CONFLUENCE_HTML = (FIXTURES / "confluence-event-table.html").read_text(encoding="utf-8")
+
+
+def test_nap_spec_tu_link_confluence(client, monkeypatch):
+    """Duong nay doc duoc bang co rowspan - dan tay thi khong."""
+    monkeypatch.setattr(routes_event, "fetch_page",
+                        lambda url: ("SDK Widget V 1.0.0", CONFLUENCE_HTML))
+    response = client.post("/event/spec/confluence", json={"url": "https://x.vn/pages/1"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["errors"] == []
+    assert body["event_count"] == 1
+    assert body["source"] == "SDK Widget V 1.0.0"
+    assert body["stage"] == "ready_to_record"
+
+
+def test_loi_mang_tra_502_chu_khong_phai_500(client, monkeypatch):
+    """Token sai/mat mang la loi HE THONG - phai noi cach sua, khong phai stacktrace."""
+    from usv.confluence_client import ConfluenceError
+
+    def boom(url):
+        raise ConfluenceError("Confluence tra 401 - token sai hoac het han.")
+
+    monkeypatch.setattr(routes_event, "fetch_page", boom)
+    response = client.post("/event/spec/confluence", json={"url": "https://x.vn/pages/1"})
+    assert response.status_code == 502
+    assert "token" in response.json()["detail"]
+
+
+def test_trang_khong_co_bang_tra_200_kem_loi(client, monkeypatch):
+    """Trang doc duoc ma khong co bang = loi DU LIEU, giong duong dan tay."""
+    monkeypatch.setattr(routes_event, "fetch_page",
+                        lambda url: ("Trang khac", "<p>chi tro sang Google Sheet</p>"))
+    response = client.post("/event/spec/confluence", json={"url": "https://x.vn/pages/1"})
+    assert response.status_code == 200
+    assert response.json()["errors"], "phai noi ro trang khong co bang event"
+
+
+def test_index_co_o_dan_link_confluence(client):
+    page = client.get("/").text
+    assert 'id="spec-url"' in page and 'id="btn-spec-url"' in page
+
+
+def test_link_go_sai_tra_400_chu_khong_502(client, monkeypatch):
+    """400 = loi cua nguoi dung. Tra 502 thi tester di kiem tra VPN thay vi
+    doc lai cai link."""
+    response = client.post("/event/spec/confluence", json={"url": "khong-phai-link"})
+    assert response.status_code == 400

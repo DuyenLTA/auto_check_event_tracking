@@ -61,7 +61,17 @@ def parse_paste(text: str) -> SpecSheet:
     rows = _rows(text or "")
     if not rows:
         return SpecSheet(errors=("O text trong - chua dan bang spec nao vao.",))
+    return parse_rows(rows)
 
+
+def parse_rows(rows: list[list[str]]) -> SpecSheet:
+    """Hang da tach san -> SpecSheet.
+
+    Tach khoi parse_paste de duong Confluence dung chung: o ben do ranh gioi o
+    lay tu luoi HTML (co rowspan), khong tu dau tab. Chi khac cach TACH O, con
+    y nghia cac cot thi phai giong het - hai ban rieng la mot ngay hai duong
+    hieu bang khac nhau.
+    """
     header = rows[0]
     index: dict[str, int] = {}
     for pos, raw in enumerate(header):

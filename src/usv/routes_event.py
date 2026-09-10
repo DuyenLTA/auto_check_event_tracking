@@ -15,6 +15,9 @@ from pydantic import BaseModel, Field
 from . import logcat_stream
 from .adb_parsers import AdbError
 from .check_config import ConfigError, load as load_config
+from .confluence_client import (ConfluenceError, ConfluenceLinkError,
+                                fetch_page)
+from .event_spec_confluence import parse_page
 from .event_spec_parse import parse_paste
 from .event_state import state
 from .event_window import cut, mark_label, whole_session
@@ -26,6 +29,10 @@ router = APIRouter()
 
 class SpecRequest(BaseModel):
     text: str = Field(default="", max_length=2_000_000)
+
+
+class ConfluenceRequest(BaseModel):
+    url: str = Field(default="", max_length=2000)
 
 
 class RecordRequest(BaseModel):
@@ -71,6 +78,33 @@ async def load_spec(request: SpecRequest) -> dict:
     state.run = None
     state.windows = ()
     return {"stage": state.stage, **sheet.payload()}
+
+
+@router.post("/event/spec/confluence")
+async def load_spec_confluence(request: ConfluenceRequest) -> dict:
+    """Nap spec THANG tu link Confluence.
+
+    Hon han duong dan TSV o mot cho khong the vuot qua bang cach dan: bang
+    that dung `rowspan`, hang thu hai cua mot event chi co 2 o trong khi bang
+    rong 8 cot. Ranh gioi o lay tu luoi HTML thi chuyen do bien mat; dem o
+    theo dau tab thi khong.
+
+    Loi mang/token tra 502 (loi HE THONG, khong phai loi cua tester), con bang
+    doc duoc ma sai thi tra 200 kem `errors` - giong duong dan dan tay.
+    """
+    try:
+        title, html = fetch_page(request.url)
+    except ConfluenceLinkError as exc:
+        # Link go sai la loi cua nguoi dung -> 400, dung bao nhu su co mang.
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except ConfluenceError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    sheet = parse_page(html)
+    state.spec = sheet
+    state.run = None
+    state.windows = ()
+    return {"stage": state.stage, "source": title, **sheet.payload()}
 
 
 @router.post("/event/record")

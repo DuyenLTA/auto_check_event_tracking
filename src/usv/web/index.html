@@ -19,14 +19,26 @@
 
   <section class="step" id="step-spec">
     <h2><span class="num">1</span> Bảng spec</h2>
+    <p class="hint">Dán <b>link Confluence</b> của trang có bảng event tracking.
+      Tool tự tìm bảng trên trang và đọc cả ô gộp (rowspan) — thứ mà dán tay
+      không xử lý được.</p>
+    <div class="row">
+      <input id="spec-url" size="52" spellcheck="false"
+        placeholder="https://confluence.../display/VL/Ten+Trang">
+      <button id="btn-spec-url" class="primary">Đọc từ link</button>
+      <span id="spec-url-info" class="info"></span>
+    </div>
+    <details id="spec-paste">
+      <summary>Hoặc dán bảng bằng tay (khi trang không nằm trên Confluence)</summary>
     <p class="hint">Copy từ Excel/Google Sheet rồi dán vào đây — <b>một hàng một dòng</b>,
       ô rỗng để tab liên tiếp. Dòng đầu phải là dòng tiêu đề cột.</p>
     <textarea id="spec-text" rows="8" spellcheck="false"
       placeholder="Screen Name&#9;Event_Name&#9;Triggered&#9;Params&#9;Param Description&#9;Value Type&#9;Value&#9;Value Description"></textarea>
     <div class="row">
-      <button id="btn-spec" class="primary">Đọc bảng</button>
+      <button id="btn-spec">Đọc bảng đã dán</button>
       <span id="spec-info" class="info"></span>
     </div>
+    </details>
     <div id="spec-errors"></div>
     <div id="spec-preview"></div>
   </section>

@@ -88,6 +88,18 @@ else
   echo "adb : ${ADB_PATH:-$(command -v adb)}"
 fi
 
+# --- 3b. Confluence (canh bao thoi, khong chan) ------------------------------
+# Nap spec bang link Confluence can hai bien nay. Khong co thi o dan tay van
+# chay binh thuong - nen chi nhac, khong chan.
+if [ -z "${CONFLUENCE_TOKEN:-}" ] || [ -z "${CONFLUENCE_BASE_URL:-}" ]; then
+  echo "CANH BAO: chua co CONFLUENCE_BASE_URL/CONFLUENCE_TOKEN - o 'Đọc từ link'"
+  echo "          se bao loi. Dat trong ~/.bashrc roi mo lai terminal:"
+  echo "          export CONFLUENCE_BASE_URL=https://confluence.cong-ty.vn"
+  echo "          export CONFLUENCE_TOKEN=<personal access token>"
+else
+  echo "confluence : $CONFLUENCE_BASE_URL"
+fi
+
 # --- 4. Chon cong con trong ---------------------------------------------------
 FREE_PORT=$("$VPY" scripts/find-free-port.py "$PORT")
 [ "$FREE_PORT" = "0" ] && die "Khong con cong trong tu $PORT den $((PORT + 19))."

@@ -15,6 +15,8 @@ const $ = (id) => document.getElementById(id);
 const ui = {
   spec: { text: $('spec-text'), btn: $('btn-spec'), info: $('spec-info'),
           errors: $('spec-errors'), preview: $('spec-preview') },
+  specUrl: { input: $('spec-url'), btn: $('btn-spec-url'),
+             info: $('spec-url-info') },
   device: $('device'), pkg: $('package'), pkgFilter: $('pkg-filter'),
   fromLaunch: $('from-launch'), quick: $('quick'),
   btnDevices: $('btn-devices'),
@@ -47,23 +49,42 @@ function setStage(next) {
 }
 
 /* --- buoc 1: spec --- */
+/* Hai nguon (link Confluence / dan tay) dung chung mot cho hien ket qua - hai
+ * ban rieng la mot ngay mot ben quen cap nhat preview. */
+function applySpec(data, info) {
+  events = data.events || [];
+  done.clear();
+  current = null;
+  info.textContent = `${data.event_count} event · ${data.param_count} param`;
+  if (data.errors?.length) {
+    ui.spec.errors.innerHTML = '<div class="alert"><b>Bảng chưa đọc được:</b><ul>'
+      + data.errors.map((e) => `<li>${escapeHtml(e)}</li>`).join('') + '</ul></div>';
+  }
+  renderPreview(ui.spec.preview, events);
+  renderMarkPanel();
+  setStage(data.stage);
+  if (data.stage !== 'need_spec') deviceUi.loadDevices();
+}
+
+ui.specUrl.btn.addEventListener('click', async () => {
+  ui.spec.errors.innerHTML = '';
+  ui.specUrl.info.textContent = 'đang đọc trang…';
+  try {
+    const data = await post('/event/spec/confluence', { url: ui.specUrl.input.value });
+    applySpec(data, ui.specUrl.info);
+    if (data.source) {
+      ui.specUrl.info.textContent += ` · ${data.source}`;
+    }
+  } catch (error) {
+    ui.specUrl.info.textContent = '';
+    fail(ui.spec.errors, error.message);
+  }
+});
+
 ui.spec.btn.addEventListener('click', async () => {
   ui.spec.errors.innerHTML = '';
   try {
-    const data = await post('/event/spec', { text: ui.spec.text.value });
-    events = data.events || [];
-    done.clear();
-    current = null;
-    ui.spec.info.textContent =
-      `${data.event_count} event · ${data.param_count} param`;
-    if (data.errors?.length) {
-      ui.spec.errors.innerHTML = '<div class="alert"><b>Bảng chưa đọc được:</b><ul>'
-        + data.errors.map((e) => `<li>${escapeHtml(e)}</li>`).join('') + '</ul></div>';
-    }
-    renderPreview(ui.spec.preview, events);
-    renderMarkPanel();
-    setStage(data.stage);
-    if (data.stage !== 'need_spec') deviceUi.loadDevices();
+    applySpec(await post('/event/spec', { text: ui.spec.text.value }), ui.spec.info);
   } catch (error) {
     fail(ui.spec.errors, error.message);
   }
@@ -150,6 +171,7 @@ ui.btnReset.addEventListener('click', async () => {
   events = []; done.clear(); current = null;
   ui.spec.preview.innerHTML = ''; ui.spec.errors.innerHTML = '';
   ui.spec.info.textContent = ''; ui.recordInfo.textContent = '';
+  ui.specUrl.info.textContent = '';
   ui.recordAlert.innerHTML = '';
   ui.summary.innerHTML = ''; ui.results.innerHTML = '';
   ui.marks.innerHTML = ''; ui.progress.textContent = '';

@@ -68,7 +68,32 @@ Dòng mốc nằm **chung timeline** với event nên không phải đồng bộ
 
 ## Bảng spec
 
-Dán trực tiếp từ Excel/Google Sheet (TSV). Cột bắt buộc: `Event_Name`, `Params`, `Value Type`.
+Hai cách nạp. Cột bắt buộc ở cả hai: `Event_Name`, `Params`, `Value Type`.
+
+### Cách 1 — link Confluence (nên dùng)
+
+Dán link trang có bảng event tracking rồi bấm *Đọc từ link*. Tool tự tìm bảng
+trên trang bằng **tên cột**, không theo thứ tự — một trang thường có thêm bảng
+Requirements và List Remote Key, lấy nhầm bảng là chấm sai toàn bộ.
+
+Hơn hẳn dán tay ở chỗ **ô gộp** (`rowspan`). Bảng thật hay gộp ô Event_Name cho
+nhiều dòng param; khi đó hàng thứ hai chỉ có 2 thẻ `<td>` trong khi bảng rộng 8
+cột. Đếm ô theo dấu tab sẽ ra "2 cột, cần 8" và báo lỗi oan trên một bảng hoàn
+toàn hợp lệ. Lấy ranh giới ô từ lưới HTML thì chuyện đó biến mất.
+
+Cần hai biến môi trường (đặt trong `~/.bashrc`):
+
+```bash
+export CONFLUENCE_BASE_URL=https://confluence.cong-ty.vn
+export CONFLUENCE_TOKEN=<personal access token>
+```
+
+Nhiều trang Confluence **không** chứa bảng mà chỉ trỏ sang Google Sheet — tool
+không đọc được Sheet, lúc đó dùng cách 2.
+
+### Cách 2 — dán TSV
+
+Dán trực tiếp từ Excel/Google Sheet.
 
 ```
 Screen Name  Event_Name               Triggered              Params          Param Description  Value Type  Value                                   Value Description
@@ -95,7 +120,7 @@ Lần đầu mất ~30 giây (tự tạo môi trường ảo + cài thư viện)
 
 Bốn bước trên giao diện:
 
-1. **Dán bảng spec** → bấm *Đọc bảng*. Hàng nào sai số cột thì báo kèm số dòng. Còn lỗi thì không cho Ghi.
+1. **Nạp spec**: dán link Confluence → *Đọc từ link*; hoặc mở phần dán tay. Hàng nào sai số cột thì báo kèm số dòng. Còn lỗi thì không cho Ghi.
 2. **Chọn máy và app** → *Bắt đầu ghi*. Tool tự bật log Firebase, tắt rồi mở lại app.
 3. **Thao tác trên máy** rồi bấm *Dừng ghi*.
 4. **Chấm** → xem report HTML hoặc tải xlsx.
