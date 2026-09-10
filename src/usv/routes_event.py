@@ -18,7 +18,7 @@ from .check_config import ConfigError, load as load_config
 from .confluence_client import (ConfluenceError, ConfluenceLinkError,
                                 fetch_page)
 from .event_spec_confluence import parse_page
-from .event_session import bo_phien_cu, co_the_tu_mo
+from .event_session import bo_phien_cu, co_the_tu_mo, lay_mau_app
 from .event_spec_parse import parse_paste
 from .event_state import state
 from .event_window import mark_label, windows_for
@@ -48,14 +48,6 @@ class RecordRequest(BaseModel):
 class MarkRequest(BaseModel):
     spec_event: str
     note: str = ""
-
-
-async def _app_dang_chay(adb, serial: str, package: str) -> bool:
-    """Loi adb o day KHONG duoc lam sap phien ghi - tra False la du an toan."""
-    try:
-        return await adb.app_running(serial, package)
-    except AdbError:
-        return False
 
 
 @router.get("/event/state")
@@ -138,7 +130,7 @@ async def start_record(request: RecordRequest) -> dict:
 
     # Lay mau ngay sau khi mo app. Tu mo tay thi luc nay chua chay - con mau
     # o /event/stop.
-    recording.app_seen = await _app_dang_chay(adb, request.serial, request.package)
+    await lay_mau_app(adb, recording)
     state.recording = recording
     state.serial, state.package = request.serial, request.package
     state.quick = False
@@ -175,19 +167,7 @@ async def stop_record() -> dict:
     if not recording.stopped:
         await logcat_stream.stop(recording)
 
-    if not recording.app_seen:
-        adb = client()
-        recording.app_seen = await _app_dang_chay(
-            adb, recording.serial, recording.package)
-        if not recording.app_seen:
-            # App duoi test khong chay -> bao cao phai chi ra app NAO dang mo,
-            # khong thi tester chi biet "khong ket luan duoc" ma khong biet sua
-            # gi. Da gap that: sai mot dau cham trong ten package.
-            try:
-                recording.foreground = await adb.foreground_package(
-                    recording.serial) or ""
-            except AdbError:
-                recording.foreground = ""
+    await lay_mau_app(client(), recording)
 
     events, markers = parse_log(recording.text())
     state.windows, state.quick = windows_for(

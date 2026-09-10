@@ -75,3 +75,30 @@ async def bo_phien_cu() -> None:
     state.recording = None
     state.run = None
     state.windows = ()
+
+
+async def lay_mau_app(adb, recording) -> None:
+    """Ghi lai app duoi test co dang chay khong, va app nao dang o foreground.
+
+    Goi ca luc bat dau ghi va luc dung. Da thay chay mot lan la du - app co
+    the bi dong truoc khi tester bam Dung.
+
+    `foreground` chi ghi khi KHONG thay app duoi test chay: luc do bao cao phai
+    chi ra app NAO dang mo, khong thi tester chi biet "khong ket luan duoc" ma
+    khong biet phai sua gi. Da gap that: sai mot dau cham trong ten package.
+
+    Loi adb o day KHONG duoc lam sap phien ghi - coi nhu chua thay la du an toan.
+    """
+    if recording.app_seen:
+        return
+    try:
+        recording.app_seen = await adb.app_running(
+            recording.serial, recording.package)
+    except AdbError:
+        recording.app_seen = False
+    if recording.app_seen:
+        return
+    try:
+        recording.foreground = await adb.foreground_package(recording.serial) or ""
+    except AdbError:
+        recording.foreground = ""
