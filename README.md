@@ -166,10 +166,25 @@ open("report.html", "w").write(
 
 ## Test
 
+`./start.sh` chỉ cài thư viện để **chạy** tool. Muốn chạy test thì cài thêm:
+
 ```bash
-.venv/bin/python -m pytest -m "not device"   # không cần cắm máy
-.venv/bin/python -m pytest -m device         # cần máy thật
+.venv/bin/python -m pip install -e ".[dev]"   # lần đầu
+.venv/bin/python -m pytest                    # 424 test, ~1 giây
 ```
+
+Cả suite chạy **không cần cắm máy** — adb được thay bằng bản giả trong test.
+Marker `device` để dành cho test cần điện thoại thật (`pytest -m device`,
+`addopts` trong `pyproject.toml` mặc định loại chúng ra); hiện chưa có test nào
+mang marker đó.
+
+Ba việc test bắt được mà `curl` không bắt được, nên đừng bỏ:
+
+| Kiểm | Bắt được gì |
+|---|---|
+| `scripts/check-web-loads.js` | JS lỗi lúc nạp — file vẫn trả 200 nhưng trang không khởi tạo được |
+| `test_web_html_balanced.py` | thẻ HTML chưa đóng làm lệch layout; browser không báo lỗi |
+| `test_readme_vi_du_chay_duoc.py` | đoạn code trong README này lệch API |
 
 ## Cấu hình
 
