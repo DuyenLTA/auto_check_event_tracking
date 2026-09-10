@@ -50,6 +50,12 @@ textarea,input,select{font-family:'JetBrains Mono',monospace;font-size:.83rem;
   background:var(--surface-alt);color:var(--ink);border:1px solid var(--line);
   border-radius:8px;padding:.45rem .6rem;}
 textarea{width:100%;resize:vertical;white-space:pre;overflow-x:auto;}
+/* An la an - `hidden` phai thang MOI khai display cua tac gia.
+   `[hidden]{display:none}` chi nam trong UA stylesheet cua browser, ma origin
+   UA luon thua author stylesheet: `.btn{display:inline-block}` o duoi ghi de
+   len no, nen mot the `<a class="btn" hidden>` VAN HIEN. Nut "Link artifact"
+   khi do hien ma khong co href -> bam khong xu ly gi, trong y het tool hong. */
+[hidden]{display:none!important;}
 button,.btn{font-family:'Public Sans',sans-serif;font-size:.88rem;font-weight:600;
   border:1px solid var(--line);background:var(--surface-alt);color:var(--ink);
   border-radius:8px;padding:.45rem .9rem;cursor:pointer;text-decoration:none;
