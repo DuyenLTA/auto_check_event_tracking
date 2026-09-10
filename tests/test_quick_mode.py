@@ -151,8 +151,13 @@ def test_ban_nhieu_lan_van_pass_nhung_in_ro_so_lan():
     assert summary.failed == 0, summary.payload()
 
 
-def test_ban_dung_mot_lan_thi_khong_bia_them_so_lan():
-    """Chi noi so lan khi that su nhieu hon mot - khong thi moi dong deu dai ra."""
+def test_ban_mot_lan_cung_van_in_so_lan():
+    """In ca khi bang 1.
+
+    Chi in khi >1 thi dong "ban luc 17:45:05" khong noi duoc la tool DA DEM
+    hay chua dem - nguoi doc khong biet co nen tin con so do khong. In "ban 1
+    lan" thi con so luon co mat va luon so sanh duoc voi so lan minh vao man.
+    """
     from usv import event_check_runner
     from usv.event_spec_parse import parse_paste
 
@@ -164,4 +169,4 @@ def test_ban_dung_mot_lan_thi_khong_bia_them_so_lan():
     muc = next(r for r in results if r.check == "event_presence"
                and r.element.startswith("rating_star_clicked"))
     assert muc.verdict is Verdict.PASS
-    assert "lần:" not in (muc.actual or ""), muc.actual
+    assert muc.actual.startswith("bắn 1 lần: "), muc.actual

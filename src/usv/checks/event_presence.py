@@ -99,7 +99,7 @@ def run(spec: SpecSheet, windows: tuple[Window, ...], config,
                         element=label, check="event_presence",
                         verdict=Verdict.NOT_VERIFIABLE,
                         expected="event được bắn ra",
-                        actual=f"bắn lúc {ngoai}, ngoài bước này",
+                        actual=f"bắn {ngoai}, ngoài bước này",
                         message=(
                             "Event CÓ bắn trong phiên ghi nhưng không nằm trong "
                             "bước đã đánh dấu. Hai khả năng, tool không phân "
@@ -132,26 +132,19 @@ def run(spec: SpecSheet, windows: tuple[Window, ...], config,
                 ))
                 continue
 
-            if len(hits) > 1:
-                # Den day nghia la check ban trung dang TAT. Van PASS - mot
-                # phien dai vao ra cung mot man thi event do ban lai la dung,
-                # bao fail la bao oan. Nhung phai IN RA so lan: khong thi mot
-                # event ban 5 lan trong nhung y het ban 1 lan, va tester biet
-                # ro minh chi vao man do mot lan cung khong co gi de nghi ngo.
-                out.append(CheckResult(
-                    element=label, check="event_presence", verdict=Verdict.PASS,
-                    expected="event được bắn ra",
-                    actual=f"bắn {len(hits)} lần: {_gio(hits)}",
-                    message=(f"Event có bắn. Nó bắn {len(hits)} lần trong phiên "
-                             "này — đúng nếu bạn vào ra màn đó nhiều lần, còn "
-                             "nếu chỉ vào một lần thì app đang bắn trùng."),
-                ))
-                continue
-
+            # LUON in so lan, ke ca 1 lan. Den day nghia la check ban trung
+            # dang TAT nen tool khong tu ket luan duoc - nguoi doc phai tu doi
+            # chieu voi so lan minh that su vao man do. Chi in so lan khi >1
+            # thi mot dong "ban luc 17:45:05" khong noi duoc la da dem hay
+            # chua, va nguoi doc khong biet co nen tin con so do khong.
             out.append(CheckResult(
                 element=label, check="event_presence", verdict=Verdict.PASS,
-                expected="event được bắn ra", actual=f"bắn lúc {hits[0].timestamp}",
-                message="Event được bắn đúng ở bước này.",
+                expected="event được bắn ra",
+                actual=f"bắn {len(hits)} lần: {_gio(hits)}",
+                message=("Event được bắn đúng ở bước này." if len(hits) == 1 else
+                         f"Event có bắn, {len(hits)} lần trong phiên này — đúng "
+                         "nếu bạn vào ra màn đó nhiều lần, còn nếu chỉ vào một "
+                         "lần thì app đang bắn trùng."),
             ))
 
     return out
@@ -181,7 +174,7 @@ def _ngoai_cua_so(name: str, session_events) -> str:
     """
     hits = [e for e in session_events
             if e.name == name and getattr(e, "from_app", True)]
-    return _gio(hits) if hits else ""
+    return f"{len(hits)} lần: {_gio(hits)}" if hits else ""
 
 
 def _label(name: str, window: Window, total: int) -> str:

@@ -94,10 +94,11 @@ def test_ban_truoc_moc_van_khong_lam_tang_so_fail():
     assert summary.failed == 0, summary.payload()
 
 
-def test_bao_ra_gio_event_thuc_su_ban_de_tester_tu_doi_chieu():
+def test_bao_ra_so_lan_va_gio_event_thuc_su_ban_de_tester_tu_doi_chieu():
     results, _ = _cham(LOG_BAN_TRUOC_MOC)
     muc = _tim(results, "daily_checkin_screen_view")
     assert "16:54:10.100" in muc.actual, muc.actual
+    assert "1 lần" in muc.actual, muc.actual
 
 
 def test_event_dung_buoc_van_pass_binh_thuong():
