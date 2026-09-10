@@ -464,3 +464,11 @@ def test_link_go_sai_tra_400_chu_khong_502(client, monkeypatch):
     doc lai cai link."""
     response = client.post("/event/spec/confluence", json={"url": "khong-phai-link"})
     assert response.status_code == 400
+
+
+@pytest.mark.parametrize("path", ["/", "/static/event.js"])
+def test_trang_va_asset_bat_trinh_duyet_hoi_lai(client, path):
+    """Khong co Cache-Control thi trinh duyet suy doan thoi han theo tuoi file
+    va F5 khong hoi lai server. Da mat may luot debug vi tester chay ban JS cu
+    trong khi ca hai cung soi code moi."""
+    assert client.get(path).headers.get("cache-control") == "no-cache"

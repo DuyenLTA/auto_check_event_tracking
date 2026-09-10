@@ -60,7 +60,16 @@ async def loopback_only(request: Request, call_next):
         # tester dang mo cung goi duoc API neu khong chan Origin.
         return JSONResponse({"detail": "Origin khong duoc phep."}, status_code=403)
 
-    return await call_next(request)
+    response = await call_next(request)
+    # Bat trinh duyet HOI LAI moi lan. Khong co Cache-Control thi trinh duyet
+    # tu suy doan thoi han ~10% tuoi file: file sua hom qua duoc giu cache
+    # hang gio, va F5 KHONG hoi lai server. Da gap that - tester refresh nhung
+    # van nhan ban JS cu bi loi, roi ca hai cung di tim bug trong code moi.
+    #
+    # ETag van con nen hoi lai thuong chi ton mot 304 vai chuc byte.
+    if request.url.path == "/" or request.url.path.startswith("/static"):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
 
 
 @app.get("/")
