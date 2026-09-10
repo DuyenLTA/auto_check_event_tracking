@@ -34,7 +34,7 @@ global.setInterval = () => 0;
 global.clearInterval = () => {};
 
 const order = ['event-marks.js', 'event-api.js', 'event-device.js',
-               'event-progress.js', 'event-render.js', 'event.js'];
+               'event-spec.js', 'event-progress.js', 'event-render.js', 'event.js'];
 for (const f of order) {
   try {
     new Function(fs.readFileSync(path + f, 'utf8'))();
@@ -43,4 +43,4 @@ for (const f of order) {
     process.exit(1);
   }
 }
-console.log('nap het 6 file, khong loi');
+console.log(`nap het ${order.length} file, khong loi`);

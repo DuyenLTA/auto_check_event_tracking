@@ -9,6 +9,7 @@ const { renderMarks, markProgress, escapeHtml } = window.USV_MARKS;
 const { renderPreview, renderSummary, renderResults } = window.USV_RENDER;
 const { api, post, fail } = window.USV_API;
 const { initDevice } = window.USV_DEVICE;
+const { initSpec } = window.USV_SPEC;
 const watch = window.USV_PROGRESS;
 const $ = (id) => document.getElementById(id);
 
@@ -64,8 +65,7 @@ function applyMode() {
 ui.quick.addEventListener('change', applyMode);
 
 /* --- buoc 1: spec --- */
-/* Hai nguon (link Confluence / dan tay) dung chung mot cho hien ket qua - hai
- * ban rieng la mot ngay mot ben quen cap nhat preview. */
+/* Nap xong (tu link hay dan tay deu vao day) -> dua vao trang thai app. */
 function applySpec(data, info) {
   events = data.events || [];
   done.clear();
@@ -78,31 +78,12 @@ function applySpec(data, info) {
   renderPreview(ui.spec.preview, events);
   renderMarkPanel();
   setStage(data.stage);
-  if (data.stage !== 'need_spec') deviceUi.loadDevices();
 }
 
-ui.specUrl.btn.addEventListener('click', async () => {
-  ui.spec.errors.innerHTML = '';
-  ui.specUrl.info.textContent = 'đang đọc trang…';
-  try {
-    const data = await post('/event/spec/confluence', { url: ui.specUrl.input.value });
-    applySpec(data, ui.specUrl.info);
-    if (data.source) {
-      ui.specUrl.info.textContent += ` · ${data.source}`;
-    }
-  } catch (error) {
-    ui.specUrl.info.textContent = '';
-    fail(ui.spec.errors, error.message);
-  }
-});
-
-ui.spec.btn.addEventListener('click', async () => {
-  ui.spec.errors.innerHTML = '';
-  try {
-    applySpec(await post('/event/spec', { text: ui.spec.text.value }), ui.spec.info);
-  } catch (error) {
-    fail(ui.spec.errors, error.message);
-  }
+initSpec({
+  text: ui.spec.text, btn: ui.spec.btn, info: ui.spec.info,
+  url: ui.specUrl.input, urlBtn: ui.specUrl.btn, urlInfo: ui.specUrl.info,
+  errors: ui.spec.errors, onLoaded: applySpec,
 });
 
 ui.btnRecord.addEventListener('click', async () => {
@@ -120,6 +101,7 @@ ui.btnRecord.addEventListener('click', async () => {
     ui.recordAlert.innerHTML = '';
     setStage(data.stage);
     // Theo doi lien tuc: mat may giua phien phai biet NGAY, khong phai luc Cham.
+    deviceUi.stopWatch();     // dang ghi thi dung dong vao danh sach may/app
     watch.start({ info: ui.recordInfo, alert: ui.recordAlert }, label,
                 () => { ui.btnRecord.disabled = false; });
   } catch (error) {
@@ -153,6 +135,7 @@ ui.markFilter.addEventListener('input', renderMarkPanel);
 ui.btnStop.addEventListener('click', async () => {
   ui.btnStop.disabled = true;
   watch.stop();
+  deviceUi.startWatch();
   try {
     const data = await post('/event/stop');
     ui.recordInfo.textContent = data.quick
@@ -194,6 +177,7 @@ ui.btnReset.addEventListener('click', async () => {
   applyMode();
   setStage('need_spec');
   deviceUi.loadDevices();       // may co the da doi giua chung
+  deviceUi.startWatch();
 });
 
 const deviceUi = initDevice({
@@ -205,5 +189,7 @@ const deviceUi = initDevice({
 applyMode();
 setStage('need_spec');
 // Tim may NGAY khi mo trang, khong doi nap spec: may cam san thi khong co ly
-// do bat nguoi dung bam them mot nut.
+// do bat nguoi dung bam them mot nut. Roi do tiep lien tuc - cam may luc nao
+// cung phai thay luc do.
 deviceUi.loadDevices();
+deviceUi.startWatch();

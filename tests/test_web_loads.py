@@ -1,4 +1,4 @@
-"""Tab web co khoi tao duoc khong - chay that tren DOM gia bang node.
+"""Kiem JS bang node tren DOM gia: trang co khoi tao duoc, vong do may co dung.
 
 Vi sao khong test duoc bang cach khac: mot loi o tang module (goi ham chua
 dinh nghia chang han) lam moi dong phia sau khong chay, nhung file van tra
@@ -16,11 +16,13 @@ from pathlib import Path
 
 import pytest
 
-SCRIPT = Path(__file__).parent.parent / "scripts" / "check-web-loads.js"
+SCRIPTS = Path(__file__).parent.parent / "scripts"
+CHECKS = ["check-web-loads.js", "check-device-watch.js"]
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="khong co node")
-def test_6_file_js_nap_duoc_khong_loi():
-    done = subprocess.run(["node", str(SCRIPT)], capture_output=True, text=True,
-                          timeout=30)
+@pytest.mark.parametrize("name", CHECKS)
+def test_kiem_js_bang_node(name: str):
+    done = subprocess.run(["node", str(SCRIPTS / name)], capture_output=True,
+                          text=True, timeout=30)
     assert done.returncode == 0, done.stdout + done.stderr

@@ -33,16 +33,20 @@ function initDevice({ device, pkg, pkgFilter, refresh, errorNode, info, pick,
       : `máy chưa dùng được: ${bad.join(', ')}`;
   }
 
+  function render(devices) {
+    device.innerHTML = devices
+      .map((d) => `<option value="${dEsc(d.serial)}"${d.usable ? '' : ' disabled'}>`
+        + `${dEsc(d.label)}${d.usable ? '' : ' — ' + dEsc(d.state)}</option>`)
+      .join('') || '<option value="">không thấy máy nào</option>';
+    show(devices);
+  }
+
   async function loadDevices() {
     info.textContent = 'đang tìm máy…';
     try {
-      const data = await dApi('/devices');
-      const devices = data.devices || [];
-      device.innerHTML = devices
-        .map((d) => `<option value="${dEsc(d.serial)}"${d.usable ? '' : ' disabled'}>`
-          + `${dEsc(d.label)}${d.usable ? '' : ' — ' + dEsc(d.state)}</option>`)
-        .join('') || '<option value="">không thấy máy nào</option>';
-      show(devices);
+      const devices = (await dApi('/devices')).devices || [];
+      signature = devices.map((d) => `${d.serial}:${d.state}`).join(',');
+      render(devices);
       if (device.value) await loadPackages();
       onReady?.();
     } catch (error) {
@@ -69,10 +73,42 @@ function initDevice({ device, pkg, pkgFilter, refresh, errorNode, info, pick,
       || '<option value="">không có app nào khớp</option>';
   }
 
+  /* Do LIEN TUC: cam may luc nao la thay luc do, khong bat bam nut.
+   *
+   * Chi ve lai khi DANH SACH MAY DOI THAT. Ve lai moi vong se nap lai danh
+   * sach app va xoa mat app dang chon cung cai bo loc dang go - cu 3 giay
+   * mot lan thi khong dung noi.
+   */
+  const WATCH_MS = 3000;
+  let timer = null;
+  let signature = null;
+
+  async function tick() {
+    let devices;
+    try {
+      devices = (await dApi('/devices')).devices || [];
+    } catch (error) {
+      return;                  // adb chop chop - vong sau thu lai
+    }
+    const now = devices.map((d) => `${d.serial}:${d.state}`).join(',');
+    if (now === signature) return;
+    signature = now;
+    render(devices);
+    if (device.value) await loadPackages();
+  }
+
+  function startWatch() {
+    if (timer === null) timer = setInterval(tick, WATCH_MS);
+  }
+
+  function stopWatch() {
+    if (timer !== null) { clearInterval(timer); timer = null; }
+  }
+
   refresh.addEventListener('click', loadDevices);
   device.addEventListener('change', loadPackages);
   pkgFilter.addEventListener('input', renderPackages);
-  return { loadDevices };
+  return { loadDevices, startWatch, stopWatch };
 }
 
 window.USV_DEVICE = { initDevice };
