@@ -10,14 +10,18 @@ Với mỗi dòng trong bảng spec:
 
 | Tiêu chí | Kết luận |
 |---|---|
-| Event có bắn ở bước đó không | `Khớp` / `Thiếu` |
-| Bắn trùng nhiều lần trong một bước | `Bắn trùng` |
+| Event có bắn ra trong phiên ghi không | `Khớp` / `Thiếu` |
 | Param spec khai mà app không gửi | `Thiếu` |
 | Giá trị ngoài danh sách spec cho phép | `Sai giá trị` |
 | Kiểu: spec `Number` mà app gửi chữ | `Sai kiểu` |
 | App gửi param spec không khai | `Thừa param` |
 | Kiểu: spec `String` mà app gửi số | `Chưa kết luận` — logcat in Long `3` và chuỗi `"3"` y hệt nhau |
-| Chưa đánh dấu bước nào cho event | `Chưa test` — **không** tính là fail |
+| Số lần bắn | in ra ở cột *App gửi* (`bắn 2 lần: …`) — **không** chấm fail, xem dưới |
+
+**Bắn trùng không bị chấm fail.** Một phiên ghi dài vào ra cùng một màn thì
+event đó bắn lại là đúng, tool không biết bạn vào mấy lần nên không kết luận
+thay bạn được. Nó in số lần bắn kèm giờ, bạn tự so với số lần mình thật sự vào
+màn đó.
 
 Chỉ chấm **event có trong bảng spec**. Event khác app bắn ra (`ad_load`,
 `track_ad_request`, `screen_view`…) không được liệt kê: một phiên thật có hàng
@@ -33,7 +37,8 @@ chục event như vậy, in hết ra thì thứ cần đọc bị chìm.
 3. **Điện thoại Android** bật *USB debugging*, cắm cáp, bấm **Allow** trên máy.
    Kiểm tra: `adb devices` phải hiện `device` (không phải `unauthorized`).
 
-Không cần token nào.
+Không cần token gì để chấm. Chỉ khi nạp spec **bằng link Confluence** mới cần
+hai biến môi trường — xem mục *Bảng spec*; dán tay thì không cần.
 
 ## Cách nó đọc được event
 
@@ -59,15 +64,21 @@ Ba điều đã đo trên máy thật, không phải suy luận:
 
 ⚠️ `setprop` **không sống qua reboot**, và app phải **khởi động lại** sau khi set (property đọc lúc process start). Tool tự làm cả hai việc này mỗi lần Ghi.
 
-## Ràng buộc lúc bắn
+## Vì sao không chia phiên theo từng bước
 
-Tool không đoán event nào thuộc bước nào. Tester đánh dấu bước, tool chèn một dòng mốc vào chính logcat:
+Bản đầu có panel đánh dấu: tester bấm nút của bước sắp làm, tool chèn một dòng
+mốc `USV_MARK` vào chính logcat rồi cắt phiên thành các cửa sổ theo mốc đó.
 
-```bash
-adb shell log -t USV_MARK "rating_placement_viewed | Khi màn rating hiển thị"
-```
+Đã bỏ. Mốc do **tester** bấm còn event do **app** bắn, hai cái không đồng bộ
+được. Đo trên máy thật: app bật màn daily checkin ngay khi mở, event
+`daily_checkin_screen_view` bắn lúc `16:54:10` trong khi mốc đầu tiên bấm được
+là `16:54:15` — event rơi ra ngoài mọi cửa sổ và bị báo `Thiếu`. Cùng app cùng
+log, không bấm mốc thì `2 pass`, bấm mốc thì `1 pass 1 fail`. Một verdict đổi
+theo thứ tự bấm nút thì không dùng được.
 
-Dòng mốc nằm **chung timeline** với event nên không phải đồng bộ giờ giữa máy tính và điện thoại. **Một nút một bước**: mốc của bước sau chính là điểm kết của bước trước.
+Nên giờ tool chấm trên **cả phiên ghi**: mất khả năng kết luận "bắn đúng lúc",
+đổi lại không còn fail oan. Cơ chế mốc vẫn còn ở tầng API (`POST /event/mark`)
+cho kịch bản tự động, chỉ là giao diện không dùng.
 
 ## Bảng spec
 
@@ -107,7 +118,7 @@ Home         rating_star_clicked      Khi user click rate    star_value         
 
 - Cột `Event_Name` để trống = param tiếp của event phía trên.
 - Cột `Value` để trống = free-form, chỉ kiểm có mặt + kiểu.
-- Cột `Triggered` là văn xuôi cho người đọc, làm nhãn nút cho tester — **không** chạm verdict.
+- Cột `Triggered` là văn xuôi cho người đọc, in kèm tên event trong report — **không** chạm verdict.
 
 **Một hàng một dòng.** Hàng sai số cột bị báo lỗi kèm số dòng chứ không tự ghép lại: ghép theo số cột làm **mất ô rỗng** ở điểm gãy và sinh ra spec sai mà không báo gì.
 
@@ -121,34 +132,14 @@ USV_NO_BROWSER=1 ./start.sh   # không tự mở browser
 
 Lần đầu mất ~30 giây (tự tạo môi trường ảo + cài thư viện). Các lần sau ~1 giây.
 
-Bốn bước trên giao diện:
+Ba bước trên giao diện:
 
 1. **Nạp spec**: dán link Confluence → *Đọc từ link*; hoặc mở phần dán tay. Hàng nào sai số cột thì báo kèm số dòng. Còn lỗi thì không cho Ghi.
-2. **Dán package name** → *Bắt đầu ghi*. Máy thì tool tự nhận. Luôn ghi **từ lúc app mở**: tìm thấy app trên máy thì tool tự tắt–mở lại; không tìm thấy thì vẫn ghi và bạn tự mở app (mở **sau** khi bấm Ghi — `setprop log.tag.FA-SVC` chỉ ăn từ lần khởi động sau đó). Không chặn, vì tool không tự mở bừa: `monkey` với app không tồn tại in `No activities found to run` mà trả exit 0, mở thất bại trong im lặng rồi ghi log của app đang mở sẵn.
-3. **Thao tác trên máy** rồi bấm *Dừng ghi*. Muốn kiểm cả thời điểm thì bấm mốc từng bước — xem dưới.
-4. **Chấm** → xem report HTML.
+2. **Máy và app**: dán package name → *Bắt đầu ghi*, thao tác trên máy, rồi *Dừng ghi* (hai nút nằm cạnh nhau). Máy thì tool tự nhận, cắm giữa chừng cũng thấy. Luôn ghi **từ lúc app mở**: tìm thấy app trên máy thì tool tự tắt–mở lại; không tìm thấy thì vẫn ghi và bạn tự mở app (mở **sau** khi bấm Ghi — `setprop log.tag.FA-SVC` chỉ ăn từ lần khởi động sau đó). Không chặn, vì tool không tự mở bừa: `monkey` với app không tồn tại in `No activities found to run` mà trả exit 0, mở thất bại trong im lặng rồi ghi log của app đang mở sẵn.
+3. **Chấm** → xem report HTML.
 
-### Đánh dấu bước là tuỳ chọn — không có ô tick chế độ
-
-Kiểm được gì phụ thuộc vào việc **bạn có bấm mốc hay không**, và tool tự suy ra
-lúc bấm *Dừng ghi*:
-
-| | Không bấm mốc nào | Bấm mốc từng bước |
-|---|---|---|
-| Cách làm | bấm Ghi rồi thao tác tự do | bấm nút của bước sắp làm **rồi mới** thao tác |
-| Event có bắn / param đúng | ✅ | ✅ |
-| Bắn **đúng lúc** | ❌ không có biên bước để so | ✅ |
-| Bắn trùng | tắt — phiên dài vào ra một màn thì bắn lại là đúng | ✅ theo từng bước |
-
-Mốc của bước sau là điểm kết của bước trước — không có nút Xong.
-
-**Vì sao không để ô tick:** ô tick bắt chọn *trước khi* biết mình có bấm mốc hay
-không, và chọn sai thì im lặng — bỏ tick rồi quên bấm mốc sẽ ra 0 cửa sổ, mọi
-dòng thành `chưa test`, một báo cáo rỗng trông như thật. Suy ra từ việc đã xảy ra
-thì không sai được.
-
-Report **luôn ghi rõ** đã chấm cả phiên hay theo từng bước, để người đọc không
-tưởng đã kiểm cả thời điểm.
+Giữa lúc ghi, ô trạng thái đếm số dòng log đọc được. Máy rớt khỏi USB là báo
+ngay tại đó chứ không đợi tới lúc Chấm — đã từng mất 70 phút vì im lặng.
 
 ## Gọi từ Python
 
@@ -158,14 +149,19 @@ Không cần giao diện thì dùng trực tiếp:
 from usv import event_check_runner, report_event_html
 from usv.check_config import load
 from usv.event_spec_parse import parse_paste
-from usv.event_window import cut_log
+from usv.event_window import whole_session
+from usv.fa_event_parse import parse_log
 
 spec = parse_paste(open("spec.tsv").read())
 assert not spec.errors, spec.errors
-windows = cut_log(open("capture.log").read())
-results, summary = event_check_runner.run(spec, windows, load())
+
+events = [e for e in parse_log(open("capture.log").read())[0] if e.from_app]
+windows = whole_session(tuple(e.name for e in spec.events), events)
+config = load().with_option("event_presence", "duplicate", False)
+results, summary = event_check_runner.run(
+    spec, windows, config, session_events=tuple(events))
 open("report.html", "w").write(
-    report_event_html.build(spec, results, summary, package="com.x"))
+    report_event_html.build(spec, results, summary, package="com.x", quick=True))
 ```
 
 ## Test
@@ -181,6 +177,6 @@ open("report.html", "w").write(
 
 ## Nguyên tắc
 
-1. **`Chưa test` và `Spec không khai` không bao giờ tính vào fail.** Tool chưa đo được thì không kết luận về app. Fail oan một loạt là cách nhanh nhất để tester bỏ không dùng tool nữa.
+1. **`Chưa kết luận`, `Chưa test` và `Spec không khai` không bao giờ tính vào fail.** Tool chưa đo được thì không kết luận về app. Fail oan một loạt là cách nhanh nhất để tester bỏ không dùng tool nữa.
 2. **Không verify được thì nói không verify được**, không pass giả.
 3. Sai cú pháp config hay spec thì **báo lỗi rõ** chứ không chạy bừa — kiểu im lặng nguy hiểm hơn crash.
