@@ -48,6 +48,21 @@ function setStage(next) {
   ui.btnCheck.disabled = stage !== 'ready_to_check';
 }
 
+/* Che do nhanh doi han buoc 3: khong danh dau tung buoc nua. Hien danh sach
+ * nut moc ma khong dung den chi lam roi mat - nen an han di, va doi ca tieu de
+ * lan cau huong dan cho khop voi viec that su phai lam. */
+function applyMode() {
+  const quick = ui.quick.checked;
+  ui.step3Title.textContent = quick ? 'Thao tác trên máy' : 'Đánh dấu từng bước';
+  ui.markHint.hidden = quick;
+  ui.quickHint.hidden = !quick;
+  ui.markFilter.hidden = quick;
+  ui.marks.hidden = quick;
+  ui.progress.hidden = quick;
+}
+
+ui.quick.addEventListener('change', applyMode);
+
 /* --- buoc 1: spec --- */
 /* Hai nguon (link Confluence / dan tay) dung chung mot cho hien ket qua - hai
  * ban rieng la mot ngay mot ben quen cap nhat preview. */
