@@ -170,7 +170,6 @@ def test_cham_khi_chua_dung_tra_409(client, fake_adb):
 
 def test_report_khi_chua_cham_tra_409(client):
     assert client.get("/event/report").status_code == 409
-    assert client.get("/event/report.xlsx").status_code == 409
 
 
 def test_danh_dau_event_khong_co_trong_spec_tra_400(client, fake_adb):
@@ -210,15 +209,6 @@ def test_report_html_render_duoc_sau_khi_cham(client, fake_adb):
     assert "Event Tracking Diff" in response.text
     assert "rating_placement_viewed" in response.text
 
-
-def test_xlsx_tai_duoc_sau_khi_cham(client, fake_adb):
-    """exporter.build tung tham chieu summary.unmatched - field da bo. Khong co
-    test nao goi qua route thi loi do khong ai thay."""
-    _full_flow(client)
-    response = client.get("/event/report.xlsx")
-    assert response.status_code == 200
-    assert response.content[:2] == b"PK", "xlsx la file zip"
-    assert "attachment" in response.headers["content-disposition"]
 
 
 def test_reset_xoa_sach_trang_thai(client, fake_adb):
@@ -338,11 +328,6 @@ def test_che_do_nhanh_bao_ra_trong_ket_qua_va_trong_report(client, fake_adb):
     page = client.get("/event/report").text
     assert "chế độ nhanh" in page.lower()
 
-
-def test_che_do_nhanh_ghi_canh_bao_vao_xlsx(client, fake_adb):
-    """Nguoi doc xlsx thuong la dev, ho khong thay callout ban HTML."""
-    _quick_flow(client, fake_adb)
-    assert client.get("/event/report.xlsx").status_code == 200
 
 
 def test_che_do_thuong_van_can_moc(client, fake_adb):

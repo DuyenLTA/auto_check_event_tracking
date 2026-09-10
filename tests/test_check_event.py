@@ -81,11 +81,11 @@ def test_A_param_he_thong_khong_bi_bao_thua():
     assert extras == []
 
 
-def test_A_event_ngoai_spec_vao_EXTRA_khong_vao_fail():
-    results, summary = _run()
-    extra = [r for r in results if r.verdict is Verdict.EXTRA]
-    assert extra, "phai co event EXTRA (track_ad_request, screen_view...)"
-    assert summary.extra == len(extra)
+def test_A_event_ngoai_spec_khong_lam_bao_cao_thanh_fail():
+    """Log that day event khong lien quan (track_ad_request, screen_view,
+    ad_query...). Chung khong duoc lam bao cao xau di - va tu ban 260910 cung
+    khong duoc liet ke ra nua, xem test_khong_liet_ke_event_la_cua_app."""
+    _, summary = _run()
     assert summary.failed == 0
 
 
@@ -262,3 +262,27 @@ def test_stream_khong_dut_thi_van_bao_thieu_event():
     only_marks = "\n".join([MARK_VIEWED, MARK_STAR])
     results, summary = _run(log_text=only_marks, stream_died=False)
     assert summary.failed == 2
+
+
+def test_khong_liet_ke_event_la_cua_app():
+    """Chi cham event CO TRONG SPEC.
+
+    App that ban hang chuc event khong lien quan (ad_load 22 lan,
+    track_ad_request 22 lan, splash_view, session_start...). Liet ke het ra thi
+    bao cao loang, va thu can doc bi chim giua dong event vo thuong vo phat.
+    """
+    results, summary = _run()
+    la = [r for r in results if r.verdict is Verdict.EXTRA]
+    assert not la, f"khong duoc liet ke event la: {[r.element for r in la]}"
+    assert summary.extra == 0
+    trong_spec = {"rating_placement_viewed", "rating_star_clicked"}
+    for item in results:
+        goc = item.element.split(".")[0].split(" (")[0]
+        assert goc in trong_spec, f"{item.element!r} khong co trong spec"
+
+
+def test_van_cham_du_event_trong_spec():
+    """Chieu nguoc lai - bo loc qua tay thi mat luon event can cham."""
+    results, _ = _run()
+    assert {r.element.split(".")[0].split(" (")[0] for r in results} == {
+        "rating_placement_viewed", "rating_star_clicked"}

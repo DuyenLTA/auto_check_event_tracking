@@ -30,7 +30,7 @@ const ui = {
   markFilter: $('mark-filter'), marks: $('marks'), progress: $('mark-progress'),
   btnStop: $('btn-stop'), btnCheck: $('btn-check'), btnReset: $('btn-reset'),
   summary: $('summary'), results: $('results'),
-  linkReport: $('link-report'), linkXlsx: $('link-xlsx'),
+  linkReport: $('link-report'),
   steps: { mark: $('step-mark'), check: $('step-check') },
   step3Title: $('step3-title'), markHint: $('mark-hint'),
   quickHint: $('quick-hint'),
@@ -158,7 +158,6 @@ ui.btnCheck.addEventListener('click', async () => {
     renderSummary(ui.summary, data);
     renderResults(ui.results, data.results || []);
     ui.linkReport.hidden = false;
-    ui.linkXlsx.hidden = false;
     setStage(data.stage);
   } catch (error) {
     fail(ui.summary, error.message);
@@ -176,7 +175,7 @@ ui.btnReset.addEventListener('click', async () => {
   ui.recordAlert.innerHTML = '';
   ui.summary.innerHTML = ''; ui.results.innerHTML = '';
   ui.marks.innerHTML = ''; ui.progress.textContent = '';
-  ui.linkReport.hidden = true; ui.linkXlsx.hidden = true;
+  ui.linkReport.hidden = true;
   applyMode();
   setStage('need_spec');
   deviceUi.loadDevices();       // may co the da doi giua chung

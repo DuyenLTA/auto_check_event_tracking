@@ -1,4 +1,4 @@
-"""Route xuat report: HTML de xem, xlsx de gui cho dev.
+"""Route xuat report HTML.
 
 Tach khoi routes_event.py de moi file duoi 200 LOC, va vi hai viec nay doc
 trang thai chu khong sua - de rieng thi doc code de thay cai gi sua state cai
@@ -12,7 +12,7 @@ import logging
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse, Response
 
-from . import exporter, report_event_html
+from . import report_event_html
 from .event_state import state
 
 log = logging.getLogger(__name__)
@@ -41,27 +41,8 @@ async def report_html() -> HTMLResponse:
     return HTMLResponse(html)
 
 
-@router.get("/event/report.xlsx")
-async def report_xlsx() -> Response:
-    run = _run()
-    data = exporter.build(
-        run.results, run.summary, package=run.package,
-        device=state.serial, generated_at=run.generated_at,
-        warnings=_warnings(run),
-    )
-    name = f"event-tracking-{run.package or 'app'}.xlsx".replace("/", "-")
-    return Response(
-        content=data, media_type=XLSX_TYPE,
-        headers={"Content-Disposition": f'attachment; filename="{name}"'},
-    )
-
-
 def _warnings(run) -> list[str]:
-    """Hai canh bao KHONG duoc de mat khi xuat xlsx.
-
-    Nguoi doc file xlsx thuong la dev, va ho khong thay callout trong ban HTML.
-    Thieu hai dong nay thi ho doc mot bang toan 'Thieu' va tuong app hong.
-    """
+    """Canh bao dua vao dau bao cao HTML."""
     out = []
     if run.stream_died:
         # Dat dau tien: doc bang ma khong biet phien ghi da chet thi moi dong

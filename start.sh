@@ -43,7 +43,7 @@ VPY="$ENV_DIR/bin/python"
 # Cai lai khi thieu thu vien HOAC khi pyproject.toml moi hon lan cai truoc
 STAMP="$ENV_DIR/.usv-installed"
 NEEDS_INSTALL=0
-"$VPY" -c "import usv, fastapi, yaml, openpyxl" >/dev/null 2>&1 || NEEDS_INSTALL=1
+"$VPY" -c "import usv, fastapi, yaml" >/dev/null 2>&1 || NEEDS_INSTALL=1
 [ -f "$STAMP" ] && [ pyproject.toml -nt "$STAMP" ] && NEEDS_INSTALL=1
 
 # `usv` phai tro vao CHINH repo nay. Doi ten thu muc du an lam file .pth cua

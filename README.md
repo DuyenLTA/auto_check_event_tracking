@@ -18,7 +18,10 @@ Với mỗi dòng trong bảng spec:
 | App gửi param spec không khai | `Thừa param` |
 | Kiểu: spec `String` mà app gửi số | `Chưa kết luận` — logcat in Long `3` và chuỗi `"3"` y hệt nhau |
 | Chưa đánh dấu bước nào cho event | `Chưa test` — **không** tính là fail |
-| Event app bắn mà spec không khai | `Spec không khai` — **không** tính là fail |
+
+Chỉ chấm **event có trong bảng spec**. Event khác app bắn ra (`ad_load`,
+`track_ad_request`, `screen_view`…) không được liệt kê: một phiên thật có hàng
+chục event như vậy, in hết ra thì thứ cần đọc bị chìm.
 
 ## Cần gì trước khi chạy
 
@@ -123,7 +126,7 @@ Bốn bước trên giao diện:
 1. **Nạp spec**: dán link Confluence → *Đọc từ link*; hoặc mở phần dán tay. Hàng nào sai số cột thì báo kèm số dòng. Còn lỗi thì không cho Ghi.
 2. **Chọn máy và app** → *Bắt đầu ghi*. Tool tự bật log Firebase, tắt rồi mở lại app.
 3. **Thao tác trên máy** rồi bấm *Dừng ghi*.
-4. **Chấm** → xem report HTML hoặc tải xlsx.
+4. **Chấm** → xem report HTML.
 
 ### Hai chế độ
 
@@ -136,7 +139,7 @@ Bốn bước trên giao diện:
 
 Chế độ đánh dấu: nút nhóm theo màn, có ô lọc và dấu đã-bấm. Mốc của bước sau là điểm kết của bước trước — không có nút Xong.
 
-Report và xlsx **luôn ghi rõ** đã chạy chế độ nào, để người đọc không tưởng đã kiểm cả thời điểm.
+Report **luôn ghi rõ** đã chạy chế độ nào, để người đọc không tưởng đã kiểm cả thời điểm.
 
 ## Gọi từ Python
 

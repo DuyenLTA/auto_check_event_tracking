@@ -4,7 +4,7 @@ Danh doi co y - mat kha nang biet event ban dung luc hay khong. Nen hai thu
 BAT BUOC:
   - `duplicate` phai TAT: mot phien dai vao ra cung mot man thi event do ban
     lai la dung, bat len la bao oan.
-  - Report va xlsx PHAI noi ra da chay che do nay, khong thi nguoi doc tuong
+  - Report PHAI noi ra da chay che do nay, khong thi nguoi doc tuong
     da kiem ca thoi diem.
 """
 

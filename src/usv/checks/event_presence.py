@@ -7,7 +7,7 @@ Ba muc ket luan, va cai thu ba la quan trong nhat:
   - KHONG cua so nao              -> NOT_TESTED (tester chua danh dau buoc)
 
 NOT_TESTED khong phai fail: tool chua do gi ca thi khong duoc ket luan gi ve app.
-Cung nguyen tac voi EXTRA: khong do duoc thi khong ket luan.
+Khong do duoc thi khong ket luan - khong bao fail.
 
 BAN TRUNG cham theo TUNG CUA SO, khong theo ca phien. Do that: `track_ad_request`
 ban 17 lan trong mot lan mo app la binh thuong. Cham theo phien la bao oan.
@@ -102,7 +102,6 @@ def run(spec: SpecSheet, windows: tuple[Window, ...], config,
                 message="Event được bắn đúng ở bước này.",
             ))
 
-    out.extend(_extras(spec, windows))
     return out
 
 
@@ -111,32 +110,3 @@ def _label(name: str, window: Window, total: int) -> str:
     if total <= 1 or not window.note:
         return name
     return f"{name} ({window.note})"
-
-
-def _extras(spec: SpecSheet, windows: tuple[Window, ...]) -> list[CheckResult]:
-    """Event app ban ma spec khong khai -> EXTRA, KHONG phai fail.
-
-    Co the spec chua cap nhat, khong han app sai. `origin=auto`/`am` la Firebase
-    tu thu (screen_view, session_start, ad_query) - cang khong phai loi app.
-    """
-    known = {e.name for e in spec.events}
-    counts: dict[str, int] = {}
-    origins: dict[str, str] = {}
-    for window in windows:
-        for event in window.events:
-            if event.name in known and event.from_app:
-                continue
-            counts[event.name] = counts.get(event.name, 0) + 1
-            origins[event.name] = event.origin
-
-    out = []
-    for name, count in sorted(counts.items()):
-        origin = origins[name]
-        source = ("app tự gọi" if origin == "app"
-                  else f"Firebase tự thu (origin={origin})")
-        out.append(CheckResult(
-            element=name, check="event_presence", verdict=Verdict.EXTRA,
-            actual=f"bắn {count} lần",
-            message=f"Spec không khai event này — {source}. Không tính vào fail.",
-        ))
-    return out

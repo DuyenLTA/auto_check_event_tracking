@@ -136,9 +136,25 @@ def test_callout_near_edge_xuat_hien_va_noi_khong_tu_doi():
     assert "không</b> tự đổi bước" in page
 
 
-def test_event_extra_vao_callout_chu_khong_lam_loang_bang():
-    assert "Không tính vào fail" in HTML
-    assert "track_ad_request" in HTML
+def test_bao_cao_khong_liet_ke_event_la_cua_app():
+    """Chi bao ve event co trong spec. Log that day event khong lien quan
+    (track_ad_request 22 lan, screen_view, ad_query...) - liet ke het thi thu
+    can doc bi chim."""
+    assert "track_ad_request" not in HTML
+    assert "screen_view" not in HTML
+
+
+def test_param_la_van_vao_callout_khong_tinh_vao_fail():
+    """Param duoc coi la global param cua app thi bao rieng, khong tinh fail -
+    duong nay con dung, chi tang EVENT la bo di."""
+    from usv.check_models import CheckResult, Summary, Verdict
+    extra = CheckResult(element="rating_star_clicked.ga_extra", check="event_params",
+                        verdict=Verdict.EXTRA, actual="x",
+                        message="Param nay co o moi event. Không tính vào fail.")
+    summary = Summary()
+    summary.add(extra)
+    page = report_event_html.build(parse_paste(SPEC_TSV), [extra], summary)
+    assert "Không tính vào fail" in page
 
 
 def test_gia_tri_tu_log_duoc_escape():
