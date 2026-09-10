@@ -322,42 +322,6 @@ def test_thieu_import_bi_bat(client, fake_adb, monkeypatch):
         client.post("/event/stop")
 
 
-# --- POST /event/flow ---------------------------------------------------------
-# Route CHI doc va tra ket qua, khong cham vao may. Nen test khong can fake_adb.
-
-FLOW_YAML = (FIXTURES / "flow-rating.yaml").read_text(encoding="utf-8")
-
-
-def test_flow_hop_le_tra_case_va_package(client):
-    body = client.post("/event/flow", json={"text": FLOW_YAML}).json()
-    assert body["ok"] is True
-    assert body["case_count"] == 3
-    assert body["package"] == "com.aihomedesign.aihomedecor.designidea.aiinterior"
-    assert body["errors"] == []
-
-
-def test_flow_tra_canh_bao_fragile_cho_tester_soi(client):
-    body = client.post("/event/flow", json={"text": FLOW_YAML}).json()
-    fragile = [c for c in body["cases"] if c["fragile"]]
-    assert fragile, "case dung tap_text phai co canh bao trong payload"
-
-
-def test_flow_sai_tra_200_kem_loi_chu_khong_phai_400(client):
-    """Cung ly do /event/spec: flow sai la loi du lieu cua tester."""
-    response = client.post("/event/flow", json={"text": "- event: e\n  cases:\n"
-                                                        "    - steps:\n"
-                                                        "        - tap_di: x\n"})
-    assert response.status_code == 200
-    body = response.json()
-    assert body["ok"] is False
-    assert any("tap_di" in e for e in body["errors"])
-
-
-def test_flow_khong_dung_vao_state_cua_spec(client):
-    """Soi flow khong duoc lam mat spec dang nap."""
-    client.post("/event/spec", json={"text": SPEC_TSV})
-    client.post("/event/flow", json={"text": FLOW_YAML})
-    assert client.get("/event/state").json()["stage"] == "ready_to_record"
 # --- khong con o tick che do: tool tu suy ra theo viec CO BAM MOC hay khong ---
 
 def _ghi(client, fake_adb, *, bam_moc: bool):

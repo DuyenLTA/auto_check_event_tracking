@@ -17,8 +17,8 @@ from .adb_parsers import AdbError
 from .check_config import ConfigError, load as load_config
 from .confluence_client import (ConfluenceError, ConfluenceLinkError,
                                 fetch_page)
-from .event_session import bo_phien_cu, co_the_tu_mo, lay_mau_app
 from .event_spec_confluence import parse_page
+from .event_session import bo_phien_cu, co_the_tu_mo, lay_mau_app
 from .event_spec_parse import parse_paste
 from .event_state import state
 from .event_window import mark_label, windows_for
