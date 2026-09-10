@@ -16,7 +16,10 @@
  * Chi dua ra ngoai qua window.USV_*. */
 (() => {
 
-const KHONG_KHAI_MAN = 'Không khai màn';
+/* Spec de trong cot Screen Name -> khong co gi de nhom, va mot tieu de
+ * "Khong khai man — 0/2" chi noi ve chinh cai bang spec chu khong noi gi ve
+ * app. Dung khoa rong lam moc "khong khai", roi BO tieu de o cho ve. */
+const KHONG_KHAI_MAN = '';
 
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (c) => (
@@ -54,8 +57,11 @@ function renderMarks(container, events, { filter = '', done, current, onMark }) 
   for (const [screen, list] of groupByScreen(shown)) {
     const wrap = document.createElement('div');
     wrap.className = 'group';
-    const doneCount = list.filter((e) => marked.has(e.name)).length;
-    wrap.innerHTML = `<h3>${escapeHtml(screen)} — ${doneCount}/${list.length}</h3>`;
+    // Khong khai man thi khong co tieu de nhom - hien thang cac nut.
+    if (screen) {
+      const doneCount = list.filter((e) => marked.has(e.name)).length;
+      wrap.innerHTML = `<h3>${escapeHtml(screen)} — ${doneCount}/${list.length}</h3>`;
+    }
 
     const row = document.createElement('div');
     row.className = 'marks';

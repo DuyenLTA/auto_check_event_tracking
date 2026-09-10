@@ -71,3 +71,16 @@ def test_khong_con_o_tick_chon_cach_mo_app():
     assert 'id="from-launch"' not in html
     assert "fromLaunch" not in js
     assert "from_launch" not in js, "khong duoc gui tham so ma server khong con doc"
+
+
+def test_khong_con_nhan_khong_khai_man_o_dau():
+    """Spec de trong cot Screen Name thi khong duoc hien nhom nao.
+
+    Nhan "Khong khai man — 0/2" noi ve chinh cai bang spec chu khong noi gi ve
+    app, va 0/2 thi trung lap voi phan tong ket. Da bi hoi hai lan.
+    """
+    for f in ["event-marks.js", "event-render.js", "event.js"]:
+        js = (WEB / f).read_text(encoding="utf-8")
+        assert "Không khai màn'" not in js and 'Không khai màn"' not in js, f
+    html = (WEB / "index.html").read_text(encoding="utf-8")
+    assert "Không khai màn" not in html
