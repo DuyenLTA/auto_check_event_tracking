@@ -35,7 +35,7 @@ const ui = {
   btnStop: $('btn-stop'), btnCheck: $('btn-check'), btnReset: $('btn-reset'),
   summary: $('summary'), results: $('results'),
   linkReport: $('link-report'), linkArtifact: $('link-artifact'),
-  steps: { record: $('step-record'), check: $('step-check') },
+  steps: { check: $('step-check') },
 };
 
 let events = [];              // event trong spec
@@ -44,7 +44,9 @@ let stage = 'need_spec';
 function setStage(next) {
   stage = next;
   const recording = stage === 'recording';
-  ui.steps.record.setAttribute('aria-disabled', !recording);
+  // Ghi va Dung ghi nam chung mot buoc nen KHONG mo/khoa ca section theo
+  // trang thai: khoa se khoa luon o dan package va nut tim may. Chi hai nut
+  // tu bat/tat nhau.
   ui.steps.check.setAttribute('aria-disabled',
     !['ready_to_check', 'done'].includes(stage));
   ui.btnRecord.disabled = stage !== 'ready_to_record';

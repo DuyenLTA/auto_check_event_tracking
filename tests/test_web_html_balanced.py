@@ -9,6 +9,7 @@ Test doc tinh, khong can browser, nen re va bat dung loai loi do.
 
 from __future__ import annotations
 
+import re
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -52,9 +53,23 @@ def test_the_can_bang():
 
 
 def test_moi_section_step_dong_dung_cho():
-    """Bon buoc phai la bon <section> NGANG HANG, khong long nhau."""
+    """Cac buoc phai NGANG HANG nhau, khong long vao nhau.
+
+    Khong ghim con so cu the: so buoc con doi (da gop buoc 3 vao buoc 2). Cai
+    phai dung la moi <section> mo ra deu duoc dong lai, va so buoc khop voi so
+    thu tu in tren tieu de.
+    """
     parser = _Balance()
     parser.feed(HTML)
     parser.close()
-    assert HTML.count('<section class="step"') == 4
-    assert HTML.count("</section>") == 4
+    so_mo = HTML.count('<section class="step"')
+    assert so_mo >= 2, "trang phai con it nhat hai buoc"
+    assert HTML.count("</section>") == so_mo, "co section khong duoc dong"
+
+
+def test_so_thu_tu_buoc_danh_lien_tu_1():
+    """Gop/xoa mot buoc ma quen danh so lai thi trang nhay so (1, 2, 4)."""
+    so = [int(n) for n in re.findall(r'<span class="num">(\d+)</span>', HTML)]
+    assert so == list(range(1, len(so) + 1)), f"so thu tu buoc nhay: {so}"
+    assert len(so) == HTML.count('<section class="step"'), \
+        "so tieu de danh so khong khop so buoc"

@@ -57,25 +57,18 @@
     </div>
     <p class="hint">Luôn ghi <b>từ lúc app mở</b>. Tìm thấy app trên máy thì
       tool tự tắt–mở lại; không tìm thấy thì tool vẫn ghi và bạn tự mở app —
-      lúc đó mở <b>sau</b> khi bấm Ghi.</p>
+      lúc đó mở <b>sau</b> khi bấm Ghi. Bấm Ghi xong thì thao tác trên máy cho
+      app bắn hết các event trong spec, rồi quay lại bấm <b>Dừng ghi</b>.</p>
     <div class="row">
       <button id="btn-record" class="primary" disabled>Bắt đầu ghi</button>
+      <button id="btn-stop" disabled>Dừng ghi</button>
       <span id="record-info" class="info"></span>
       <div id="record-alert"></div>
     </div>
   </section>
 
-  <section class="step" id="step-record">
-    <h2><span class="num">3</span> Thao tác trên máy</h2>
-    <p class="hint">Thao tác trên máy cho app bắn hết các event trong spec, rồi
-      bấm <b>Dừng ghi</b>. Không phải bấm gì khác ở đây.</p>
-    <div class="row">
-      <button id="btn-stop" disabled>Dừng ghi</button>
-    </div>
-  </section>
-
   <section class="step" id="step-check">
-    <h2><span class="num">4</span> Kết quả</h2>
+    <h2><span class="num">3</span> Kết quả</h2>
     <div class="row">
       <button id="btn-check" class="primary" disabled>Chấm</button>
       <a id="link-report" class="btn" href="/event/report" target="_blank" hidden>Xem report</a>
