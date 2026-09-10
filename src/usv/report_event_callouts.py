@@ -33,8 +33,18 @@ def esc(value: object) -> str:
 def _callouts(results: list[CheckResult], fa_silent: bool,
               near_edge: tuple[str, ...], quick: bool = False,
               stream_died: bool = False, app_seen: bool = True,
-              foreground: str = "") -> str:
+              foreground: str = "", package: str = "",
+              checked_package: str = "") -> str:
     out = []
+    if checked_package and package and checked_package != package:
+        # Doi app duoi test ma khong noi ra thi bao cao noi ve mot app KHAC HAN
+        # app tester nghi minh dang test. Dat dau tien, tren ca canh bao khac.
+        out.append(
+            "<div class='callout'><h3>Đã chấm cho app đang mở</h3>"
+            f"<p>Bạn dán <code>{esc(package)}</code> nhưng máy không có app đó. "
+            f"Lúc ghi, máy đang mở <code>{esc(checked_package)}</code> — báo cáo "
+            "này chấm cho app đó. Nếu không phải app bạn muốn test thì dán lại "
+            "tên đúng rồi ghi lại.</p></div>")
     if not app_seen:
         # Dat DAU TIEN, tren ca stream_died: neu app duoi test khong he chay
         # thi khong mot dong nao trong bao cao noi ve app do.

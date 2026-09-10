@@ -37,6 +37,7 @@ async def report_html() -> HTMLResponse:
         generated_at=run.generated_at, event_count=run.event_count,
         fa_silent=run.fa_silent, stream_died=run.stream_died,
         app_seen=run.app_seen, foreground=run.foreground,
+        checked_package=run.checked_package,
         near_edge=run.near_edge, quick=run.quick,
     )
     return HTMLResponse(html)
@@ -45,6 +46,11 @@ async def report_html() -> HTMLResponse:
 def _warnings(run) -> list[str]:
     """Canh bao dua vao dau bao cao HTML."""
     out = []
+    if run.checked_package and run.checked_package != run.package:
+        out.append(
+            f"DA CHAM CHO APP {run.checked_package}: ten ban dan "
+            f"({run.package}) khong co tren may, tool lay app dang mo luc ghi. "
+            "Neu khong phai app can test thi dan lai ten dung roi ghi lai.")
     if not run.app_seen:
         out.append(
             "APP DUOI TEST KHONG CHAY LAN NAO trong phien ghi. Log Firebase do "

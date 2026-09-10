@@ -150,3 +150,15 @@ def test_khong_nham_sang_dong_khac_co_dau_gach_cheo():
     from usv.adb_parsers import parse_resumed_package
     rac = "  mLastPausedActivity: ActivityRecord{1 u0 com.khac.app/.Main t1}"
     assert parse_resumed_package(rac) is None, "chi doc dong *ResumedActivity*"
+
+
+def test_doc_duoc_package_launcher():
+    from usv.adb_parsers import parse_home_package
+    out = ("priority=0 preferredOrder=0 match=0x108000 isDefault=true\n"
+           "com.google.android.apps.nexuslauncher/.NexusLauncherActivity\n")
+    assert parse_home_package(out) == "com.google.android.apps.nexuslauncher"
+
+
+def test_khong_resolve_duoc_launcher_thi_tra_None():
+    from usv.adb_parsers import parse_home_package
+    assert parse_home_package("No activity found") is None

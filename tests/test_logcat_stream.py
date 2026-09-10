@@ -76,6 +76,7 @@ class FakeClient:
         self.logs: list[tuple[str, str]] = []
         self.lines = lines or []
         self.prop_value = prop
+        self.foreground = "com.x"
         self.process: FakeProcess | None = None
         self.tags: tuple[str, ...] = ()
 
@@ -102,6 +103,12 @@ class FakeClient:
 
     async def force_stop(self, serial, package):
         self.calls.append("force_stop")
+
+    async def home_package(self, serial):
+        return "com.launcher"
+
+    async def foreground_package(self, serial):
+        return self.foreground
 
     async def launch(self, serial, package):
         self.calls.append("launch")

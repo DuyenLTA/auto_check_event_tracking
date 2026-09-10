@@ -66,12 +66,41 @@ async def start(client, serial: str, package: str, *,
     # Bat doc NGAY, truoc khi mo app: khong thi event dau tien (first_open,
     # session_start) ban ra ma chua ai doc.
     recording.reader = asyncio.create_task(_pump(recording))
+    try:
+        recording.home_package = await client.home_package(serial) or ""
+    except AdbError:
+        recording.home_package = ""
+    recording.watcher = asyncio.create_task(_watch_foreground(client, recording))
 
     if from_launch and package:
         await client.force_stop(serial, package)
         await client.launch(serial, package)
         await asyncio.sleep(LAUNCH_SETTLE)
     return recording
+
+
+FOREGROUND_MS = 2.0
+
+
+async def _watch_foreground(client, recording: Recording) -> None:
+    """Dem app nao o foreground, suot phien ghi.
+
+    Lay mau MOT LAN luc Dung ghi thi cai gi dang tren man luc do thang - da do
+    duoc: bat ra com.google.android.apps.nexuslauncher va bao cao ghi "da cham
+    cho launcher". Dem suot phien roi lay app xuat hien nhieu nhat thi khong bi
+    mot khoanh khac lam lech.
+
+    Loi adb khong duoc lam sap phien ghi - bo qua mau do, vong sau thu lai.
+    """
+    while not recording.stopping:
+        try:
+            now = await client.foreground_package(recording.serial)
+        except Exception:      # noqa: BLE001 - mau nay chi de goi y, khong ket luan
+            now = None
+        if now:
+            recording.foreground_seen[now] = \
+                recording.foreground_seen.get(now, 0) + 1
+        await asyncio.sleep(FOREGROUND_MS)
 
 
 async def _pump(recording: Recording) -> None:
@@ -143,6 +172,11 @@ async def stop(recording: Recording) -> Recording:
             await process.wait()
         except ProcessLookupError:
             pass
+
+    watcher = recording.watcher
+    if watcher is not None:
+        watcher.cancel()
+        recording.watcher = None
 
     reader = recording.reader
     if reader is not None:

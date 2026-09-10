@@ -39,6 +39,19 @@ class Recording:
     # App dang o foreground luc Dung ghi, chi ghi khi app_seen=False. De bao
     # cao chi thang ten dung cho tester thay vi de ho tu do lai bang mat.
     foreground: str = ""
+    # App thuc su duoc cham. Bang `package` da dan, TRU khi ten dan khong co
+    # tren may va tester tu mo mot app khac - luc do la ten app dang mo. Giu
+    # rieng `package` de bao cao noi duoc ca hai. Xem event_session.lay_mau_app.
+    checked_package: str = ""
+    # Ten package da dan co tren may khong. Quyet dinh luc Dung ghi co duoc
+    # doi sang app dang mo hay khong - xem event_session.lay_mau_app.
+    package_found: bool = True
+    # Dem so lan tung app xuat hien o foreground trong phien. Lay mau SUOT
+    # phien chu khong mot lan luc Dung ghi: lay mot lan thi cai gi dang tren
+    # man luc do thang - da bat duoc launcher va bao "da cham cho launcher".
+    foreground_seen: dict = field(default_factory=dict)
+    home_package: str = ""
+    watcher: object | None = None
     # stop() da duoc goi -> EOF sap toi la CO Y, khong phai dut.
     stopping: bool = False
 
@@ -71,4 +84,5 @@ class Recording:
                 "stopped": self.stopped, "fa_silent": self.fa_silent,
                 "stream_died": self.stream_died,
                 "app_seen": self.app_seen,
-                "foreground": self.foreground}
+                "foreground": self.foreground,
+                "checked_package": self.checked_package or self.package}

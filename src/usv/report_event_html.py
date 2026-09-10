@@ -123,6 +123,7 @@ def build(spec: SpecSheet, results: list[CheckResult], summary: Summary, *,
           package: str = "", generated_at: str = "", event_count: int = 0,
           fa_silent: bool = False, stream_died: bool = False,
           app_seen: bool = True, foreground: str = "",
+          checked_package: str = "",
           near_edge: tuple[str, ...] = (),
           quick: bool = False) -> str:
     screens = _screen_of(spec)
@@ -173,7 +174,8 @@ def build(spec: SpecSheet, results: list[CheckResult], summary: Summary, *,
     </div>
     <div class="section-chips">{''.join(chips)}</div>
   </header>
-  {_callouts(results, fa_silent, near_edge, quick, stream_died, app_seen, foreground)}
+  {_callouts(results, fa_silent, near_edge, quick, stream_died, app_seen,
+               foreground, package, checked_package)}
   <div class="sections">{''.join(sections)}</div>
 </div>
 """

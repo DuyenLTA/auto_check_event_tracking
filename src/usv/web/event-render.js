@@ -58,6 +58,12 @@ function renderSummary(node, data) {
       + 'bắn và param đúng hay không — <b>không</b> kết luận bắn đúng lúc. '
       + 'Kiểm bắn trùng đã tắt.</div>';
   }
+  if (data.checked_package && data.checked_package !== data.package) {
+    html += '<div class="alert warn"><b>Đã chấm cho app đang mở:</b> <code>'
+      + esc(data.checked_package) + '</code>. Tên bạn dán (<code>'
+      + esc(data.package || '') + '</code>) không có trên máy. Nếu không phải '
+      + 'app cần test thì dán lại tên đúng rồi ghi lại.</div>';
+  }
   if (data.app_seen === false) {
     html += '<div class="alert"><b>App dưới test không chạy lần nào.</b> Log '
       + 'Firebase do Google Play Services in ra nên không cho biết event thuộc '

@@ -130,7 +130,8 @@ async def start_record(request: RecordRequest) -> dict:
 
     # Lay mau ngay sau khi mo app. Tu mo tay thi luc nay chua chay - con mau
     # o /event/stop.
-    await lay_mau_app(adb, recording)
+    recording.package_found = tu_mo
+    await lay_mau_app(adb, recording, ten_co_tren_may=tu_mo)
     state.recording = recording
     state.serial, state.package = request.serial, request.package
     state.quick = False
@@ -167,7 +168,8 @@ async def stop_record() -> dict:
     if not recording.stopped:
         await logcat_stream.stop(recording)
 
-    await lay_mau_app(client(), recording)
+    await lay_mau_app(client(), recording,
+                      ten_co_tren_may=recording.package_found)
 
     events, markers = parse_log(recording.text())
     state.windows, state.quick = windows_for(

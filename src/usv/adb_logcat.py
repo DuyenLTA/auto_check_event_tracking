@@ -11,7 +11,7 @@ import asyncio
 import re
 
 from .adb_parsers import (AdbError, check_package, check_serial,
-                          parse_resumed_package)
+                          parse_home_package, parse_resumed_package)
 
 # Chan chuoi la di vao dong lenh adb. Cung ly do voi check_serial/check_package
 # trong adb_parsers: moi arg di rieng vao subprocess nhung ten van phai sach.
@@ -107,6 +107,16 @@ class LogcatMixin:
         out, _, _ = await self._run(
             "-s", serial, "shell", "dumpsys", "activity", "activities")
         return parse_resumed_package(out)
+
+    async def home_package(self, serial: str) -> str | None:
+        """Package cua launcher. Can de loai no ra khi doan app duoi test tu
+        foreground - xem parse_home_package."""
+        check_serial(serial)
+        out, _, _ = await self._run(
+            "-s", serial, "shell",
+            "cmd package resolve-activity --brief "
+            "-a android.intent.action.MAIN -c android.intent.category.HOME")
+        return parse_home_package(out)
 
     async def force_stop(self, serial: str, package: str) -> None:
         """Dung app. Can truoc khi mo lai de property log.tag co hieu luc."""

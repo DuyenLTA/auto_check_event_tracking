@@ -47,6 +47,7 @@ async def run_check() -> dict:
         results=results, summary=summary, spec=state.spec, package=state.package,
         generated_at=now_vn(), fa_silent=fa_silent, stream_died=stream_died,
         app_seen=app_seen, foreground=recording.foreground,
+        checked_package=recording.checked_package or recording.package,
         near_edge=tuple(dict.fromkeys(n for w in state.windows for n in w.near_edge)),
         event_count=len(events), quick=state.quick,
     )
@@ -62,6 +63,8 @@ async def run_check() -> dict:
         "stream_died": stream_died,
         "app_seen": app_seen,
         "foreground": recording.foreground,
+        "package": recording.package,
+        "checked_package": recording.checked_package or recording.package,
         "near_edge": list(state.run.near_edge),
         "config": config.payload(),
         "results": [r.payload() for r in results],

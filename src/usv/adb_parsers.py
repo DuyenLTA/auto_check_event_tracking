@@ -180,3 +180,24 @@ def parse_resumed_package(output: str) -> str | None:
         if match:
             return match.group(1)
     return None
+
+
+def parse_home_package(output: str) -> str | None:
+    """Package cua launcher, tu 'cmd package resolve-activity --brief -a
+    android.intent.action.MAIN -c android.intent.category.HOME'.
+
+    Can de LOAI launcher ra khi doan app duoi test tu foreground. Do that: lay
+    mau foreground dung mot lan luc Dung ghi thi bat duoc
+    com.google.android.apps.nexuslauncher, va bao cao ghi "da cham cho
+    launcher" - vo nghia.
+
+    Lay bang resolve-activity chu khong doan theo ten chua chu 'launcher': moi
+    may mot launcher khac nhau, va doan thi sai tren may co launcher ben thu ba.
+
+    Dong cuoi cua output la 'package/.Activity'.
+    """
+    for line in reversed(output.strip().splitlines()):
+        line = line.strip()
+        if "/" in line and " " not in line:
+            return line.split("/")[0] or None
+    return None

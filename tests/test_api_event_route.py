@@ -90,9 +90,17 @@ class FakeAdb:
     async def foreground_package(self, serial):
         return self.foreground
 
+    async def home_package(self, serial):
+        return "com.launcher"
+
+    running: set | None = None
+
     async def app_running(self, serial, package):
-        # App gia "dang chay" khi no co trong danh sach cai dat - du de phan
-        # biet hai ca: app that va app go sai ten.
+        # Mac dinh: app "dang chay" khi co trong danh sach cai dat - du de phan
+        # biet app that voi app go sai ten. Test doi `running` de dung ca app
+        # co cai ma khong chay.
+        if self.running is not None:
+            return package in self.running
         return package in await self.packages(serial)
     async def launch(self, serial, package):
         self.calls.append("launch")
@@ -595,3 +603,88 @@ def test_goi_y_app_DANG_MO_khi_dan_sai_ten(client, fake_adb):
     assert body["launched"] is False
     assert "com.other.app" in body["hint"], body["hint"]
     assert "KHÔNG kết luận được gì" in body["hint"]
+
+
+def test_dan_sai_ten_tu_mo_app_thi_van_cham_duoc(client, fake_adb):
+    """Dan sai ten + tu mo app bang tay -> tool phai NHAN RA app dang mo va
+    cham cho app do, khong bo cuoc.
+
+    Truoc day: `pidof <ten sai>` mai mai rong -> app_seen=False -> ca phien ra
+    "khong verify duoc". Tester lam dung het moi thu ma khong nhan duoc ket
+    luan nao, chi vi mot dau cham go lech.
+    """
+    fake_adb.foreground = "com.example.app"          # app tester tu mo
+    client.post("/event/spec", json={"text": SPEC_TSV})
+    body = client.post("/event/record", json={"serial": "FAKE1",
+                                              "package": "com.example.ap"}).json()
+    assert body["launched"] is False
+    for name in ("rating_placement_viewed", "rating_star_clicked"):
+        fake_adb.process.stdout.queue.append(
+            (f"09-08 15:00:01.000 V/FA-SVC ( 9): Logging event: origin=app,"
+             f"name={name},params=Bundle[{{{PARAMS[name]}}}]\n").encode())
+    stop = client.post("/event/stop").json()
+    rec = stop["recording"]
+    assert rec["app_seen"] is True, "app dang mo -> phai coi la da thay app chay"
+    assert rec["checked_package"] == "com.example.app", "phai cham cho app dang mo"
+    check = client.post("/event/check").json()
+    assert check["summary"]["pass"] == 5
+    assert check["checked_package"] == "com.example.app"
+
+
+def test_bao_cao_noi_ro_da_cham_cho_app_nao(client, fake_adb):
+    """Doi app duoi test ma khong noi ra thi bao cao noi ve mot app khac han
+    app tester nghi minh dang test."""
+    fake_adb.foreground = "com.example.app"
+    client.post("/event/spec", json={"text": SPEC_TSV})
+    client.post("/event/record", json={"serial": "FAKE1", "package": "com.example.ap"})
+    client.post("/event/stop")
+    client.post("/event/check")
+    page = client.get("/event/report").text
+    assert "com.example.ap'" in page or "com.example.ap<" in page, "phai neu ten da dan"
+    assert "com.example.app" in page, "va ten app da cham"
+
+
+def test_dan_dung_ten_ma_app_khong_chay_thi_KHONG_doi_sang_app_khac(client, fake_adb):
+    """Ten dan CO tren may nhung app khong chay -> khong duoc am tham doi sang
+    app dang mo. Luc do co gi sai that (app crash, mo khong len), va doi sang
+    app khac la bao cao ve mot app tester khong he chon."""
+    fake_adb.foreground = "com.other.app"
+    fake_adb.running = set()          # khong app nao chay
+    client.post("/event/spec", json={"text": SPEC_TSV})
+    client.post("/event/record", json={"serial": "FAKE1", "package": "com.example.app"})
+    stop = client.post("/event/stop").json()
+    assert stop["recording"]["app_seen"] is False
+    assert stop["recording"]["checked_package"] == "com.example.app"
+    check = client.post("/event/check").json()
+    assert check["summary"]["pass"] == 0
+
+
+def test_doan_app_lay_cai_xuat_hien_nhieu_nhat_va_loai_launcher():
+    """Doan theo SO LAN o foreground, khong theo mau cuoi cung.
+
+    Lay mau luc Dung ghi thi cai gi dang tren man luc do thang - da do duoc
+    tren may: bat ra com.google.android.apps.nexuslauncher va bao cao ghi "da
+    cham cho launcher", vo nghia.
+    """
+    from usv.event_recording import Recording
+    from usv.event_session import doan_app
+
+    rec = Recording(serial="S1", package="com.go.sai")
+    rec.home_package = "com.google.android.apps.nexuslauncher"
+    rec.foreground_seen = {
+        "com.google.android.apps.nexuslauncher": 9,   # launcher, phai loai
+        "com.android.systemui": 4,                    # system UI, phai loai
+        "com.that.su.app": 6,
+        "com.thoang.qua": 1,
+    }
+    assert doan_app(rec) == "com.that.su.app"
+
+
+def test_doan_app_tra_rong_khi_chi_thay_launcher():
+    from usv.event_recording import Recording
+    from usv.event_session import doan_app
+
+    rec = Recording(serial="S1", package="com.go.sai")
+    rec.home_package = "com.launcher"
+    rec.foreground_seen = {"com.launcher": 5, "com.android.systemui": 2}
+    assert doan_app(rec) == "", "khong duoc cham cho launcher"

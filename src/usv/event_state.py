@@ -37,6 +37,7 @@ class EventRun:
     stream_died: bool = False
     app_seen: bool = True
     foreground: str = ""
+    checked_package: str = ""
     near_edge: tuple[str, ...] = ()
     event_count: int = 0
     quick: bool = False
