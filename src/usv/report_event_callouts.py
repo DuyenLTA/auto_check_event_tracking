@@ -32,8 +32,19 @@ def esc(value: object) -> str:
 
 def _callouts(results: list[CheckResult], fa_silent: bool,
               near_edge: tuple[str, ...], quick: bool = False,
-              stream_died: bool = False) -> str:
+              stream_died: bool = False, app_seen: bool = True) -> str:
     out = []
+    if not app_seen:
+        # Dat DAU TIEN, tren ca stream_died: neu app duoi test khong he chay
+        # thi khong mot dong nao trong bao cao noi ve app do.
+        out.append(
+            "<div class='callout alarm'><h3>App dưới test không chạy lần nào</h3>"
+            "<p>Suốt phiên ghi, máy không có process nào của app này. Log "
+            "Firebase do <b>Google Play Services</b> in ra chứ không phải "
+            "process của app, nên nó <b>không cho biết event thuộc app nào</b> "
+            "— event bắt được ở đây là của <b>app khác</b>. Kiểm lại tên "
+            "package, và nếu tự mở app bằng tay thì mở <b>sau</b> khi bấm "
+            "Ghi.</p></div>")
     if stream_died:
         # Dat DAU TIEN: neu phien ghi da chet thi moi ket luan phia duoi chi
         # noi ve phan dau cua phien, va nguoi doc phai biet dieu do truoc khi

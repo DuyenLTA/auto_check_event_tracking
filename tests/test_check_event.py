@@ -35,12 +35,14 @@ def _log(*extra: str) -> str:
 
 
 def _run(spec_tsv: str = SPEC_TSV, log_text: str | None = None,
-         *, fa_silent: bool = False, stream_died: bool = False):
+         *, fa_silent: bool = False, stream_died: bool = False,
+         app_seen_running: bool = True):
     spec = parse_paste(spec_tsv)
     assert spec.errors == (), spec.errors
     windows = cut_log(log_text if log_text is not None else _log())
     return event_check_runner.run(spec, windows, CONFIG, fa_silent=fa_silent,
-                                  stream_died=stream_died)
+                                  stream_died=stream_died,
+                                  app_seen_running=app_seen_running)
 
 
 def _by_verdict(results):
@@ -286,3 +288,26 @@ def test_van_cham_du_event_trong_spec():
     results, _ = _run()
     assert {r.element.split(".")[0].split(" (")[0] for r in results} == {
         "rating_placement_viewed", "rating_star_clicked"}
+
+
+def test_app_khong_he_chay_thi_khong_ket_luan_PASS():
+    """App duoi test khong chay trong ca phien -> event bat duoc la cua app KHAC.
+
+    Log FA-SVC do Google Play Services in ra (do that: PID app 4524, moi dong
+    "Logging event:" mang PID 31649 = com.google.android.gms), nen logcat
+    khong noi duoc event thuoc app nao. Neu app khong he chay thi khong con gi
+    de gan - bao PASS luc do la PASS GIA.
+
+    Da xay ra: package go sai -> `monkey` that bai ma tra exit 0 -> tool ghi
+    log cua app dang mo san va bao "5 pass" cho mot app khong duoc cai.
+    """
+    results, summary = _run(app_seen_running=False)
+    assert summary.passed == 0, "khong duoc co pass nao"
+    nv = [r for r in results if r.verdict is Verdict.NOT_VERIFIABLE]
+    assert nv and any("không chạy" in r.message for r in nv)
+
+
+def test_app_co_chay_thi_cham_binh_thuong():
+    """Chieu nguoc lai - guard qua tay thi moi phien deu thanh khong ket luan."""
+    _, summary = _run(app_seen_running=True)
+    assert summary.passed == 5

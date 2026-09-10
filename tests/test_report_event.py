@@ -220,3 +220,13 @@ def test_bao_cao_noi_ro_bao_nhieu_event_va_bao_nhieu_muc_kiem():
     """Con so dau tien nguoi doc thay phai la SO EVENT, khong phai so dong."""
     page = _build()
     assert "2 event trong spec" in page
+
+
+def test_callout_app_khong_chay_xuat_hien():
+    page = _build(app_seen=False)
+    assert "không chạy lần nào" in page
+    assert "app khác" in page
+
+
+def test_app_co_chay_thi_khong_co_callout_do():
+    assert "không chạy lần nào" not in HTML

@@ -21,8 +21,8 @@ from ..event_window import Window
 
 
 def run(spec: SpecSheet, windows: tuple[Window, ...], config,
-        *, fa_silent: bool = False,
-        stream_died: bool = False) -> list[CheckResult]:
+        *, fa_silent: bool = False, stream_died: bool = False,
+        app_seen_running: bool = True) -> list[CheckResult]:
     setting = config.checks.get("event_presence")
     catch_duplicate = bool(setting.options.get("duplicate", True)) if setting else True
 
@@ -30,6 +30,23 @@ def run(spec: SpecSheet, windows: tuple[Window, ...], config,
     by_event: dict[str, list[Window]] = {}
     for window in windows:
         by_event.setdefault(window.spec_event, []).append(window)
+
+    if not app_seen_running:
+        # Phai chan o NGOAI cung, truoc ca nhanh "co thay event": log FA-SVC do
+        # Google Play Services in ra, KHONG phai process cua app (do tren may:
+        # PID app 4524, moi dong "Logging event:" mang PID 31649 =
+        # com.google.android.gms). Nen logcat khong noi duoc event thuoc app
+        # nao. App khong he chay thi khong con gi de gan - "thay event" luc do
+        # la thay event cua app KHAC, va bao PASS la PASS GIA.
+        return [CheckResult(
+            element=event.name, check="event_presence",
+            verdict=Verdict.NOT_VERIFIABLE, expected="event được bắn ra",
+            message=("App dưới test không chạy lần nào trong phiên ghi. Log "
+                     "Firebase do Google Play Services in ra nên không cho "
+                     "biết event thuộc app nào — event bắt được ở đây là của "
+                     "app khác, không kết luận được gì về app này. Kiểm lại "
+                     "tên package, và mở app SAU khi bấm Ghi."),
+        ) for event in spec.events]
 
     for event in spec.events:
         found = by_event.get(event.name, [])

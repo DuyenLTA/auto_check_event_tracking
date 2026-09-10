@@ -49,6 +49,14 @@ class MarkRequest(BaseModel):
     note: str = ""
 
 
+async def _app_dang_chay(adb, serial: str, package: str) -> bool:
+    """Loi adb o day KHONG duoc lam sap phien ghi - tra False la du an toan."""
+    try:
+        return await adb.app_running(serial, package)
+    except AdbError:
+        return False
+
+
 @router.get("/event/state")
 async def read_state() -> dict:
     """Trang thai hien tai. Tra rong thay vi loi khi chua nap gi - goi de hoi
@@ -128,6 +136,9 @@ async def start_record(request: RecordRequest) -> dict:
     except AdbError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
+    # Lay mau ngay sau khi mo app. Tu mo tay thi luc nay chua chay - con mau
+    # o /event/stop.
+    recording.app_seen = await _app_dang_chay(adb, request.serial, request.package)
     state.recording = recording
     state.serial, state.package = request.serial, request.package
     state.quick = False
@@ -162,6 +173,10 @@ async def stop_record() -> dict:
         raise HTTPException(status_code=409, detail="Chưa bắt đầu ghi.")
     if not recording.stopped:
         await logcat_stream.stop(recording)
+
+    if not recording.app_seen:
+        recording.app_seen = await _app_dang_chay(
+            client(), recording.serial, recording.package)
 
     events, markers = parse_log(recording.text())
     state.windows, state.quick = windows_for(

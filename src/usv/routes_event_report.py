@@ -36,6 +36,7 @@ async def report_html() -> HTMLResponse:
         run.spec, run.results, run.summary, package=run.package,
         generated_at=run.generated_at, event_count=run.event_count,
         fa_silent=run.fa_silent, stream_died=run.stream_died,
+        app_seen=run.app_seen,
         near_edge=run.near_edge, quick=run.quick,
     )
     return HTMLResponse(html)
@@ -44,6 +45,11 @@ async def report_html() -> HTMLResponse:
 def _warnings(run) -> list[str]:
     """Canh bao dua vao dau bao cao HTML."""
     out = []
+    if not run.app_seen:
+        out.append(
+            "APP DUOI TEST KHONG CHAY LAN NAO trong phien ghi. Log Firebase do "
+            "Google Play Services in ra nen khong cho biet event thuoc app nao "
+            "- event bat duoc la cua APP KHAC. Kiem lai ten package.")
     if run.stream_died:
         # Dat dau tien: doc bang ma khong biet phien ghi da chet thi moi dong
         # "khong bat duoc" deu bi hieu sai thanh loi app.

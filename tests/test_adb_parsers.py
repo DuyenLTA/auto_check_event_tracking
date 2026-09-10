@@ -103,3 +103,25 @@ def test_launch_im_lang_khi_mo_duoc():
 
     adb._run = fake_run
     asyncio.run(adb.launch("SERIAL1", "com.example.app"))   # khong duoc nem gi
+
+
+def test_app_running_doc_pidof():
+    """pidof tra rong -> app khong chay. Can vi log FA-SVC do Play Services in
+    ra chu khong phai process app, nen khong the doi chieu PID."""
+    import asyncio
+
+    from usv.adb_client import AdbClient
+
+    adb = AdbClient("/fake/adb")
+    calls = []
+
+    async def fake_run(*args, timeout=None):
+        calls.append(args)
+        return (out, "", 0)
+
+    adb._run = fake_run
+    out = "4524\n"
+    assert asyncio.run(adb.app_running("SERIAL1", "com.example.app")) is True
+    out = "\n"
+    assert asyncio.run(adb.app_running("SERIAL1", "com.example.app")) is False
+    assert calls[0][-2:] == ("pidof", "com.example.app")

@@ -58,6 +58,12 @@ function renderSummary(node, data) {
       + 'bắn và param đúng hay không — <b>không</b> kết luận bắn đúng lúc. '
       + 'Kiểm bắn trùng đã tắt.</div>';
   }
+  if (data.app_seen === false) {
+    html += '<div class="alert"><b>App dưới test không chạy lần nào.</b> Log '
+      + 'Firebase do Google Play Services in ra nên không cho biết event thuộc '
+      + 'app nào — event bắt được là của <b>app khác</b>. Kiểm lại tên package, '
+      + 'và nếu tự mở app bằng tay thì mở <b>sau</b> khi bấm Ghi.</div>';
+  }
   if (data.stream_died) {
     html += '<div class="alert"><b>Phiên ghi bị đứt giữa đường.</b> Stream '
       + 'logcat dừng trước khi bấm Dừng ghi — thường là máy rớt khỏi USB. '

@@ -77,6 +77,11 @@ class FakeAdb:
     async def getprop(self, serial, key): return "VERBOSE"
     async def logcat_clear(self, serial): return None
     async def force_stop(self, serial, package): return None
+
+    async def app_running(self, serial, package):
+        # App gia "dang chay" khi no co trong danh sach cai dat - du de phan
+        # biet hai ca: app that va app go sai ten.
+        return package in await self.packages(serial)
     async def launch(self, serial, package): return None
 
     async def logcat_spawn(self, serial, tags):

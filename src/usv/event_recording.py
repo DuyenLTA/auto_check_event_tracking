@@ -32,6 +32,10 @@ class Recording:
     # Phan con lai cua phien khong duoc ghi -> KHONG duoc ket luan app thieu
     # event. Cung nguyen tac voi fa_silent. Xem _pump.
     stream_died: bool = False
+    # App duoi test da tung chay trong phien nay chua. Lay mau luc bat dau va
+    # luc dung. Chua tung thay -> event bat duoc la cua app KHAC, xem
+    # checks/event_presence.py.
+    app_seen: bool = False
     # stop() da duoc goi -> EOF sap toi la CO Y, khong phai dut.
     stopping: bool = False
 
@@ -62,4 +66,5 @@ class Recording:
         return {"serial": self.serial, "package": self.package,
                 "line_count": len(self.lines), "marks": list(self.marks),
                 "stopped": self.stopped, "fa_silent": self.fa_silent,
-                "stream_died": self.stream_died}
+                "stream_died": self.stream_died,
+                "app_seen": self.app_seen}

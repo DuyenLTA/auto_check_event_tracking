@@ -85,6 +85,20 @@ class LogcatMixin:
             raise AdbError(f"Tag logcat khong hop le: {tag!r}")
         await self._run("-s", serial, "shell", "log", "-p", "i", "-t", tag, message)
 
+    async def app_running(self, serial: str, package: str) -> bool:
+        """App co process dang chay khong.
+
+        Can vi log FA-SVC do Google Play Services in ra, KHONG phai process cua
+        app - do tren may: PID app 4524, moi dong "Logging event:" mang PID
+        31649 = com.google.android.gms. Nen logcat khong noi duoc event la cua
+        app nao, va neu app duoi test khong he chay thi moi "pass" bat duoc
+        deu la event cua app KHAC.
+        """
+        check_serial(serial)
+        check_package(package)
+        out, _, _ = await self._run("-s", serial, "shell", "pidof", package)
+        return bool(out.strip())
+
     async def force_stop(self, serial: str, package: str) -> None:
         """Dung app. Can truoc khi mo lai de property log.tag co hieu luc."""
         check_serial(serial)
