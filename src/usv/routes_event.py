@@ -111,7 +111,7 @@ async def start_record(request: RecordRequest) -> dict:
     if state.spec is None or not state.spec.ok:
         raise HTTPException(
             status_code=409,
-            detail="Spec chua hop le - sua het loi o bang preview roi mới Ghi được.")
+            detail="Spec chưa hợp lệ — sửa hết lỗi ở bảng preview rồi mới Ghi được.")
     old = state.recording
     if old is not None and old.live:
         raise HTTPException(status_code=409, detail="Đang ghi rồi.")

@@ -147,7 +147,7 @@ async def _pump(recording: Recording) -> None:
 async def mark(client, recording: Recording, label: str) -> None:
     """Chen moc vao logcat. MOT nut mot buoc: moc sau la diem ket cua buoc truoc."""
     if recording.stopped:
-        raise AdbError("Phien ghi da dung - khong chen moc duoc nua.")
+        raise AdbError("Phiên ghi đã dừng — không chèn mốc được nữa.")
     # KHONG doc stream o day - task nen dang doc lien tuc. Doc o ca hai cho la
     # hai ben gianh cung mot stdout.
     await client.shell_log(recording.serial, MARK_TAG, label)

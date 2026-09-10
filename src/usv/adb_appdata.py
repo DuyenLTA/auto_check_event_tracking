@@ -34,8 +34,8 @@ class AppDataMixin:
     def _check_path(path: str) -> str:
         if ".." in path or path.startswith("/") or not _REL_PATH.fullmatch(path):
             raise AdbError(
-                f"Duong dan trong app khong hop le: {path!r}. Phai la duong dan "
-                "tuong doi, vd 'files/frc_x.json' hoac 'shared_prefs/y.xml'.")
+                f"Đường dẫn trong app không hợp lệ: {path!r}. Phải là đường dẫn "
+                "tương đối, vd 'files/frc_x.json' hoặc 'shared_prefs/y.xml'.")
         return path
 
     async def is_debuggable(self, serial: str, package: str) -> bool:
@@ -91,13 +91,13 @@ class AppDataMixin:
                 stderr=asyncio.subprocess.PIPE,
             )
         except OSError as exc:
-            raise AdbError(f"Khong chay duoc adb: {exc}") from exc
+            raise AdbError(f"Không chạy được adb: {exc}") from exc
         _, err = await proc.communicate(content.encode("utf-8"))
         stderr = err.decode("utf-8", "replace")
         if _NOT_DEBUGGABLE in stderr:
             raise AdbError(_blocked_message(package))
         if proc.returncode:
-            raise AdbError(f"Ghi {path} that bai: {stderr.strip() or 'khong ro'}")
+            raise AdbError(f"Ghi {path} thất bại: {stderr.strip() or 'không rõ'}")
 
     async def device_time_ms(self, serial: str) -> int:
         """Gio cua MAY theo mili-giay.
@@ -112,7 +112,7 @@ class AppDataMixin:
         out, _, code = await self._run("-s", serial, "shell", "date", "+%s%3N")
         digits = out.strip()
         if code != 0 or not digits.isdigit():
-            raise AdbError(f"Khong doc duoc gio tren may: {out.strip()!r}")
+            raise AdbError(f"Không đọc được giờ trên máy: {out.strip()!r}")
         return int(digits)
 
     async def app_remove(self, serial: str, package: str, path: str) -> None:

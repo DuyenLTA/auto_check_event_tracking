@@ -44,7 +44,7 @@ def config() -> tuple[str, str]:
     token = os.environ.get("CONFLUENCE_TOKEN") or ""
     if not base or not token:
         raise ConfluenceError(
-            "Chua khai bao Confluence. Dat hai bien nay roi khoi dong lai tool:\n"
+            "Chưa khai báo Confluence. Đặt hai biến này rồi khởi động lại tool:\n"
             "  export CONFLUENCE_BASE_URL=https://confluence.cong-ty.vn\n"
             "  export CONFLUENCE_TOKEN=<personal access token>")
     return base, token
@@ -54,13 +54,13 @@ def locate(url: str) -> dict[str, str]:
     """Doc link -> tham so tra cuu. Nhan ca ba dang link Confluence hay gap."""
     text = (url or "").strip()
     if not text:
-        raise ConfluenceLinkError("Chua dan link Confluence nao.")
+        raise ConfluenceLinkError("Chưa dán link Confluence nào.")
     if text.isdigit():
         return {"page_id": text}
 
     parsed = urllib.parse.urlparse(text)
     if not parsed.scheme:
-        raise ConfluenceLinkError(f"{text!r} khong phai mot link hop le.")
+        raise ConfluenceLinkError(f"{text!r} không phải một link hợp lệ.")
 
     found = _PAGE_ID.search(parsed.query) or _PAGES_PATH.search(parsed.path)
     if found:
@@ -72,10 +72,10 @@ def locate(url: str) -> dict[str, str]:
         return {"space": urllib.parse.unquote(parts[1]),
                 "title": urllib.parse.unquote_plus(parts[2])}
     raise ConfluenceLinkError(
-        "Khong doc duoc link. Dung mot trong cac dang:\n"
+        "Không đọc được link. Dùng một trong các dạng:\n"
         "  .../pages/viewpage.action?pageId=123456\n"
-        "  .../display/SPACE/Ten+Trang\n"
-        "  hoac dan thang so pageId.")
+        "  .../display/SPACE/Tên+Trang\n"
+        "  hoặc dán thẳng số pageId.")
 
 
 def _get(path: str, token: str) -> dict:
@@ -89,13 +89,13 @@ def _get(path: str, token: str) -> dict:
             return json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         hint = {
-            401: " - token sai hoac het han.",
-            403: " - bi chan. Neu token dung thi thuong la nginx chan User-Agent.",
-            404: " - khong co trang nay, kiem lai link.",
+            401: " — token sai hoặc hết hạn.",
+            403: " — bị chặn. Nếu token đúng thì thường là nginx chặn User-Agent.",
+            404: " — không có trang này, kiểm lại link.",
         }.get(exc.code, "")
-        raise ConfluenceError(f"Confluence tra {exc.code}{hint}") from exc
+        raise ConfluenceError(f"Confluence trả {exc.code}{hint}") from exc
     except urllib.error.URLError as exc:
-        raise ConfluenceError(f"Khong noi duoc toi Confluence: {exc.reason}") from exc
+        raise ConfluenceError(f"Không nối được tới Confluence: {exc.reason}") from exc
 
 
 def fetch_page(url: str) -> tuple[str, str]:
@@ -113,12 +113,13 @@ def fetch_page(url: str) -> tuple[str, str]:
         results = found.get("results") or []
         if not results:
             raise ConfluenceError(
-                f"Khong tim thay trang {where['title']!r} trong space "
+                f"Không tìm thấy trang {where['title']!r} trong space "
                 f"{where['space']!r}.")
         data = results[0]
 
     body = (data.get("body") or {}).get("storage") or {}
     html = body.get("value") or ""
     if not html:
-        raise ConfluenceError("Trang tra ve rong - co the ban khong co quyen xem.")
+        raise ConfluenceError(
+            "Trang trả về rỗng — có thể bạn không có quyền xem trang này.")
     return data.get("title") or "", html

@@ -36,13 +36,13 @@ class LogcatMixin:
         """
         check_serial(serial)
         if not _PROP_KEY.fullmatch(key) or not _PROP_VALUE.fullmatch(value):
-            raise AdbError(f"Ten/gia tri property khong hop le: {key}={value}")
+            raise AdbError(f"Tên/giá trị property không hợp lệ: {key}={value}")
         await self._run("-s", serial, "shell", "setprop", key, value)
 
     async def getprop(self, serial: str, key: str) -> str:
         check_serial(serial)
         if not _PROP_KEY.fullmatch(key):
-            raise AdbError(f"Ten property khong hop le: {key}")
+            raise AdbError(f"Tên property không hợp lệ: {key}")
         out, _, _ = await self._run("-s", serial, "shell", "getprop", key)
         return out.strip()
 
@@ -64,7 +64,7 @@ class LogcatMixin:
         check_serial(serial)
         for tag in tags:
             if not _LOG_TAG.fullmatch(tag):
-                raise AdbError(f"Tag logcat khong hop le: {tag!r}")
+                raise AdbError(f"Tag logcat không hợp lệ: {tag!r}")
         args = ["-s", serial, "logcat", "-v", "time", "-s", *tags]
         try:
             return await asyncio.create_subprocess_exec(
@@ -73,7 +73,7 @@ class LogcatMixin:
                 stderr=asyncio.subprocess.PIPE,
             )
         except OSError as exc:
-            raise AdbError(f"Khong mo duoc stream logcat: {exc}") from exc
+            raise AdbError(f"Không mở được stream logcat: {exc}") from exc
 
     async def shell_log(self, serial: str, tag: str, message: str) -> None:
         """Chen mot dong vao logcat -> moc cat cua so.
@@ -83,7 +83,7 @@ class LogcatMixin:
         """
         check_serial(serial)
         if not _LOG_TAG.fullmatch(tag):
-            raise AdbError(f"Tag logcat khong hop le: {tag!r}")
+            raise AdbError(f"Tag logcat không hợp lệ: {tag!r}")
         await self._run("-s", serial, "shell", "log", "-p", "i", "-t", tag, message)
 
     async def app_running(self, serial: str, package: str) -> bool:

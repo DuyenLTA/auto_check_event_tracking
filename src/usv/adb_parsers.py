@@ -62,24 +62,24 @@ def find_adb(explicit: str | None = None) -> str:
         if candidate and Path(candidate).is_file() and os.access(candidate, os.X_OK):
             return candidate
     raise AdbError(
-        "Khong tim thay adb. Cach sua:\n"
-        "  - Cai Android platform-tools, hoac\n"
-        "  - Them adb vao PATH, hoac\n"
-        "  - Dat bien moi truong ADB_PATH=/duong/dan/toi/adb"
+        "Không tìm thấy adb. Cách sửa:\n"
+        "  - Cài Android platform-tools, hoặc\n"
+        "  - Thêm adb vào PATH, hoặc\n"
+        "  - Đặt biến môi trường ADB_PATH=/đường/dẫn/tới/adb"
     )
 
 
 def check_serial(serial: str) -> str:
     """Chan serial la. Xem docstring module ve ly do."""
     if not serial or not SERIAL_RE.fullmatch(serial):
-        raise AdbError(f"Serial khong hop le: {serial!r}")
+        raise AdbError(f"Serial không hợp lệ: {serial!r}")
     return serial
 
 
 def check_package(package: str) -> str:
     """Chan ten package la. Xem docstring module ve ly do."""
     if not package or not PACKAGE_RE.fullmatch(package):
-        raise AdbError(f"Ten package khong hop le: {package!r}")
+        raise AdbError(f"Tên package không hợp lệ: {package!r}")
     return package
 
 

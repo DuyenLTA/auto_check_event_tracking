@@ -89,7 +89,7 @@ def test_launch_bao_loi_khi_may_noi_khong_co_man_nao_de_mo():
     adb._run = fake_run
     with pytest.raises(AdbError) as err:
         asyncio.run(adb.launch("SERIAL1", "com.khong.he.co"))
-    assert "khong co man nao de mo" in str(err.value)
+    assert "không có màn nào để mở" in str(err.value)
 
 
 def test_launch_im_lang_khi_mo_duoc():

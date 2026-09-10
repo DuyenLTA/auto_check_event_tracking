@@ -33,7 +33,7 @@ class InputMixin:
     def _coord(value: float, name: str) -> int:
         number = int(round(value))
         if not 0 <= number <= MAX_COORD:
-            raise AdbError(f"{name}={value!r} ngoai khoang cho phep.")
+            raise AdbError(f"{name}={value!r} ngoài khoảng cho phép.")
         return number
 
     async def input_tap(self, serial: str, x: float, y: float) -> None:
@@ -58,7 +58,7 @@ class InputMixin:
         key = KEYEVENTS.get(name.strip().upper())
         if key is None:
             raise AdbError(
-                f"keyevent {name!r} khong duoc phep. Chi nhan: "
+                f"keyevent {name!r} không được phép. Chỉ nhận: "
                 + ", ".join(sorted(KEYEVENTS)))
         await self._run("-s", serial, "shell", "input", "keyevent", key)
 
@@ -66,6 +66,6 @@ class InputMixin:
         """Go chu. `input text` khong nhan khoang trang nen doi thanh %s."""
         check_serial(serial)
         if "'" in text or '"' in text:
-            raise AdbError("Chuoi go vao khong duoc chua dau nhay.")
+            raise AdbError("Chuỗi gõ vào không được chứa dấu nháy.")
         await self._run(
             "-s", serial, "shell", "input", "text", text.replace(" ", "%s"))

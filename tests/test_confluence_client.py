@@ -39,7 +39,7 @@ def test_dan_thang_so_pageId():
 def test_link_rac_bao_loi_kem_cac_dang_hop_le():
     with pytest.raises(ConfluenceError) as err:
         locate("khong-phai-link")
-    assert "khong phai mot link hop le" in str(err.value)
+    assert "không phải một link hợp lệ" in str(err.value)
 
 
 def test_chua_export_bien_thi_noi_ro_phai_export_gi(monkeypatch):
@@ -91,3 +91,6 @@ def test_403_goi_y_dung_cho_thay_vi_do_tai_token(monkeypatch):
     with pytest.raises(ConfluenceError) as err:
         fetch_page("306053648")
     assert "User-Agent" in str(err.value)
+
+
+

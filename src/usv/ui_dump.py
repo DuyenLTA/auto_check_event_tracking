@@ -34,7 +34,7 @@ def parse_bounds(raw: str) -> Bounds:
     """'[0,72][1080,283]' -> Bounds(0, 72, 1080, 283)."""
     match = _BOUNDS_RE.fullmatch(raw.strip())
     if not match:
-        raise ValueError(f"bounds khong doc duoc: {raw!r}")
+        raise ValueError(f"bounds không đọc được: {raw!r}")
     left, top, right, bottom = (int(g) for g in match.groups())
     return Bounds(left, top, right, bottom)
 

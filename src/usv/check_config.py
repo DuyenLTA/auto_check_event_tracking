@@ -75,26 +75,26 @@ def config_path() -> Path | None:
 
 def parse(raw: dict) -> CheckConfig:
     if not isinstance(raw, dict):
-        raise ConfigError("File config phai la mot YAML object.")
+        raise ConfigError("File config phải là một YAML object.")
 
     checks: dict[str, CheckSetting] = {}
     for name, entry in (raw.get("checks") or {}).items():
         if name not in KNOWN_CHECKS:
             raise ConfigError(
-                f"checks.{name} khong phai ten check hop le. Chi nhan: "
+                f"checks.{name} không phải tên check hợp lệ. Chỉ nhận: "
                 + ", ".join(sorted(KNOWN_CHECKS))
             )
         if not isinstance(entry, dict):
-            raise ConfigError(f"checks.{name} phai la object co truong 'enabled'.")
+            raise ConfigError(f"checks.{name} phải là object có trường 'enabled'.")
         if "enabled" not in entry:
-            raise ConfigError(f"checks.{name} thieu truong 'enabled'.")
+            raise ConfigError(f"checks.{name} thiếu trường 'enabled'.")
         if not isinstance(entry["enabled"], bool):
-            raise ConfigError(f"checks.{name}.enabled phai la true/false.")
+            raise ConfigError(f"checks.{name}.enabled phải là true/false.")
         severity = str(entry.get("severity", "error"))
         if severity not in KNOWN_SEVERITY:
             raise ConfigError(
-                f"checks.{name}.severity phai la 'error' hoac 'warning', "
-                f"dang la {severity!r}."
+                f"checks.{name}.severity phải là 'error' hoặc 'warning', "
+                f"đang là {severity!r}."
             )
         options = {k: v for k, v in entry.items() if k not in {"enabled", "severity"}}
         checks[name] = CheckSetting(
@@ -116,7 +116,7 @@ def load(path: Path | None = None) -> CheckConfig:
     try:
         raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     except yaml.YAMLError as exc:
-        raise ConfigError(f"{path.name} sai cu phap YAML:\n{exc}") from exc
+        raise ConfigError(f"{path.name} sai cú pháp YAML:\n{exc}") from exc
     except OSError as exc:
-        raise ConfigError(f"Khong doc duoc {path}: {exc}") from exc
+        raise ConfigError(f"Không đọc được {path}: {exc}") from exc
     return parse(raw)

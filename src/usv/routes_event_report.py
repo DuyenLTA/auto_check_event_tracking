@@ -48,16 +48,16 @@ def _warnings(run) -> list[str]:
     out = []
     if run.checked_package and run.checked_package != run.package:
         out.append(
-            f"DA CHAM CHO APP {run.checked_package}: ten ban dan "
-            f"({run.package}) khong co tren may, tool lay app dang mo luc ghi. "
-            "Neu khong phai app can test thi dan lai ten dung roi ghi lai.")
+            f"ĐÃ CHẤM CHO APP {run.checked_package}: tên bạn dán "
+            f"({run.package}) không có trên máy, tool lấy app đang mở lúc ghi. "
+            "Nếu không phải app cần test thì dán lại tên đúng rồi ghi lại.")
     if not run.app_seen:
         out.append(
-            "APP DUOI TEST KHONG CHAY LAN NAO trong phien ghi. Log Firebase do "
-            "Google Play Services in ra nen khong cho biet event thuoc app nao "
-            "- event bat duoc la cua APP KHAC. Kiem lai ten package."
-            + (f" Luc dung ghi may dang mo {run.foreground} - rat co the day "
-               "moi la ten can dan." if run.foreground else ""))
+            "APP DƯỚI TEST KHÔNG CHẠY LẦN NÀO trong phiên ghi. Log Firebase do "
+            "Google Play Services in ra nên không cho biết event thuộc app nào "
+            "— event bắt được là của APP KHÁC. Kiểm lại tên package."
+            + (f" Lúc dừng ghi máy đang mở {run.foreground} — rất có thể đây "
+               "mới là tên cần dán." if run.foreground else ""))
     if run.stream_died:
         # Dat dau tien: doc bang ma khong biet phien ghi da chet thi moi dong
         # "khong bat duoc" deu bi hieu sai thanh loi app.

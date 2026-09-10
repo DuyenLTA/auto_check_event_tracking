@@ -107,9 +107,9 @@ def parse_rows(rows: list[list[str]]) -> SpecSheet:
     for line_no, row in enumerate(rows[1:], start=2):
         if len(row) != ncol:
             errors.append(
-                f"Dong {line_no}: {len(row)} cot, can {ncol}. Hang nay co the bi "
-                "gay lam nhieu dong khi dan - sua lai thanh MOT hang mot dong "
-                "(o rong thi de tab lien tiep, dung xoa tab)."
+                f"Dòng {line_no}: {len(row)} cột, cần {ncol}. Hàng này có thể bị "
+                "gãy làm nhiều dòng khi dán — sửa lại thành MỘT hàng một dòng "
+                "(ô rỗng thì để tab liên tiếp, đừng xoá tab)."
             )
             continue
 
@@ -124,9 +124,9 @@ def parse_rows(rows: list[list[str]]) -> SpecSheet:
                                 triggered=cell("triggered"))
         if current is None:
             errors.append(
-                f"Dong {line_no}: co param '{cell('param') or '(rong)'}' nhung "
-                "chua co event nao phia tren. Hang param tiep theo cua mot event "
-                "thi de trong cot Event_Name, nhung phai nam DUOI hang cua event do."
+                f"Dòng {line_no}: có param '{cell('param') or '(rỗng)'}' nhưng "
+                "chưa có event nào phía trên. Hàng param tiếp theo của một event "
+                "thì để trống cột Event_Name, nhưng phải nằm DƯỚI hàng của event đó."
             )
             continue
 
@@ -136,7 +136,7 @@ def parse_rows(rows: list[list[str]]) -> SpecSheet:
 
         if param_name in {p.name for p in params}:
             errors.append(
-                f"Dong {line_no}: param '{param_name}' khai hai lan cho event "
+                f"Dòng {line_no}: param '{param_name}' khai hai lần cho event "
                 f"'{current.name}'."
             )
             continue
@@ -149,7 +149,7 @@ def parse_rows(rows: list[list[str]]) -> SpecSheet:
 
     flush()
     if not events and not errors:
-        errors.append("Khong doc duoc event nao - bang chi co dong tieu de?")
+        errors.append("Không đọc được event nào — bảng chỉ có dòng tiêu đề?")
     return SpecSheet(events=tuple(events), errors=tuple(errors),
                      columns=tuple(header))
 
