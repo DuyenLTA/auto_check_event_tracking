@@ -294,16 +294,17 @@ def test_thieu_import_bi_bat(client, fake_adb, monkeypatch):
         client.post("/event/stop")
 
 
-# --- che do nhanh: khong danh dau buoc ---
+# --- khong con o tick che do: tool tu suy ra theo viec CO BAM MOC hay khong ---
 
-def _quick_flow(client, fake_adb):
-    """Ghi che do nhanh: khong bam moc, chi bom event vao stream."""
+def _ghi(client, fake_adb, *, bam_moc: bool):
+    """Ghi mot phien roi bom event vao stream. `bam_moc` -> co chen moc."""
     client.post("/event/spec", json={"text": SPEC_TSV})
-    client.post("/event/record", json={"serial": "FAKE1", "package": "com.example.app",
-                                       "quick": True})
-    step = 0
-    for name in ("rating_placement_viewed", "rating_star_clicked"):
-        step += 1
+    client.post("/event/record", json={"serial": "FAKE1", "package": "com.example.app"})
+    for step, name in enumerate(("rating_placement_viewed", "rating_star_clicked"), 1):
+        if bam_moc:
+            # shell_log cua FakeAdb chen moc RO! roi bom luon event cua buoc do.
+            client.post("/event/mark", json={"spec_event": name, "note": ""})
+            continue
         stamp = f"09-08 15:00:{step:02d}"
         fake_adb.process.stdout.queue.append(
             (f"{stamp}.000 V/FA-SVC ( 9): Logging event: origin=app,"
@@ -311,44 +312,47 @@ def _quick_flow(client, fake_adb):
     return client.post("/event/stop").json(), client.post("/event/check").json()
 
 
-def test_che_do_nhanh_khong_can_moc_van_cham_duoc(client, fake_adb):
-    """Cat theo moc thi 0 moc = 0 cua so = moi dong 'chua test'."""
-    stop, check = _quick_flow(client, fake_adb)
-    assert stop["quick"] is True
+def test_khong_bam_moc_nao_thi_cham_ca_phien(client, fake_adb):
+    """Khong bam moc = khong co bien buoc de so. Cat theo moc thi ra 0 cua so
+    va MOI dong thanh 'chua test' - mot bao cao rong trong nhu that.
+
+    Truoc day nguoi dung phai tick 'che do nhanh' TRUOC khi ghi, tuc quyet
+    dinh khi chua biet minh co bam moc hay khong. Tick sai thi im lang.
+    """
+    stop, check = _ghi(client, fake_adb, bam_moc=False)
     assert stop["marker_count"] == 0
+    assert stop["quick"] is True, "khong moc -> tu suy ra la cham ca phien"
     assert stop["window_count"] == 2, "mot cua so cho moi event trong spec"
     assert check["summary"]["not_tested"] == 0
-    assert check["summary"]["fail"] == 0
     assert check["summary"]["pass"] == 5
 
 
-def test_che_do_nhanh_bao_ra_trong_ket_qua_va_trong_report(client, fake_adb):
-    _, check = _quick_flow(client, fake_adb)
+def test_co_bam_moc_thi_cat_theo_moc(client, fake_adb):
+    """Chieu nguoc lai: co moc thi phai cat theo moc de con cham duoc THOI
+    DIEM. Suy ra sai chieu nay thi mat han nang luc do."""
+    stop, check = _ghi(client, fake_adb, bam_moc=True)
+    assert stop["marker_count"] == 2
+    assert stop["quick"] is False, "co moc -> cat theo moc"
+    assert check["quick"] is False
+    assert check["summary"]["fail"] == 0
+
+
+def test_bao_cao_noi_ro_da_cham_ca_phien(client, fake_adb):
+    _, check = _ghi(client, fake_adb, bam_moc=False)
     assert check["quick"] is True
     page = client.get("/event/report").text
     assert "chế độ nhanh" in page.lower()
 
 
-
-def test_che_do_thuong_van_can_moc(client, fake_adb):
-    """Khong bam moc o che do thuong -> chua test, KHONG phai fail."""
+def test_record_khong_con_nhan_tham_so_quick(client, fake_adb):
+    """Bo o tick roi thi than server cung khong duoc doc `quick` tu client -
+    de lai thi mot client cu van lai duoc hanh vi ma UI khong con hien."""
     client.post("/event/spec", json={"text": SPEC_TSV})
     client.post("/event/record", json={"serial": "FAKE1", "package": "com.example.app",
                                        "quick": False})
     client.post("/event/stop")
-    check = client.post("/event/check").json()
-    assert check["quick"] is False
-    assert check["summary"]["not_tested"] == 2
-    assert check["summary"]["fail"] == 0
-
-
-def test_state_giu_co_quick(client, fake_adb):
-    client.post("/event/spec", json={"text": SPEC_TSV})
-    client.post("/event/record", json={"serial": "FAKE1", "package": "com.example.app",
-                                       "quick": True})
-    assert client.get("/event/state").json()["quick"] is True
-    client.post("/event/reset")
-    assert client.get("/event/state").json()["quick"] is False
+    assert client.get("/event/state").json()["quick"] is True, (
+        "khong moc nao -> van phai la cham ca phien, bo qua `quick` client gui")
 
 
 def test_index_co_cho_hien_canh_bao_dut_giua_phien(client):

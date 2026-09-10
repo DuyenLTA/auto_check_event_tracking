@@ -125,21 +125,30 @@ Bốn bước trên giao diện:
 
 1. **Nạp spec**: dán link Confluence → *Đọc từ link*; hoặc mở phần dán tay. Hàng nào sai số cột thì báo kèm số dòng. Còn lỗi thì không cho Ghi.
 2. **Dán package name** → *Bắt đầu ghi*. Máy thì tool tự nhận. Gõ sai tên package thì báo ngay tại chỗ, vì sai một chữ là report ra toàn `Thiếu` trông y hệt app hỏng thật. Tool tự bật log Firebase, tắt rồi mở lại app.
-3. **Thao tác trên máy** rồi bấm *Dừng ghi*.
+3. **Thao tác trên máy** rồi bấm *Dừng ghi*. Muốn kiểm cả thời điểm thì bấm mốc từng bước — xem dưới.
 4. **Chấm** → xem report HTML.
 
-### Hai chế độ
+### Đánh dấu bước là tuỳ chọn — không có ô tick chế độ
 
-| | Chế độ nhanh (mặc định) | Đánh dấu từng bước |
+Kiểm được gì phụ thuộc vào việc **bạn có bấm mốc hay không**, và tool tự suy ra
+lúc bấm *Dừng ghi*:
+
+| | Không bấm mốc nào | Bấm mốc từng bước |
 |---|---|---|
 | Cách làm | bấm Ghi rồi thao tác tự do | bấm nút của bước sắp làm **rồi mới** thao tác |
 | Event có bắn / param đúng | ✅ | ✅ |
 | Bắn **đúng lúc** | ❌ không có biên bước để so | ✅ |
 | Bắn trùng | tắt — phiên dài vào ra một màn thì bắn lại là đúng | ✅ theo từng bước |
 
-Chế độ đánh dấu: nút nhóm theo màn, có ô lọc và dấu đã-bấm. Mốc của bước sau là điểm kết của bước trước — không có nút Xong.
+Mốc của bước sau là điểm kết của bước trước — không có nút Xong.
 
-Report **luôn ghi rõ** đã chạy chế độ nào, để người đọc không tưởng đã kiểm cả thời điểm.
+**Vì sao không để ô tick:** ô tick bắt chọn *trước khi* biết mình có bấm mốc hay
+không, và chọn sai thì im lặng — bỏ tick rồi quên bấm mốc sẽ ra 0 cửa sổ, mọi
+dòng thành `chưa test`, một báo cáo rỗng trông như thật. Suy ra từ việc đã xảy ra
+thì không sai được.
+
+Report **luôn ghi rõ** đã chấm cả phiên hay theo từng bước, để người đọc không
+tưởng đã kiểm cả thời điểm.
 
 ## Gọi từ Python
 

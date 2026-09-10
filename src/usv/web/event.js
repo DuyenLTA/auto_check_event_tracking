@@ -22,7 +22,7 @@ const ui = {
   specUrl: { input: $('spec-url'), btn: $('btn-spec-url'),
              info: $('spec-url-info') },
   device: $('device'), pkg: $('package'), pkgInfo: $('package-info'),
-  fromLaunch: $('from-launch'), quick: $('quick'),
+  fromLaunch: $('from-launch'),
   btnDevices: $('btn-devices'),
   deviceInfo: $('device-info'), devicePick: $('device-pick'),
   btnRecord: $('btn-record'), recordInfo: $('record-info'),
@@ -32,8 +32,6 @@ const ui = {
   summary: $('summary'), results: $('results'),
   linkReport: $('link-report'),
   steps: { mark: $('step-mark'), check: $('step-check') },
-  step3Title: $('step3-title'), markHint: $('mark-hint'),
-  quickHint: $('quick-hint'),
 };
 
 let events = [];              // event trong spec
@@ -51,21 +49,6 @@ function setStage(next) {
   ui.btnStop.disabled = !recording;
   ui.btnCheck.disabled = stage !== 'ready_to_check';
 }
-
-/* Che do nhanh doi han buoc 3: khong danh dau tung buoc nua. Hien danh sach
- * nut moc ma khong dung den chi lam roi mat - nen an han di, va doi ca tieu de
- * lan cau huong dan cho khop voi viec that su phai lam. */
-function applyMode() {
-  const quick = ui.quick.checked;
-  ui.step3Title.textContent = quick ? 'Thao tác trên máy' : 'Đánh dấu từng bước';
-  ui.markHint.hidden = quick;
-  ui.quickHint.hidden = !quick;
-  ui.markFilter.hidden = quick;
-  ui.marks.hidden = quick;
-  ui.progress.hidden = quick;
-}
-
-ui.quick.addEventListener('change', applyMode);
 
 /* --- buoc 1: spec --- */
 /* Nap xong (tu link hay dan tay deu vao day) -> dua vao trang thai app. */
@@ -95,11 +78,9 @@ ui.btnRecord.addEventListener('click', async () => {
   try {
     const data = await post('/event/record', {
       serial: ui.device.value, package: ui.pkg.value,
-      from_launch: ui.fromLaunch.checked, quick: ui.quick.checked,
+      from_launch: ui.fromLaunch.checked,
     });
-    const label = ui.quick.checked
-      ? 'đang ghi, thao tác trên máy rồi bấm Dừng ghi'
-      : 'đang ghi, bấm nút của bước sắp làm';
+    const label = 'đang ghi, thao tác trên máy rồi bấm Dừng ghi';
     ui.recordInfo.textContent = label;
     ui.recordAlert.innerHTML = '';
     setStage(data.stage);
@@ -176,7 +157,6 @@ ui.btnReset.addEventListener('click', async () => {
   ui.summary.innerHTML = ''; ui.results.innerHTML = '';
   ui.marks.innerHTML = ''; ui.progress.textContent = '';
   ui.linkReport.hidden = true;
-  applyMode();
   setStage('need_spec');
   deviceUi.loadDevices();       // may co the da doi giua chung
   deviceUi.startWatch();
@@ -188,7 +168,6 @@ const deviceUi = initDevice({
   info: ui.deviceInfo, pick: ui.devicePick,
 });
 
-applyMode();
 setStage('need_spec');
 // Tim may NGAY khi mo trang, khong doi nap spec: may cam san thi khong co ly
 // do bat nguoi dung bam them mot nut. Roi do tiep lien tuc - cam may luc nao

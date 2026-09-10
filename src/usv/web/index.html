@@ -56,16 +56,12 @@
       <span id="package-info" class="info"></span>
     </div>
     <div class="row">
-      <label class="check"><input type="checkbox" id="quick" checked>
-        <b>Chế độ nhanh</b> — không đánh dấu từng bước</label>
-      <span class="hint">Bấm Ghi rồi thao tác tự do. Đổi lại: chỉ kết luận event
-        <b>có bắn</b> và param đúng hay không, <b>không</b> kết luận bắn đúng lúc.</span>
-    </div>
-    <div class="row">
       <label class="check"><input type="checkbox" id="from-launch" checked>
-        Ghi từ lúc mở app</label>
-      <span class="hint">Bắt được <code>first_open</code>, <code>session_start</code>
-        và <code>placement_name=app_shortcut</code>. Tool tự tắt rồi mở lại app.</span>
+        Tắt và mở lại app trước khi ghi</label>
+      <span class="hint">Bật thì bắt được <code>first_open</code>,
+        <code>session_start</code>, <code>placement_name=app_shortcut</code>.
+        Tắt thì ghi từ màn đang đứng — cần khi màn đó chỉ hiện một lần và mở
+        lại app là mất.</span>
     </div>
     <div class="row">
       <button id="btn-record" class="primary" disabled>Bắt đầu ghi</button>
@@ -75,11 +71,12 @@
   </section>
 
   <section class="step" id="step-mark">
-    <h2><span class="num">3</span> <span id="step3-title">Đánh dấu từng bước</span></h2>
-    <p class="hint" id="mark-hint">Bấm nút của bước sắp làm, <b>rồi mới</b> thao tác
-      trên máy. Mốc của bước sau chính là điểm kết của bước trước — không cần nút Xong.</p>
-    <p class="hint" id="quick-hint" hidden>Thao tác trên máy cho hết các màn cần
-      test, xong bấm <b>Dừng ghi</b>.</p>
+    <h2><span class="num">3</span> Thao tác trên máy</h2>
+    <p class="hint">Bấm hết các màn cần test rồi bấm <b>Dừng ghi</b>. Tool kết
+      luận event <b>có bắn</b> và param đúng hay không.</p>
+    <p class="hint">Muốn kiểm thêm <b>bắn đúng lúc</b> và <b>bắn trùng</b> thì bấm
+      nút của bước sắp làm <b>rồi mới</b> thao tác — mốc của bước sau chính là
+      điểm kết của bước trước. Không bấm nút nào cũng được.</p>
     <div class="row">
       <input id="mark-filter" placeholder="lọc event" size="28">
       <span id="mark-progress" class="info"></span>

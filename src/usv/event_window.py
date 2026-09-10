@@ -171,3 +171,20 @@ def whole_session(spec_events: tuple[str, ...],
                start_ms=start, end_ms=end)
         for name in spec_events
     )
+
+
+def windows_for(spec_events: tuple[str, ...], events, markers) -> tuple[tuple, bool]:
+    """(cua so, da_gom_ca_phien) - SUY RA tu viec co moc hay khong.
+
+    Suy ra thay vi bat nguoi dung chon truoc: mot o tick "che do nhanh" bat ho
+    quyet dinh khi chua biet minh co bam moc hay khong, va tick sai thi im
+    lang - bo tick roi quen bam moc se ra 0 cua so, moi dong thanh "chua test",
+    mot bao cao rong trong nhu that.
+
+    Co moc  -> cat theo moc, cham duoc ca THOI DIEM va ban trung theo buoc.
+    Khong   -> khong co bien buoc nao de so, gom ca phien cho tung event.
+    """
+    if markers:
+        return cut(events, markers), False
+    app_events = [e for e in events if e.from_app]
+    return whole_session(spec_events, app_events), True

@@ -20,7 +20,7 @@ from .confluence_client import (ConfluenceError, ConfluenceLinkError,
 from .event_spec_confluence import parse_page
 from .event_spec_parse import parse_paste
 from .event_state import state
-from .event_window import cut, mark_label, whole_session
+from .event_window import mark_label, windows_for
 from .fa_event_parse import parse_log
 from .routes_device import client
 
@@ -39,9 +39,8 @@ class RecordRequest(BaseModel):
     serial: str
     package: str
     from_launch: bool = True
-    # Che do NHANH: khong danh dau tung buoc, tester bam Ghi roi thao tac tu do.
-    # Danh doi: khong biet event ban dung luc hay khong. Xem event_window.whole_session.
-    quick: bool = False
+    # KHONG co tham so `quick`. Cham ca phien hay cat theo moc duoc SUY RA luc
+    # Dung ghi, tu viec co moc hay khong - xem stop_record.
 
 
 class MarkRequest(BaseModel):
@@ -146,7 +145,7 @@ async def start_record(request: RecordRequest) -> dict:
 
     state.recording = recording
     state.serial, state.package = request.serial, request.package
-    state.quick = request.quick
+    state.quick = False
     state.run, state.windows = None, ()
     return {"stage": state.stage, "quick": state.quick,
             "recording": recording.payload()}
@@ -180,15 +179,9 @@ async def stop_record() -> dict:
         await logcat_stream.stop(recording)
 
     events, markers = parse_log(recording.text())
-    if state.quick:
-        # Khong co moc -> cat theo moc se ra 0 cua so va MOI dong thanh
-        # "chua test". Che do nhanh gom ca phien thanh mot cua so cho tung event.
-        app_events = [e for e in events if e.from_app]
-        state.windows = whole_session(
-            tuple(e.name for e in (state.spec.events if state.spec else ())),
-            app_events)
-    else:
-        state.windows = cut(events, markers)
+    state.windows, state.quick = windows_for(
+        tuple(e.name for e in (state.spec.events if state.spec else ())),
+        events, markers)
     return {
         "stage": state.stage,
         "quick": state.quick,
