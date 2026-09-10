@@ -72,19 +72,29 @@ class FakeAdb:
         self.process = FakeProcess()
         self.step = 0
         self.marks: list[str] = []
+        # Thu tu goi co y nghia: logcat -c -> spawn -> force_stop -> launch.
+        # Sai thu tu la mat cac event dau tien (first_open, session_start).
+        self.calls: list[str] = []
 
     async def setprop(self, serial, key, value): return None
     async def getprop(self, serial, key): return "VERBOSE"
-    async def logcat_clear(self, serial): return None
-    async def force_stop(self, serial, package): return None
+    async def logcat_clear(self, serial):
+        self.calls.append("clear")
+        return None
+    async def force_stop(self, serial, package):
+        self.calls.append("force_stop")
+        return None
 
     async def app_running(self, serial, package):
         # App gia "dang chay" khi no co trong danh sach cai dat - du de phan
         # biet hai ca: app that va app go sai ten.
         return package in await self.packages(serial)
-    async def launch(self, serial, package): return None
+    async def launch(self, serial, package):
+        self.calls.append("launch")
+        return None
 
     async def logcat_spawn(self, serial, tags):
+        self.calls.append("spawn")
         # Ong MOI moi lan spawn, y nhu `adb logcat` that. Tra lai ong cu thi
         # phien ghi thu hai thua luon trang thai dong cua phien truoc.
         self.process = FakeProcess()
@@ -510,79 +520,57 @@ def test_dang_ghi_ma_nap_spec_moi_thi_dung_han_phien_cu(client, fake_adb):
     assert fake_adb.process.returncode is not None, "phai kill process logcat cu"
 
 
-def test_app_chua_cai_thi_TU_CHOI_ghi(client, fake_adb):
-    """Ghi mot app khong co tren may = ghi log cua app KHAC.
 
-    Do that tren may: `adb shell monkey -p <app khong ton tai>` in ra
-    "No activities found to run" nhung EXIT CODE VAN LA 0. Nen tool mo app
-    that bai trong im lang roi ghi tiep, va bao cao gan event cua app khac cho
-    app dang test - da ra "5 pass" cho mot app khong he duoc cai. PASS gia con
-    te hon FAIL gia.
+
+
+
+
+
+
+
+# --- tim thay package thi tu mo, khong thay thi de tester tu mo (KHONG chan) ---
+
+def test_tim_thay_package_thi_tool_tu_mo_app(client, fake_adb):
+    client.post("/event/spec", json={"text": SPEC_TSV})
+    body = client.post("/event/record", json={"serial": "FAKE1",
+                                              "package": "com.example.app"}).json()
+    assert body["launched"] is True
+    assert "launch" in fake_adb.calls, "phai goi launch"
+    assert "force_stop" in fake_adb.calls, "phai tat app truoc de property co hieu luc"
+
+
+def test_khong_thay_package_van_ghi_va_de_tester_tu_mo(client, fake_adb):
+    """KHONG chan: van phai ghi, va ghi TU DAU de bat duoc event luc mo app.
+
+    Chan thi tester khong test duoc app ma `pm list packages` khong tra ra.
+    Nhung tool cung khong duoc tu mo bua: `monkey` voi app khong ton tai in
+    "No activities found to run" ma tra exit 0, mo that bai trong im lang roi
+    ghi log cua app dang mo san.
     """
     client.post("/event/spec", json={"text": SPEC_TSV})
     response = client.post("/event/record", json={"serial": "FAKE1",
                                                   "package": "com.khong.he.co"})
-    assert response.status_code == 400, "phai tu choi, khong duoc ghi"
-    detail = response.json()["detail"]
-    assert "com.khong.he.co" in detail
-    assert client.get("/event/state").json()["recording"] is None
-
-
-def test_app_co_cai_thi_ghi_binh_thuong(client, fake_adb):
-    """Chieu nguoc lai - kiem qua tay thi chan luon app hop le."""
-    client.post("/event/spec", json={"text": SPEC_TSV})
-    assert client.post("/event/record", json={"serial": "FAKE1",
-                                              "package": "com.example.app"}).status_code == 200
-
-
-def test_goi_y_app_gan_giong_khi_go_sai(client, fake_adb):
-    """Go lech mot chu thi chi ra ten dung, dung de tester tu do lai bang mat."""
-    client.post("/event/spec", json={"text": SPEC_TSV})
-    response = client.post("/event/record", json={"serial": "FAKE1",
-                                                  "package": "com.example.ap"})
-    assert response.status_code == 400
-    assert "com.example.app" in response.json()["detail"], "phai goi y ten gan giong"
-
-
-def test_tu_mo_app_bang_tay_thi_khong_chan_ten_package(client, fake_adb):
-    """Tat "tat va mo lai app" = tool KHONG mo app, tester tu mo tay.
-
-    Luc do khong con cai im lang can chan: chot chan ton tai vi `monkey` mo
-    app that bai ma tra exit 0. Khong mo thi khong the that bai am tham, nen
-    khong duoc chan - va do la cach duy nhat de ghi mot app tool khong tra ra
-    duoc (ten khac, app cho user khac, app vua cai).
-    """
-    client.post("/event/spec", json={"text": SPEC_TSV})
-    response = client.post("/event/record", json={
-        "serial": "FAKE1", "package": "com.khong.he.co", "from_launch": False})
     assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["launched"] is False, "khong thay app thi KHONG duoc tu mo"
+    assert "launch" not in fake_adb.calls, "mo bua se mo sai app"
     assert client.get("/event/state").json()["stage"] == "recording"
+    assert "mở app" in body["hint"].lower(), body["hint"]
 
 
-def test_de_tool_mo_app_thi_van_chan(client, fake_adb):
-    """Chieu nguoc lai - noi long ca hai chieu thi PASS gia quay lai."""
+def test_goi_y_ten_gan_giong_khi_go_lech_mot_chu(client, fake_adb):
     client.post("/event/spec", json={"text": SPEC_TSV})
-    response = client.post("/event/record", json={
-        "serial": "FAKE1", "package": "com.khong.he.co", "from_launch": True})
-    assert response.status_code == 400
+    body = client.post("/event/record", json={"serial": "FAKE1",
+                                              "package": "com.example.ap"}).json()
+    assert body["launched"] is False
+    assert "com.example.app" in body["hint"]
 
 
-def test_loi_chi_ra_cach_tu_mo_tay(client, fake_adb):
-    """Bao loi phai noi duong ra, khong chi noi "khong co"."""
+def test_stream_mo_TRUOC_khi_mo_app(client, fake_adb):
+    """Ghi tu dau: phai mo stream logcat roi moi mo app, khong thi mat cac
+    event dau tien (first_open, session_start)."""
     client.post("/event/spec", json={"text": SPEC_TSV})
-    detail = client.post("/event/record", json={
-        "serial": "FAKE1", "package": "com.khong.he.co"}).json()["detail"]
-    assert "tự mở" in detail or "bỏ tick" in detail.lower(), detail
-
-
-def test_loi_nhac_dung_ten_o_tick_dang_hien(client, fake_adb):
-    """Bao loi phai goi dung ten o tick tren trang. Doi nhan ma quen sua thong
-    bao thi nguoi dung di tim mot o khong con ten do."""
-    from pathlib import Path
-    html = (Path(__file__).parent.parent / "src" / "usv" / "web"
-            / "index.html").read_text(encoding="utf-8")
-    client.post("/event/spec", json={"text": SPEC_TSV})
-    detail = client.post("/event/record", json={
-        "serial": "FAKE1", "package": "com.khong.he.co"}).json()["detail"]
-    ten = detail.split('"')[1]
-    assert ten in html, f"thong bao nhac o tick {ten!r} ma trang khong co"
+    client.post("/event/record", json={"serial": "FAKE1", "package": "com.example.app"})
+    calls = fake_adb.calls
+    assert calls.index("spawn") < calls.index("launch")
+    assert calls.index("clear") < calls.index("spawn")

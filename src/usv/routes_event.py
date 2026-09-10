@@ -18,7 +18,7 @@ from .check_config import ConfigError, load as load_config
 from .confluence_client import (ConfluenceError, ConfluenceLinkError,
                                 fetch_page)
 from .event_spec_confluence import parse_page
-from .event_session import bo_phien_cu, phai_co_app
+from .event_session import bo_phien_cu, co_the_tu_mo
 from .event_spec_parse import parse_paste
 from .event_state import state
 from .event_window import mark_label, windows_for
@@ -39,7 +39,8 @@ class ConfluenceRequest(BaseModel):
 class RecordRequest(BaseModel):
     serial: str
     package: str
-    from_launch: bool = True
+    # KHONG co `from_launch`. Luon ghi tu dau; tool tu mo app khi tim thay
+    # package, khong thay thi de tester tu mo - xem co_the_tu_mo().
     # KHONG co tham so `quick`. Cham ca phien hay cat theo moc duoc SUY RA luc
     # Dung ghi, tu viec co moc hay khong - xem stop_record.
 
@@ -128,11 +129,10 @@ async def start_record(request: RecordRequest) -> dict:
         await logcat_stream.stop(old)
 
     adb = client()
-    await phai_co_app(adb, request.serial, request.package,
-                      from_launch=request.from_launch)
+    tu_mo, nhac = await co_the_tu_mo(adb, request.serial, request.package)
     try:
         recording = await logcat_stream.start(
-            adb, request.serial, request.package, from_launch=request.from_launch)
+            adb, request.serial, request.package, from_launch=tu_mo)
     except AdbError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
@@ -144,6 +144,7 @@ async def start_record(request: RecordRequest) -> dict:
     state.quick = False
     state.run, state.windows = None, ()
     return {"stage": state.stage, "quick": state.quick,
+            "launched": tu_mo, "hint": nhac,
             "recording": recording.payload()}
 
 

@@ -124,7 +124,7 @@ Lần đầu mất ~30 giây (tự tạo môi trường ảo + cài thư viện)
 Bốn bước trên giao diện:
 
 1. **Nạp spec**: dán link Confluence → *Đọc từ link*; hoặc mở phần dán tay. Hàng nào sai số cột thì báo kèm số dòng. Còn lỗi thì không cho Ghi.
-2. **Dán package name** → *Bắt đầu ghi*. Máy thì tool tự nhận. Gõ sai tên package thì báo ngay tại chỗ, vì sai một chữ là report ra toàn `Thiếu` trông y hệt app hỏng thật. Tool tự bật log Firebase, tắt rồi mở lại app.
+2. **Dán package name** → *Bắt đầu ghi*. Máy thì tool tự nhận. Luôn ghi **từ lúc app mở**: tìm thấy app trên máy thì tool tự tắt–mở lại; không tìm thấy thì vẫn ghi và bạn tự mở app (mở **sau** khi bấm Ghi — `setprop log.tag.FA-SVC` chỉ ăn từ lần khởi động sau đó). Không chặn, vì tool không tự mở bừa: `monkey` với app không tồn tại in `No activities found to run` mà trả exit 0, mở thất bại trong im lặng rồi ghi log của app đang mở sẵn.
 3. **Thao tác trên máy** rồi bấm *Dừng ghi*. Muốn kiểm cả thời điểm thì bấm mốc từng bước — xem dưới.
 4. **Chấm** → xem report HTML.
 

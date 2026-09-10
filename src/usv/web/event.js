@@ -22,7 +22,6 @@ const ui = {
   specUrl: { input: $('spec-url'), btn: $('btn-spec-url'),
              info: $('spec-url-info') },
   device: $('device'), pkg: $('package'), pkgInfo: $('package-info'),
-  fromLaunch: $('from-launch'), launchHint: $('launch-hint'),
   btnDevices: $('btn-devices'),
   deviceInfo: $('device-info'), devicePick: $('device-pick'),
   btnRecord: $('btn-record'), recordInfo: $('record-info'),
@@ -49,21 +48,6 @@ function setStage(next) {
   ui.btnStop.disabled = !recording;
   ui.btnCheck.disabled = stage !== 'ready_to_check';
 }
-
-/* Noi ro AI mo app, theo dung trang thai o tick. Nhan tinh mo ta ca hai
- * truong hop mot luc thi doc xong van khong biet minh dang o truong hop nao -
- * nguoi dung da phai hoi lai. */
-function applyLaunchHint() {
-  ui.launchHint.innerHTML = ui.fromLaunch.checked
-    ? 'Tool tắt app rồi mở lại — bạn không phải chạm vào máy. Bắt được '
-      + '<code>first_open</code>, <code>session_start</code>, '
-      + '<code>placement_name=app_shortcut</code>.'
-    : '<b>Bạn tự mở app trên máy</b>, và phải mở <b>sau</b> khi bấm Ghi — log '
-      + 'Firebase chỉ bật được từ lần app khởi động sau đó. Dùng khi màn chỉ '
-      + 'hiện một lần, hoặc khi tool không tìm ra package.';
-}
-
-ui.fromLaunch.addEventListener('change', applyLaunchHint);
 
 /* --- buoc 1: spec --- */
 /* Nap xong (tu link hay dan tay deu vao day) -> dua vao trang thai app. */
@@ -93,15 +77,17 @@ ui.btnRecord.addEventListener('click', async () => {
   try {
     const data = await post('/event/record', {
       serial: ui.device.value, package: ui.pkg.value,
-      from_launch: ui.fromLaunch.checked,
     });
-    // Tat "tat va mo lai app" -> tool khong mo app. Phai nhac mo NGAY BAY GIO:
-    // log Firebase chi bat duoc tu lan app khoi dong sau khi tool set property.
-    const label = ui.fromLaunch.checked
+    // Tool khong tu mo duoc -> phai nhac mo NGAY BAY GIO: log Firebase chi bat
+    // duoc tu lan app khoi dong sau khi tool set property, mo truoc thi ca
+    // phien khong co dong FA nao.
+    const label = data.launched
       ? 'đang ghi, thao tác trên máy rồi bấm Dừng ghi'
       : 'đang ghi — MỞ APP trên máy bây giờ, rồi thao tác';
     ui.recordInfo.textContent = label;
-    ui.recordAlert.innerHTML = '';
+    ui.recordAlert.innerHTML = data.launched ? ''
+      : `<div class="alert warn"><b>Tự mở app trên máy bây giờ.</b> `
+        + `${escapeHtml(data.hint || '')}</div>`;
     setStage(data.stage);
     // Theo doi lien tuc: mat may giua phien phai biet NGAY, khong phai luc Cham.
     deviceUi.stopWatch();     // dang ghi thi dung dong vao danh sach may/app
@@ -190,7 +176,6 @@ const deviceUi = initDevice({
   info: ui.deviceInfo, pick: ui.devicePick,
 });
 
-applyLaunchHint();   // thieu dong nay thi lan dau mo trang o goi y trong
 setStage('need_spec');
 // Tim may NGAY khi mo trang, khong doi nap spec: may cam san thi khong co ly
 // do bat nguoi dung bam them mot nut. Roi do tiep lien tuc - cam may luc nao

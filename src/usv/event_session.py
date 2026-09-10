@@ -16,38 +16,34 @@ from .adb_parsers import AdbError
 from .event_state import state
 
 
-async def phai_co_app(adb, serial: str, package: str, *,
-                      from_launch: bool) -> None:
-    """Tu choi ghi khi app khong co tren may VA tool phai tu mo app.
+async def co_the_tu_mo(adb, serial: str, package: str) -> tuple[bool, str]:
+    """(tool co tu mo app duoc khong, cau nhac cho tester).
 
-    `from_launch=False` -> tool khong mo app, tester tu mo tay. Luc do khong
-    con cai im lang can chan, nen KHONG duoc chan: do la cach duy nhat de ghi
-    mot app ma `pm list packages` khong tra ra (app cho user khac, app vua cai
-    chua kip xuat hien, hoac ten khac ten tren store).
+    KHONG chan khi khong tim thay: tester phai test duoc ca app ma
+    `pm list packages` khong tra ra (app cho user khac, app vua cai, ten khac
+    ten tren store). Phien ghi van chay, va van chay TU DAU - stream mo truoc
+    khi app duoc mo nen event dau tien khong mat.
 
-    Bat buoc phai chan o day: `adb shell monkey -p <app khong ton tai>` in ra
-    "No activities found to run" nhung EXIT CODE VAN LA 0, nen mo app that bai
-    trong IM LANG. Tool cu the ghi tiep va bao cao gan event cua app khac cho
-    app dang test - da ra "5 pass" cho mot app khong he duoc cai tren may.
-    PASS gia te hon FAIL gia: fail thi con di kiem tra, pass thi dong so.
+    Nhung cung KHONG duoc tu mo bua: `adb shell monkey -p <app khong ton tai>`
+    in "No activities found to run" ma tra EXIT CODE 0, nen mo that bai trong
+    im lang - roi phien ghi bat log cua app dang mo san va bao cao gan event
+    cua app KHAC cho app dang test. Da ra "5 pass" cho mot app khong duoc cai.
 
-    Goi y ten gan giong: go lech mot chu la loi hay gap nhat, va tu do lai
-    mot chuoi 40 ky tu bang mat thi rat de bo qua.
+    Nen: tim thay -> tu mo. Khong thay -> de tester tu mo, va NOI RA.
     """
-    if not from_launch:
-        return
     try:
         installed = await adb.packages(serial)
     except AdbError:
-        return           # khong doc duoc danh sach thi de logcat_stream bao loi
+        return False, ("Không đọc được danh sách app trên máy — hãy tự mở app "
+                       "trên máy BÂY GIỜ.")
     if package in installed:
-        return
+        return True, ""
     gan = get_close_matches(package, installed, n=3, cutoff=0.6)
-    raise HTTPException(status_code=400, detail=(
-        f"May {serial} khong co app {package!r}. "
+    return False, (
+        f"Máy không có app {package!r} nên tool không tự mở. "
         + (f"Ý bạn là: {', '.join(gan)}? " if gan else "")
-        + "Nếu tên đúng mà máy không trả ra, hãy bỏ tick \"Tool tự mở app\" "
-          "rồi tự mở app trên máy SAU khi bấm Ghi."))
+        + "Nếu tên đúng thì hãy tự MỞ APP trên máy BÂY GIỜ — phiên ghi đã bắt "
+          "đầu nên vẫn bắt được event từ lúc mở.")
 
 
 async def bo_phien_cu() -> None:
