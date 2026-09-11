@@ -774,3 +774,88 @@ def test_route_cham_truyen_event_ca_phien_vao_check(client, fake_adb, monkeypatc
     assert client.post("/event/check").status_code == 200
     names = [e.name for e in thay.get("session_events", ())]
     assert "rating_placement_viewed" in names, sorted(thay)
+
+
+# --- triage: ghi chu cua agent, gan vao luot dang xem ---
+
+def _cham_mot_luot(client, fake_adb):
+    """Ghi -> dung -> cham, tra ve body cua /event/check. CO it nhat 1 FAIL.
+
+    Phai bom mot dong FA cua event KHAC: khong co dong FA nao thi `fa_silent`
+    bat len va moi dong thanh "chua ket luan" chu khong phai FAIL - luc do
+    khong con gi de triage.
+    """
+    client.post("/event/spec", json={"text": SPEC_TSV})
+    client.post("/event/record", json={"serial": "FAKE1",
+                                       "package": "com.example.app"})
+    fake_adb.process.stdout.queue.append(
+        (b"09-08 15:00:01.000 V/FA-SVC ( 9): Logging event: origin=app,"
+         b"name=mot_event_khac,params=Bundle[{ga_event_origin(_o)=app}]\n"))
+    client.post("/event/stop")
+    return client.post("/event/check").json()
+
+
+def _mot_fail(check: dict) -> str:
+    for r in check["results"]:
+        if r["verdict"].startswith("FAIL"):
+            return r["element"]
+    raise AssertionError("luot nay khong co dong FAIL nao de triage")
+
+
+def test_triage_gan_duoc_vao_luot_dang_xem(client, fake_adb):
+    check = _cham_mot_luot(client, fake_adb)
+    response = client.post("/event/triage", json={
+        "generated_at": check["generated_at"],
+        "notes": [{"element": _mot_fail(check), "ket_luan": "spec_cu",
+                   "ly_do": "Spec còn khai param đã bỏ.", "dong_y": 2, "tong": 3}],
+    })
+    assert response.status_code == 200, response.text
+    assert response.json()["da_ghi"] == 1
+    assert client.get("/event/triage").json()["co"] is True
+
+
+def test_triage_cua_luot_KHAC_bi_tu_choi(client, fake_adb):
+    """Ghi chu luot cu dan vao luot moi la kieu sai im lang te nhat.
+
+    Da gap dung benh nay o nut artifact: bao cao cu hien ra nhu bao cao moi.
+    """
+    check = _cham_mot_luot(client, fake_adb)
+    response = client.post("/event/triage", json={
+        "generated_at": "2020-01-01 00:00",
+        "notes": [{"element": _mot_fail(check), "ket_luan": "spec_cu",
+                   "ly_do": "x"}],
+    })
+    assert response.status_code == 409, response.text
+    assert "lượt đang xem" in response.json()["detail"]
+
+
+def test_triage_khi_chua_cham_lan_nao_thi_409(client):
+    response = client.post("/event/triage", json={
+        "generated_at": "2026-09-11 09:00", "notes": []})
+    assert response.status_code == 409
+
+
+def test_ghi_chu_sai_tra_400_chu_khong_phai_500(client, fake_adb):
+    """Agent gui du lieu hong la loi DU LIEU, khong phai loi server."""
+    check = _cham_mot_luot(client, fake_adb)
+    response = client.post("/event/triage", json={
+        "generated_at": check["generated_at"],
+        "notes": [{"element": _mot_fail(check), "ket_luan": "bia_ra",
+                   "ly_do": "x"}],
+    })
+    assert response.status_code == 400, response.text
+
+
+def test_ghi_chu_hien_trong_report_html(client, fake_adb):
+    check = _cham_mot_luot(client, fake_adb)
+    client.post("/event/triage", json={
+        "generated_at": check["generated_at"],
+        "notes": [{"element": _mot_fail(check), "ket_luan": "app_doi_ten",
+                   "ly_do": "App bắn tên khác.",
+                   "bang_chung": "rating_star_rated lúc 15:40:29.545",
+                   "dong_y": 3, "tong": 3}],
+    })
+    html = client.get("/event/report").text
+    assert "Nhiều khả năng: App đổi tên event" in html
+    assert "3/3 agent đồng ý" in html
+    assert "rating_star_rated" in html

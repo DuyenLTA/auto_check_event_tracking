@@ -70,6 +70,7 @@ async def report_html() -> HTMLResponse:
         app_seen=run.app_seen, foreground=run.foreground,
         checked_package=run.checked_package,
         near_edge=run.near_edge, quick=run.quick,
+        triage=run.triage,
     )
     return HTMLResponse(html)
 

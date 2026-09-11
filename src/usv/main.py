@@ -18,6 +18,7 @@ from .routes_device import router as device_router
 from .routes_event import router as event_router
 from .routes_event_check import router as event_check_router
 from .routes_event_report import router as event_report_router
+from .routes_event_triage import router as event_triage_router
 
 WEB_DIR = web_dir()
 LOOPBACK = {"127.0.0.1", "::1", "localhost"}
@@ -31,6 +32,7 @@ app.include_router(device_router)
 app.include_router(event_router)
 app.include_router(event_check_router)
 app.include_router(event_report_router)
+app.include_router(event_triage_router)
 
 
 @app.middleware("http")

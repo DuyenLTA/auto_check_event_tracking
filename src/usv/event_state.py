@@ -14,6 +14,7 @@ from datetime import datetime, timedelta, timezone
 
 from .check_models import CheckResult, Summary
 from .event_spec_models import SpecSheet
+from .event_triage import TriageBatch
 from .event_window import Window
 from .logcat_stream import Recording
 
@@ -41,6 +42,9 @@ class EventRun:
     near_edge: tuple[str, ...] = ()
     event_count: int = 0
     quick: bool = False
+    # Ghi chu triage do agent gui vao sau khi cham - xem routes_event_triage.
+    # None = chua triage; khac han voi triage xong ma khong tim ra gi.
+    triage: TriageBatch | None = None
 
 
 @dataclass(slots=True)
