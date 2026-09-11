@@ -191,6 +191,39 @@ Ba việc test bắt được mà `curl` không bắt được, nên đừng b�
 | `test_web_html_balanced.py` | thẻ HTML chưa đóng làm lệch layout; browser không báo lỗi |
 | `test_readme_vi_du_chay_duoc.py` | đoạn code trong README này lệch API |
 
+## Soi nguyên nhân lỗi bằng agent (tuỳ chọn)
+
+Tool chỉ nói được *"spec đòi X, app gửi Y"*. Câu hỏi kế tiếp — app thiếu thật,
+app đổi tên event, spec cũ rồi, hay đơn giản là phiên test chưa đi tới màn đó —
+phải đọc thêm trang spec và log thô mới trả lời được.
+
+Việc đó do **agent** làm, chạy bên ngoài tool. Tool chỉ nhận kết quả và hiển thị:
+
+```
+POST /event/triage   ← agent gửi ghi chú vào (phải khớp generated_at của lượt)
+GET  /event/run      ← kết quả lượt chấm, dạng JSON, CHỈ ĐỌC
+GET  /event/observed ← event app THẬT SỰ bắn: bảng tên + số lần + giờ
+```
+
+Ghi chú hiện thành khối riêng dưới mỗi dòng lỗi, kèm số phiếu phản biện
+(`2/3 agent đồng ý`). **Không có agent thì report y như cũ** — tool không cần
+API key, không thêm thư viện.
+
+Năm kết luận, đúng năm: `app_thieu`, `app_doi_ten`, `spec_cu`,
+`chua_thao_tac`, `khong_do_duoc`.
+
+Ba chốt chặn, vì đây là **suy luận** chứ không phải đo được:
+
+| Chốt | Chặn điều gì |
+|---|---|
+| Chỉ gắn được vào dòng **đang FAIL** (chặn ở cả tầng nhận lẫn tầng vẽ) | Ghi chú trên dòng PASS làm người đọc tưởng dòng đó cũng lỗi |
+| Phải khớp `generated_at` | Ghi chú lượt cũ dán vào lượt mới — sai im lặng |
+| `bo_sot` luôn in ra | Soi 3/15 lỗi mà im thì report trông như đã soi hết |
+
+Chạy bằng Claude Code: `.claude/workflows/triage-event-fail.js` — fan-out một
+agent mỗi dòng lỗi, mỗi kết luận có 2 agent độc lập thử bác bỏ, quá bán mới
+được ghi.
+
 ## Cấu hình
 
 `config/event-check-rules.yaml` — bật/tắt từng check. Sửa xong có hiệu lực ngay, không phải khởi động lại.
