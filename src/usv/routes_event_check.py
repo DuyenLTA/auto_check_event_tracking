@@ -77,6 +77,45 @@ async def run_check() -> dict:
     }
 
 
+# Tra toi da bao nhieu event trong danh sach chi tiet. Mot phien dai co hang
+# tram event; tra het thi nguoi doc (va agent) chim trong du lieu, ma phan
+# quyet dinh nam o BANG TEN o tren.
+MAX_EVENT = 200
+
+
+@router.get("/event/observed")
+async def observed(name: str = "") -> dict:
+    """Event app THAT SU ban ra trong phien vua ghi.
+
+    Can cho viec soi nguyen nhan mot dong FAIL: bang ten + so lan cho thay
+    ngay app co ban mot event TEN KHAC gan giong hay khong - do la cach phan
+    biet "app thieu event" voi "app doi ten event". Khong co du lieu nay thi
+    chi con doan.
+
+    `name` loc theo ten chinh xac; de trong thi tra ca phien.
+    """
+    recording = state.recording
+    if recording is None:
+        raise HTTPException(status_code=409, detail="Chưa ghi phiên nào.")
+
+    events, _ = parse_log(recording.text())
+    app_events = [e for e in events if e.from_app]
+
+    dem: dict[str, list] = {}
+    for event in app_events:
+        dem.setdefault(event.name, []).append(event.timestamp)
+    ten = [{"name": k, "so_lan": len(v), "lan_dau": v[0], "lan_cuoi": v[-1]}
+           for k, v in sorted(dem.items(), key=lambda kv: -len(kv[1]))]
+
+    chon = [e for e in app_events if not name or e.name == name]
+    return {
+        "tong": len(app_events),
+        "ten": ten,
+        "cat_bot": max(0, len(chon) - MAX_EVENT),
+        "events": [e.payload() for e in chon[:MAX_EVENT]],
+    }
+
+
 @router.post("/event/reset")
 async def reset() -> dict:
     """Bo het de lam lai. Kill process logcat neu con dang chay."""

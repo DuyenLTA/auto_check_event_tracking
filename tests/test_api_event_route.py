@@ -859,3 +859,38 @@ def test_ghi_chu_hien_trong_report_html(client, fake_adb):
     assert "Nhiều khả năng: App đổi tên event" in html
     assert "3/3 agent đồng ý" in html
     assert "rating_star_rated" in html
+
+
+def test_doc_run_KHONG_lam_doi_generated_at(client, fake_adb):
+    """Agent doc ket qua bang GET, khong duoc goi lai POST /event/check.
+
+    Cham lai sinh moc moi, ma chinh moc do la thu chan ghi chu triage cua luot
+    nay dan sang luot khac. Mot duong doc ma lam doi moc thi no tu pha cai
+    chot chan do - nen phai co GET rieng, va phai chung minh no chi doc.
+    """
+    check = _cham_mot_luot(client, fake_adb)
+    moc = check["generated_at"]
+    for _ in range(3):
+        assert client.get("/event/run").json()["generated_at"] == moc
+    assert client.get("/event/run").json()["fails"], "luot nay phai co FAIL"
+
+
+def test_observed_cho_thay_ten_app_THAT_SU_ban(client, fake_adb):
+    """Khong co danh sach nay thi khong phan biet duoc 'app thieu event' voi
+    'app doi ten event' - chi con doan."""
+    _cham_mot_luot(client, fake_adb)
+    body = client.get("/event/observed").json()
+    ten = [t["name"] for t in body["ten"]]
+    assert "mot_event_khac" in ten, ten
+    assert body["tong"] >= 1
+
+
+def test_observed_loc_duoc_theo_ten(client, fake_adb):
+    _cham_mot_luot(client, fake_adb)
+    body = client.get("/event/observed", params={"name": "mot_event_khac"}).json()
+    assert body["events"] and all(e["name"] == "mot_event_khac"
+                                  for e in body["events"])
+
+
+def test_observed_khi_chua_ghi_phien_nao_thi_409(client):
+    assert client.get("/event/observed").status_code == 409

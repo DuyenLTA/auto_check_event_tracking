@@ -25,6 +25,11 @@ KET_LUAN = {
     "app_thieu": "App thiếu event thật",
     "app_doi_ten": "App đổi tên event",
     "spec_cu": "Spec đã cũ",
+    # Tester khong di toi man do thi event KHONG ban la dung, khong phai bug.
+    # Thieu muc nay thi moi lan test do dang deu bi dam thanh "app thieu
+    # event", va dev mat thoi gian di tim mot bug khong ton tai. Spec 40-60
+    # event thi bo sot vai man la chuyen binh thuong.
+    "chua_thao_tac": "Chưa thao tác tới bước này",
     "khong_do_duoc": "Tool không đo được",
 }
 
