@@ -882,7 +882,7 @@ def test_observed_cho_thay_ten_app_THAT_SU_ban(client, fake_adb):
     body = client.get("/event/observed").json()
     ten = [t["name"] for t in body["ten"]]
     assert "mot_event_khac" in ten, ten
-    assert body["tong"] >= 1
+    assert body["tong_app"] >= 1
 
 
 def test_observed_loc_duoc_theo_ten(client, fake_adb):
@@ -894,3 +894,23 @@ def test_observed_loc_duoc_theo_ten(client, fake_adb):
 
 def test_observed_khi_chua_ghi_phien_nao_thi_409(client):
     assert client.get("/event/observed").status_code == 409
+
+
+def test_observed_tach_ro_so_event_APP_voi_so_event_CA_PHIEN(client, fake_adb):
+    """Hai con so phai co ten khac nhau VA co giai thich.
+
+    Da gap that: /event/observed goi 16 la "tong" (chi origin=app) trong khi
+    /event/run goi 25 la "event_count" (dem het ca origin=auto/am). Hai ten
+    deu doc nhu "so event", nguoi doi chieu ket luan log bi cat mat 9 dong roi
+    tu choi ket luan - tu choi DUNG, loi nam o cho tool khong noi ro.
+    """
+    _cham_mot_luot(client, fake_adb)
+    obs = client.get("/event/observed").json()
+    run = client.get("/event/run").json()
+
+    assert "tong" not in obs, "ten mo ho, phai la tong_app / tong_ca_phien"
+    assert obs["tong_app"] <= obs["tong_ca_phien"]
+    assert obs["tong_ca_phien"] == run["event_count"], (
+        "hai duong phai dem cung mot thu khi noi ve ca phien")
+    assert sum(obs["theo_origin"].values()) == obs["tong_ca_phien"]
+    assert "KHÔNG phải log bị cắt" in obs["giai_thich"]

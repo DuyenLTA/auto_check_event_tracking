@@ -108,8 +108,25 @@ async def observed(name: str = "") -> dict:
            for k, v in sorted(dem.items(), key=lambda kv: -len(kv[1]))]
 
     chon = [e for e in app_events if not name or e.name == name]
+    theo_origin: dict[str, int] = {}
+    for event in events:
+        theo_origin[event.origin] = theo_origin.get(event.origin, 0) + 1
+
+    # Tra CA HAI con so, kem giai thich. Truoc day chi tra mot so goi la
+    # "tong" (chi dem origin=app) trong khi /event/run goi 25 la
+    # "event_count" (dem het) - hai con so khac nhau duoi hai cai ten deu doc
+    # nhu "so event". Nguoi doc doi chieu hai dau roi ket luan log bi cat mat
+    # 9 dong. Da gap that: agent soi loi tu choi ket luan vi tuong thieu du
+    # lieu, va no tu choi DUNG - loi nam o cho tool khong noi ro.
     return {
-        "tong": len(app_events),
+        "tong_app": len(app_events),
+        "tong_ca_phien": len(events),
+        "theo_origin": theo_origin,
+        "giai_thich": (
+            "tong_app chỉ đếm event origin=app — đó là phạm vi bảng spec. "
+            "tong_ca_phien đếm cả event Firebase tự bắn (origin=auto/am) như "
+            "session_start, screen_view. Chênh lệch giữa hai số là chuyện "
+            "bình thường, KHÔNG phải log bị cắt."),
         "ten": ten,
         "cat_bot": max(0, len(chon) - MAX_EVENT),
         "events": [e.payload() for e in chon[:MAX_EVENT]],

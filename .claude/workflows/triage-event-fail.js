@@ -57,6 +57,13 @@ Duong doc duoc phep:
                                   fa_silent / stream_died / app_seen)
   GET ${BASE}/event/observed   -> event app THAT SU ban: bang ten + so lan + gio
 
+Hai con so event, DUNG nham:
+  /event/observed -> tong_app       : event origin=app, tuc pham vi bang spec
+  /event/observed -> tong_ca_phien  : ke ca event Firebase tu ban (auto/am)
+  /event/run      -> event_count    : bang tong_ca_phien
+Chenh lech giua hai so la BINH THUONG, khong phai log bi cat. Muon biet log co
+bi cat that khong thi xem stream_died va fa_silent trong /event/run.
+
 Nam ket luan, dung dung ma nay:
   app_thieu      App co chay toi buoc do ma khong ban event -> bug that.
   app_doi_ten    App ban mot event TEN KHAC cho dung viec do (vi du spec ghi

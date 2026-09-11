@@ -74,7 +74,12 @@ async def doc_run() -> dict:
         "generated_at": run.generated_at,
         "package": run.checked_package or run.package,
         "quick": run.quick,
+        # Dem CA event Firebase tu ban (origin=auto/am). Muon so event thuoc
+        # pham vi spec thi xem tong_app o /event/observed - hai so nay khac
+        # nhau la binh thuong, xem giai_thich o do.
         "event_count": run.event_count,
+        "event_count_ghi_chu": ("đếm cả event Firebase tự bắn; số event thuộc "
+                                "phạm vi spec xem tong_app ở /event/observed"),
         "fa_silent": run.fa_silent,
         "stream_died": run.stream_died,
         "app_seen": run.app_seen,
