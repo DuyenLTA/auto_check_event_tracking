@@ -152,6 +152,12 @@ def build(spec: SpecSheet, results: list[CheckResult], summary: Summary, *,
 
     checked = summary.total_checked
     pct = round(summary.passed / checked * 100) if checked else 0
+    # MAU SO la so muc DA KIEM, khong phai so muc trong spec (nguyen tac 1:
+    # chua test khong duoc tinh vao ti le). Nhung de tran "1 / 1 khop" thi
+    # nguoi doc tuong ca spec da xanh - da bi hoi dung cau do. Noi luon so
+    # chua test ngay canh con so, khong de no chi nam duoi dang chip.
+    chua_test = (f" · {summary.not_tested} chưa test" if summary.not_tested
+                 else "")
     tallies = []
     if summary.failed:
         tallies.append(f"<span class='section-chip fail'>sai <b>{summary.failed}</b></span>")
@@ -176,7 +182,7 @@ def build(spec: SpecSheet, results: list[CheckResult], summary: Summary, *,
       {f'· {esc(generated_at)}' if generated_at else ''}</p>
     <div class="scorecard">
       <div class="score-row"><span class="score-num">{summary.passed}</span>
-        <span class="score-den">/ {checked} khớp</span></div>
+        <span class="score-den">/ {checked} mục đã kiểm{chua_test}</span></div>
       <div class="score-bar"><div class="score-bar-fill" style="width:{pct}%"></div></div>
       <div class="tallies">{''.join(tallies)}</div>
     </div>

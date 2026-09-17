@@ -82,7 +82,7 @@ def test_mau_so_scorecard_KHONG_gom_not_tested_va_extra():
     for item in results:
         summary.add(item)
     page = report_event_html.build(spec, results, summary)
-    assert "/ 2 khớp" in page, "mau so phai la 2 (1 pass + 1 fail), khong phai 4"
+    assert "/ 2 mục đã kiểm" in page, "mau so phai la 2 (1 pass + 1 fail), khong phai 4"
 
 
 def test_chua_test_va_app_co_them_hien_thanh_chip_rieng():
@@ -254,3 +254,28 @@ def test_spec_co_khai_man_thi_van_nhom_theo_man():
     """Chieu nguoc lai - bo nhom luon thi mat cach doc theo man khi spec co
     khai (bang that hay co 40-60 event tren nhieu man)."""
     assert "Home" in HTML, "spec mau co Screen Name = Home"
+
+
+def test_diem_tren_dau_khong_doc_nham_thanh_ca_spec_da_xanh():
+    """Spec 2 event, 1 pass 1 chua test: de tran '1 / 1 khớp' thi nguoi doc
+    tuong ca spec da xanh. Con so chua test phai nam NGAY canh, khong chi o chip."""
+    from usv.check_models import CheckResult, Summary, Verdict
+    from usv.event_spec_models import SpecEvent, SpecSheet
+    from usv.report_event_html import build
+
+    spec = SpecSheet(events=(SpecEvent(name="widget_view", screen="Add widget"),
+                             SpecEvent(name="widget_click", screen="Add widget")))
+    ket_qua = [
+        CheckResult(element="widget_click", check="event_presence",
+                    verdict=Verdict.PASS, message="ok"),
+        CheckResult(element="widget_view", check="event_presence",
+                    verdict=Verdict.NOT_TESTED, message="lái hụt"),
+    ]
+    summary = Summary()
+    for r in ket_qua:
+        summary.add(r)
+
+    html = build(spec, ket_qua, summary, package="com.x")
+    assert "1 chưa test" in html
+    assert "mục đã kiểm" in html
+    assert "/ 1 khớp" not in html, "con so tran de doc nham thanh ca spec da xanh"
