@@ -165,7 +165,7 @@ windows = whole_session(tuple(e.name for e in spec.events), events)
 config = load().with_option("event_presence", "duplicate", False)
 results, summary = event_check_runner.run(
     spec, windows, config, session_events=tuple(events))
-open("report.html", "w").write(
+open("report.html", "w", encoding="utf-8").write(
     report_event_html.build(spec, results, summary, package="com.x", quick=True))
 ```
 

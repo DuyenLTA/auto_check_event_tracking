@@ -100,8 +100,11 @@ def _get(path: str, token: str) -> dict:
 
 def fetch_page(url: str) -> tuple[str, str]:
     """Tra ve (tieu de, HTML storage) cua trang."""
-    base, token = config()
+    # Doc link TRUOC khi doi env: link go sai la loi cua nguoi dung (400), con
+    # thieu env la su co cau hinh (502). Doi thu tu thi link sai bi bao thanh
+    # su co he thong.
     where = locate(url)
+    base, token = config()
     if "page_id" in where:
         data = _get(f"{base}/rest/api/content/{where['page_id']}"
                     "?expand=body.storage", token)
