@@ -140,3 +140,22 @@ def parse_wm_density(output: str) -> int | None:
         elif "physical" in low:
             physical = value
     return override or physical
+
+
+_VERSION_NAME = re.compile(r"versionName=(\S+)")
+_VERSION_CODE = re.compile(r"versionCode=(\d+)")
+
+
+def parse_package_version(output: str) -> tuple[str, str]:
+    """Doc 'adb shell dumpsys package <pkg>' -> (versionName, versionCode).
+
+    Lay lan KHOP DAU TIEN: dumpsys in ban dang cai truoc, roi moi den muc
+    'Hidden system packages' chua ban he thong cu. Lay nham ban kia thi report
+    ghi sai han bang app da check - va khong ai doi chieu lai duoc nua.
+
+    Khong doc duoc -> ('', ''), khong raise: khong biet version la thieu mot
+    dong trong report, khong phai ly do de bo ca luot cham.
+    """
+    ten = _VERSION_NAME.search(output or "")
+    ma = _VERSION_CODE.search(output or "")
+    return (ten.group(1) if ten else "", ma.group(1) if ma else "")

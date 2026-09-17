@@ -131,7 +131,8 @@ def build(spec: SpecSheet, results: list[CheckResult], summary: Summary, *,
           app_seen: bool = True, foreground: str = "",
           checked_package: str = "",
           near_edge: tuple[str, ...] = (),
-          quick: bool = False, triage=None) -> str:
+          quick: bool = False, triage=None,
+          app_version: str = "", shots: str = "") -> str:
     screens = _screen_of(spec)
     triggered = _triggered_of(spec)
 
@@ -169,7 +170,8 @@ def build(spec: SpecSheet, results: list[CheckResult], summary: Summary, *,
   <header class="report-head">
     <p class="eyebrow">Event Tracking · Firebase Analytics</p>
     <h1>Event Tracking Diff</h1>
-    <p class="meta">{esc(package)} · <b>{len(spec.events)} event trong spec</b>
+    <p class="meta">{esc(package)}{f' · bản <b>{esc(app_version)}</b>' if app_version else ''}
+      · <b>{len(spec.events)} event trong spec</b>
       · {checked} mục đã kiểm · {event_count} event đọc được từ logcat
       {f'· {esc(generated_at)}' if generated_at else ''}</p>
     <div class="scorecard">
@@ -184,5 +186,6 @@ def build(spec: SpecSheet, results: list[CheckResult], summary: Summary, *,
                foreground, package, checked_package)}
   {triage_callout(triage)}
   <div class="sections">{''.join(sections)}</div>
+  {shots}
 </div>
 """

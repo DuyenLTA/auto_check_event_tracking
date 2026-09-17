@@ -22,10 +22,10 @@ import asyncio
 import logging
 from dataclasses import dataclass, field
 
-from . import remote_config
 from .adb_parsers import AdbError
 from .device_actions import swipe, tap
 from .event_flow_models import Flow, FlowCase, Step
+from .event_flow_reset import LAUNCH_SETTLE, prepare
 from .event_window import mark_label
 from .logcat_stream import Recording, mark
 from .models import DeviceNode
@@ -106,52 +106,15 @@ async def run_step(client, serial: str, metrics, package: str, step: Step) -> No
     raise AdbError(f"Step {step.kind!r} không hiểu.")
 
 
-async def prepare(client, serial: str, package: str,
-                  case: FlowCase) -> tuple[bool, str, list[str]]:
-    """Reset + mo lai app + verify. Tra (di tiep duoc, ly do, ghi chu)."""
-    notes: list[str] = []
-    reset = case.reset
-
-    if reset.clear_prefs:
-        cleared = await remote_config.clear_prefs(
-            client, serial, package, list(reset.clear_prefs))
-        if not cleared.ok:
-            return False, cleared.blocked, notes
-        notes.extend(cleared.notes)
-
-    if reset.remote_config:
-        applied = await remote_config.override(
-            client, serial, package, reset.remote_config)
-        if not applied.ok:
-            return False, applied.blocked, notes
-        notes.extend(applied.notes)
-        if applied.mirrors:
-            notes.append("prefs mirror đã sửa: " + ", ".join(sorted(applied.mirrors)))
-
-    if reset.relaunch:
-        await client.force_stop(serial, package)
-        await client.launch(serial, package)
-        await asyncio.sleep(LAUNCH_SETTLE)
-
-    if reset.remote_config:
-        # Doc lai SAU khi mo lai app: build dev dat minimumFetchInterval = 0 thi
-        # throttle vo hieu, app fetch that va de mat patch. Luc do tien de chua
-        # dat -> BLOCKED, tuyet doi khong ket luan app sai.
-        got = await remote_config.verify(client, serial, package, reset.remote_config)
-        lech = {k: (v, got.get(k, "")) for k, v in reset.remote_config.items()
-                if got.get(k, "") != str(v)}
-        if lech:
-            detail = ", ".join(f"{k}: cần {want!r} nhưng đang {have!r}"
-                               for k, (want, have) in lech.items())
-            return False, (
-                "Remote Config không giữ được giá trị sau khi mở lại app "
-                f"({detail}). Thường là bản build đặt minimumFetchInterval = 0 "
-                "nên throttle vô hiệu và app fetch thật đè lên."), notes
-    return True, "", notes
-
-
 async def run_case(client, serial: str, metrics, package: str,
-                   recording: Recording, case: FlowCase) -> CaseResult:
+                   recording: Recording, case: FlowCase,
+                   on_shot=None) -> CaseResult:
+    """`on_shot(moment)` - callback chup man. None thi khong chup gi.
+
+    Chup quanh STEP CUOI chu khong moi step: step cuoi la cai lam event ban ra,
+    con 30 tam anh cua duong di thi phinh report ma khong tra loi duoc cau hoi
+    nao.
+    """
     result = CaseResult(case=case)
     try:
         ready, reason, notes = await prepare(client, serial, package, case)
@@ -164,23 +127,34 @@ async def run_case(client, serial: str, metrics, package: str,
 
     await mark(client, recording, mark_label(case.event, case.label))
 
-    for step in case.steps:
+    cuoi = len(case.steps) - 1
+    for order, step in enumerate(case.steps):
+        if on_shot is not None and order == cuoi:
+            await on_shot("trước bước cuối")
         try:
             await run_step(client, serial, metrics, package, step)
         except AdbError as exc:
             result.status = "not_tested"
             result.reason = f"step `{step.label()}` thất bại: {exc}"
+            if on_shot is not None:
+                # Anh o DUNG cho lai hut - thu duy nhat noi duoc vi sao khong
+                # bam trung: man khac han, quang cao che, hay dialog chan.
+                await on_shot("lúc lái hụt")
             return result
         result.steps_done += 1
+    if on_shot is not None:
+        await on_shot("sau bước cuối")
     return result
 
 
 async def run_flow(client, serial: str, metrics, package: str,
-                   recording: Recording, flow: Flow) -> list[CaseResult]:
+                   recording: Recording, flow: Flow, album=None) -> list[CaseResult]:
     """Chay tuan tu. Mot case blocked KHONG dung ca luot - cac case khac van do duoc."""
     out: list[CaseResult] = []
     for case in flow.cases:
-        result = await run_case(client, serial, metrics, package, recording, case)
+        on_shot = album.recorder(case.label) if album is not None else None
+        result = await run_case(client, serial, metrics, package, recording, case,
+                                on_shot=on_shot)
         if not result.ran:
             log.warning("Case %s: %s - %s", case.label, result.status, result.reason)
         out.append(result)

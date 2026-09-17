@@ -17,7 +17,8 @@ from .adb_logcat import LogcatMixin
 from .adb_foreground_parse import parse_current_focus
 from .adb_parsers import (
     AdbError, AdbTransportError, Device, check_package, check_serial, find_adb,
-    parse_devices, parse_packages, parse_wm_density, parse_wm_size,
+    parse_devices, parse_package_version, parse_packages, parse_wm_density,
+    parse_wm_size,
 )
 
 log = logging.getLogger(__name__)
@@ -127,6 +128,24 @@ class AdbClient(LogcatMixin, InputMixin, AppDataMixin):
                 f"  wm density -> {density_out.strip()!r}"
             )
         return size, density
+
+    async def package_version(self, serial: str, package: str) -> tuple[str, str]:
+        """(versionName, versionCode) cua ban DANG CAI tren may.
+
+        Report phai ghi ra: doi chat voi dev ma khong noi duoc da check ban nao
+        thi moi ket luan deu tra lai duoc bang "ban do cu roi".
+
+        Doc khong duoc -> ('', ''), khong raise: thieu mot dong trong report
+        khong phai ly do de bo ca luot cham.
+        """
+        check_serial(serial)
+        check_package(package)
+        try:
+            out, _, _ = await self._run("-s", serial, "shell", "dumpsys",
+                                        "package", package)
+        except AdbError:
+            return ("", "")
+        return parse_package_version(out)
 
     async def current_focus(self, serial: str) -> str | None:
         """Package (hoac ten window) dang giu focus. None neu khong doc duoc."""
