@@ -187,6 +187,16 @@ class AdbClient(LogcatMixin, InputMixin, AppDataMixin):
             raise AdbError("Đọc được file dump nhưng không phải XML hierarchy.")
         return xml
 
+    async def screencap_raw(self, serial: str) -> bytes:
+        """Framebuffer THO (khong `-p`): header + RGBA_8888.
+
+        Dung de thu nho ma khong phai giai ma PNG - xem png_nho. Tren Pixel 7
+        ban PNG la 3.0 MB/tam, giu nguyen co thi hai tam da cham tran artifact.
+        """
+        check_serial(serial)
+        return await self._run_binary(
+            "-s", serial, "exec-out", "screencap", timeout=SCREENCAP_TIMEOUT)
+
     async def screencap(self, serial: str) -> bytes:
         """PNG bytes. `exec-out` de khong bi CRLF lam hong binary."""
         check_serial(serial)

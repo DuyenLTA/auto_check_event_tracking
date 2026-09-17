@@ -14,6 +14,7 @@ import logging
 from dataclasses import dataclass, field
 
 from .adb_parsers import AdbError
+from .png_nho import RawError, tu_raw
 
 log = logging.getLogger(__name__)
 
@@ -59,11 +60,20 @@ class Album:
             # khong thi bang chung nhin nhu that ma rong khong.
             if not await self.adb.is_awake(self.serial):
                 await self.adb.wake(self.serial)
-            png = await self.adb.screencap(self.serial)
+            png = await self._nho()
         except AdbError as exc:
             log.warning("Chup man that bai: %s", exc)
             return b""
         return png if png.startswith(PNG_MAGIC) else b""
+
+    async def _nho(self) -> bytes:
+        """Raw + thu nho. May tra raw la thu khong hieu -> quay ve `screencap -p`
+        (to hon nhieu, nhung co anh con hon khong)."""
+        try:
+            return tu_raw(await self.adb.screencap_raw(self.serial))
+        except (RawError, AttributeError) as exc:
+            log.warning("Raw khong dung duoc (%s) - quay ve screencap -p", exc)
+            return await self.adb.screencap(self.serial)
 
     def recorder(self, case_label: str):
         """Callback cho `run_case`: no goi `await ghi(moment)`."""
