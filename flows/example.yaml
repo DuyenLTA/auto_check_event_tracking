@@ -1,0 +1,33 @@
+# Format chuan cua flow file. `cli_record` ghi ra DUNG format nay.
+# Dat ten file theo package: flows/com.example.app.yaml
+package: com.example.app
+
+cases:
+  # MOT CASE = MOT EVENT. Mot case lai app toi dung mot trang thai, roi cho
+  # dung mot event ban ra. Muon cham 2 event thi viet 2 case.
+  - event: widget_show
+    label: "placement=result"        # ten hien trong report; bo trong thi lay event + expect_params
+    expect_params:                   # lan nay PHAI ra dung gia tri nay
+      placement_name: result
+    reset:
+      remote_config:                 # sua Remote Config truoc khi chay
+        widget_enabled: "true"
+      clear_prefs:                   # xoa han vai file prefs (KHONG dung pm clear - mat login)
+        - apero_rate_prefs.xml
+      relaunch: true                 # force-stop + mo lai de app doc gia tri moi
+    steps:
+      - {kind: launch}                                   # force-stop roi mo lai app
+      - {kind: tap, resource_id: btn_result}             # bam theo resource_id (ben nhat)
+      - {kind: wait, seconds: 2}                         # cho cung 2s
+      - {kind: wait_text, text: "Widget", timeout: 10}    # cho tới khi thay chu, toi da 10s
+
+  - event: widget_click
+    reset:
+      remote_config: {widget_enabled: "true"}
+    steps:
+      - {kind: launch}
+      - {kind: tap, text: "Bắt đầu"}     # selector theo CHU: chay duoc nhung vo khi doi ngon ngu
+      - {kind: tap, resource_id: card_item, index: 2}   # node thu 3 trong so cac node cung id
+      - {kind: type, text: "hello"}      # go chu vao o dang focus (tap o do truoc)
+      - {kind: key, text: KEYCODE_BACK}  # bam phim cung
+      - {kind: swipe, resource_id: list_container, direction: up}
