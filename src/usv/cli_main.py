@@ -36,7 +36,7 @@ def doc_flow(package: str, duong_dan: str) -> tuple[Flow | None, str]:
         raise CliError(str(exc)) from exc
 
 
-def parse_args(argv: list[str] | None):
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="usv-check",
         description="Chấm event tracking: spec + máy thật -> report HTML.")
@@ -47,7 +47,11 @@ def parse_args(argv: list[str] | None):
                         help="file flow YAML (mặc định flows/<package>.yaml)")
     parser.add_argument("--out", default="out", help="thư mục ghi report")
     parser.add_argument("--serial", default="", help="chọn máy khi cắm nhiều máy")
-    return parser.parse_args(argv)
+    return parser
+
+
+def parse_args(argv: list[str] | None):
+    return build_parser().parse_args(argv)
 
 
 def ep_utf8() -> None:

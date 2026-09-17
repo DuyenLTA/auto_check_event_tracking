@@ -94,7 +94,7 @@ async def lam(args) -> tuple[int, list[dict]]:
                 "direction": args.huong}]
 
 
-def parse_args(argv: list[str] | None):
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="usv-record",
         description="Ghi flow có người ngồi xem: bấm thử rồi lưu thành case.")
@@ -117,7 +117,11 @@ def parse_args(argv: list[str] | None):
     parser.add_argument("--expect", action="append", default=[], metavar="KEY=VALUE")
     parser.add_argument("--rc", action="append", default=[], metavar="KEY=VALUE")
     parser.add_argument("--clear-prefs", action="append", default=[], metavar="FILE")
-    args = parser.parse_args(argv)
+    return parser
+
+
+def parse_args(argv: list[str] | None):
+    args = build_parser().parse_args(argv)
     args.chu = args.giay_hoac_chu
     args.giay = float(args.giay_hoac_chu or 1)
     return args

@@ -129,22 +129,54 @@ Home         rating_star_clicked      Khi user click rate    star_value         
 
 ## Chạy
 
+Một lệnh, chạy từ đầu đến report:
+
 ```bash
-./start.sh                    # http://127.0.0.1:8000
-PORT=9000 ./start.sh          # đổi cổng
-USV_NO_BROWSER=1 ./start.sh   # không tự mở browser
+usv-check --spec <link Confluence> --package com.example.app
+usv-check --spec-tsv spec.tsv --package com.example.app --flows flows/com.example.app.yaml
+usv-check --spec-tsv spec.tsv --package com.example.app --serial 29301FDH2006K7
 ```
 
-Lần đầu mất ~30 giây (tự tạo môi trường ảo + cài thư viện). Các lần sau ~1 giây.
+Lần đầu trong repo: `.venv/Scripts/python.exe -m pip install -e .` (Windows) hoặc
+`.venv/bin/python -m pip install -e .`.
 
-Ba bước trên giao diện:
+Tool tự làm đủ vòng: nạp spec → mở logcat (đặt `setprop` **trước** khi mở app) →
+lái máy theo từng case trong file flow → cắt cửa sổ theo mốc → chấm → ghi report HTML
+vào `out/`.
 
-1. **Nạp spec**: dán link Confluence → *Đọc từ link*; hoặc mở phần dán tay. Hàng nào sai số cột thì báo kèm số dòng. Còn lỗi thì không cho Ghi.
-2. **Máy và app**: dán package name → *Bắt đầu ghi*, thao tác trên máy, rồi *Dừng ghi* (hai nút nằm cạnh nhau). Máy thì tool tự nhận, cắm giữa chừng cũng thấy. Luôn ghi **từ lúc app mở**: tìm thấy app trên máy thì tool tự tắt–mở lại; không tìm thấy thì vẫn ghi và bạn tự mở app (mở **sau** khi bấm Ghi — `setprop log.tag.FA-SVC` chỉ ăn từ lần khởi động sau đó). Không chặn, vì tool không tự mở bừa: `monkey` với app không tồn tại in `No activities found to run` mà trả exit 0, mở thất bại trong im lặng rồi ghi log của app đang mở sẵn.
-3. **Chấm** → xem report HTML.
+- **stdout chỉ đúng một dòng JSON**: `{report, generated_at, package, app_version,
+  metrics, pass, fail, not_tested, cases, results}`. Tiến độ từng case đi ra stderr.
+- Cắm nhiều máy mà không có `--serial` → dừng và liệt kê serial, **không chọn bừa**:
+  chấm nhầm máy thì cả báo cáo nói về một máy không ai định kiểm.
+- Chưa có file flow → mọi event ra `NOT_TESTED` kèm "chưa có flow", **không** FAIL.
 
-Giữa lúc ghi, ô trạng thái đếm số dòng log đọc được. Máy rớt khỏi USB là báo
-ngay tại đó chứ không đợi tới lúc Chấm — đã từng mất 70 phút vì im lặng.
+### Ghi flow — `usv-record`
+
+Đường duy nhất sinh flow, và cố ý có người ngồi xem: `check` không bao giờ tự mò UI
+để bấm (bấm loạn trên máy thật có thể mua hàng, gửi form, đăng xuất).
+
+```bash
+usv-record --package com.example.app launch
+usv-record --package com.example.app dump
+usv-record --package com.example.app tap --id btnResult --index 0
+usv-record --package com.example.app wait-text "Widget" --timeout 10
+usv-record --package com.example.app save --event widget_show --label "placement=result" --expect placement_name=result
+```
+
+`dump` in cây UI rút gọn (chỉ node bấm được hoặc có chữ, mỗi dòng kèm `index=`).
+`save` nối case vào `flows/<package>.yaml`, giữ bản `.bak` trước khi ghi đè.
+Format file flow: [`flows/README.md`](flows/README.md).
+
+### Link artifact
+
+Tool chạy ở `127.0.0.1`, không có đường tới claude.ai, nên **Claude publish** report
+rồi ghi lại link:
+
+```bash
+usv-artifact --url <link artifact> --generated-at "<generated_at trong JSON>"
+```
+
+Republish cùng file giữ nguyên URL — link gửi team chỉ cần nhớ một lần.
 
 ## Gọi từ Python
 
@@ -171,11 +203,11 @@ open("report.html", "w", encoding="utf-8").write(
 
 ## Test
 
-`./start.sh` chỉ cài thư viện để **chạy** tool. Muốn chạy test thì cài thêm:
+Cài kèm thư viện test:
 
 ```bash
-.venv/bin/python -m pip install -e ".[dev]"   # lần đầu
-.venv/bin/python -m pytest                    # ~1 giây, không cần cắm máy
+.venv/bin/python -m pip install -e ".[dev]"   # lần đầu (Windows: .venv/Scripts/python.exe)
+.venv/bin/python -m pytest                    # vài giây, không cần cắm máy
 ```
 
 Cả suite chạy **không cần cắm máy** — adb được thay bằng bản giả trong test.
@@ -187,8 +219,7 @@ Ba việc test bắt được mà `curl` không bắt được, nên đừng b�
 
 | Kiểm | Bắt được gì |
 |---|---|
-| `scripts/check-web-loads.js` | JS lỗi lúc nạp — file vẫn trả 200 nhưng trang không khởi tạo được |
-| `test_web_html_balanced.py` | thẻ HTML chưa đóng làm lệch layout; browser không báo lỗi |
+| `test_skill_md_lenh_co_that.py` | lệnh nêu trong SKILL.md/README lệch với parser thật |
 | `test_readme_vi_du_chay_duoc.py` | đoạn code trong README này lệch API |
 
 ## Soi nguyên nhân lỗi bằng agent (tuỳ chọn)

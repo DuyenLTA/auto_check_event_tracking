@@ -3,11 +3,13 @@ name: auto-check-event-tracking
 description: >
   Đối chiếu event Firebase Analytics mà app Android thật bắn ra với bảng spec event
   tracking, ra report pass/fail kèm note sai ở đâu (thiếu event, bắn trùng, thiếu param,
-  sai giá trị, sai kiểu, thừa param). Chạy qua web UI local hoặc gọi trực tiếp từ Python.
+  sai giá trị, sai kiểu, thừa param). Một lệnh: link Confluence + package → tự lái máy
+  theo flow đã ghi → chấm → link artifact.
   Kích hoạt khi user nói về: check event tracking, verify event Firebase, đối chiếu event
   với spec, nạp spec từ link Confluence, log FA-SVC, logcat event, report event tracking,
-  auto check event.
-  Cần adb + máy Android thật cắm cáp, bật USB debugging. Không cần token.
+  auto check event, ghi flow lái app.
+  Cần adb + máy Android thật cắm cáp, bật USB debugging. Spec từ Confluence cần
+  CONFLUENCE_BASE_URL + CONFLUENCE_TOKEN.
   Không dùng cho đối chiếu UI với design Figma — đó là tool ui-spec-verifier.
 ---
 
@@ -17,102 +19,88 @@ Repo gốc: https://github.com/DuyenLTA/auto_check_event_tracking
 
 ## Đọc trước khi làm gì
 
-`README.md` trong thư mục skill này là tài liệu đầy đủ: bảng verdict, format bảng spec
-(TSV dán từ Excel), cách tool đọc logcat, ràng buộc `setprop` không sống qua reboot,
-và nguyên tắc "không verify được thì nói không verify được".
+`README.md` trong thư mục skill này là tài liệu đầy đủ: bảng verdict, format bảng spec,
+cách tool đọc logcat, ràng buộc `setprop` không sống qua reboot, và nguyên tắc
+"không verify được thì nói không verify được".
 
-## Chạy web UI
+`flows/README.md` là format file flow — đường đi để lái app.
 
-Linux/macOS:
-
-```bash
-cd ~/.claude/skills/auto-check-event-tracking
-./start.sh                    # http://127.0.0.1:8000
-PORT=9000 ./start.sh          # đổi cổng
-USV_NO_BROWSER=1 ./start.sh   # không tự mở browser
-```
-
-Lần đầu ~30s (tự tạo venv + cài lib), sau đó ~1s.
-
-**Windows**: `./start.sh` KHÔNG chạy được — nó tìm `.venv/bin/python`, còn venv trên
-Windows đặt ở `.venv/Scripts/`. Dùng `scripts/run-windows.py`:
+## Hai lệnh
 
 ```bash
-cd ~/.claude/skills/auto-check-event-tracking
-.venv/Scripts/python.exe scripts/run-windows.py 8000
+usv-check --spec <link Confluence> --package com.example.app
+usv-record --package com.example.app dump
 ```
 
-Rồi tự mở http://127.0.0.1:8000. Script này làm hai việc mà `start.sh` không làm
-được trên Windows: đặt `ProactorEventLoop` (uvicorn mặc định dùng
-`SelectorEventLoop`, loop đó không tạo được subprocess nên **mọi lệnh adb đổ
-`NotImplementedError`**), và đọc file `.env` ở gốc repo (`start.sh` không đọc
-`.env`, mà Windows thì không có `~/.bashrc` để `export`).
+Lần đầu trong repo: `.venv/Scripts/python.exe -m pip install -e .` (Windows) hoặc
+`.venv/bin/python -m pip install -e .`.
 
-Lần đầu cần tự cài: `.venv/Scripts/python.exe -m pip install -e .`
+## `check` — chấm một lượt
 
-Ba bước trên UI:
-
-1. **Nạp spec** — dán link Confluence rồi bấm *Đọc từ link*, hoặc mở phần dán TSV tay.
-   Còn lỗi thì không cho Ghi.
-2. **Máy và app** — dán package name → *Bắt đầu ghi*, thao tác trên máy, rồi *Dừng ghi*.
-   Máy tool tự nhận. Luôn ghi từ lúc app mở: `setprop log.tag.FA-SVC` chỉ ăn từ lần
-   khởi động sau đó, nên nếu tự mở app thì mở **sau** khi bấm Ghi.
-3. **Chấm** → report HTML.
-
-Đánh mốc từng bước là **tuỳ chọn**: có bấm mốc thì chấm theo cửa sổ từng bước, không
-bấm mốc nào thì tool tự chấm cả phiên. Không còn ô tick chế độ, cũng không xuất xlsx.
-
-## Gọi từ Python
-
-Xem mục "Gọi từ Python" trong `README.md` — dùng `event_check_runner.run()` với
-`parse_paste()` cho spec và `cut_log()` cho log đã capture.
-
-## Cấu hình
-
-`config/event-check-rules.yaml` — bật/tắt từng check, có hiệu lực ngay.
-
-Nạp spec từ link Confluence cần hai biến môi trường; thiếu thì dùng đường dán TSV tay:
+**Luôn chạy nền** (`run_in_background`): một lượt đủ case mất vài phút, user còn làm
+việc khác.
 
 ```bash
-export CONFLUENCE_BASE_URL=https://confluence.cong-ty.vn
-export CONFLUENCE_TOKEN=<personal access token>
+usv-check --spec <link Confluence> --package com.example.app
+usv-check --spec-tsv spec.tsv --package com.example.app --flows flows/com.example.app.yaml
+usv-check --spec-tsv spec.tsv --package com.example.app --serial 29301FDH2006K7
 ```
 
-Nên dùng đường Confluence hơn dán tay: bảng thật gộp ô (`rowspan`) Event_Name cho nhiều
-dòng param, đếm ô theo dấu tab sẽ báo lỗi oan trên bảng hoàn toàn hợp lệ.
+- **stdout chỉ đúng một dòng JSON** — đọc dòng cuối stdout, parse ra:
+  `{report, generated_at, package, app_version, metrics, pass, fail, not_tested, cases, results}`
+- Tiến độ từng case đi ra **stderr** — không phải đọc.
+- Cắm nhiều máy mà không có `--serial` → tool dừng và liệt kê serial, **không chọn bừa**.
 
-## Test
+### Sau khi chạy xong
+
+1. Publish `report` thành artifact (Claude làm — tool chạy ở 127.0.0.1, không có đường
+   tới claude.ai).
+2. Ghi lại link để lần sau còn biết:
+   ```bash
+   usv-artifact --url <link artifact> --generated-at "<generated_at trong JSON>"
+   ```
+3. Trả lời user: link + `12 pass / 2 fail / 3 chưa test · bản 2.4.1 (125)`.
+
+### Đọc kết quả đúng cách
+
+- `fail > 0` → **nêu thẳng tên event sai trong câu trả lời**, đừng bắt user mở link mới biết.
+- `not_tested` kèm "chưa có flow" → gợi ý chạy `record` để ghi case cho event đó.
+- `not_tested` kèm "Lái hụt ở case ..." → flow sai selector, không phải app sai. Sửa flow.
+- `fa_silent: true` → logcat không có dòng FA nào. **Không** kết luận app thiếu event.
+- **Lái hụt không bao giờ là FAIL.** Chưa lái tới màn thì chưa đo gì cả.
+
+## `record` — ghi flow, có người ngồi xem
+
+Đường duy nhất sinh flow. `check` không bao giờ tự mò UI: AI bấm loạn trên máy thật có
+thể mua hàng, gửi form, đăng xuất.
+
+Mỗi lệnh là một lần gọi riêng; bước đã bấm giữ trong `out/record-<package>.json`.
 
 ```bash
-# Windows
-.venv/Scripts/python.exe -m pytest -m "not device"   # không cần cắm máy
-.venv/Scripts/python.exe -m pytest -m device         # cần máy thật
-
-# Linux/macOS
-.venv/bin/python -m pytest -m "not device"
+usv-record --package com.example.app launch
+usv-record --package com.example.app dump
+usv-record --package com.example.app tap --id btnResult --index 0
+usv-record --package com.example.app wait 2
+usv-record --package com.example.app wait-text "Widget" --timeout 10
+usv-record --package com.example.app swipe --id listContainer --huong up
+usv-record --package com.example.app back
+usv-record --package com.example.app show
+usv-record --package com.example.app save --event widget_show --label "placement=result" --expect placement_name=result
+usv-record --package com.example.app drop
 ```
 
-## Cập nhật skill
+- `dump` in cây UI rút gọn: chỉ node bấm được hoặc có chữ, mỗi dòng kèm `index=`.
+- Ưu tiên selector: `--id` > `--desc` > `--text`. Khoá bằng chữ thì vỡ khi app đổi
+  ngôn ngữ — tool cảnh báo nhưng không chặn.
+- `save` nối case vào `flows/<package>.yaml` (giữ bản `.bak`), rồi dọn phiên để ghi case tiếp.
+- Reset trước case: `--rc widget_enabled=true --clear-prefs apero_rate_prefs.xml`.
 
-Skill này là git clone có hai remote, nội dung hai bên giữ giống nhau 100%:
-`origin` = DuyenLTA/auto_check_event_tracking (gốc), `mine` = LuuThiAnDuyen/check_event_track.
+## Nguyên tắc không được phá
 
-```bash
-cd ~/.claude/skills/auto-check-event-tracking
-git pull origin main      # hoặc: git pull mine main
-```
-
-## Tự publish artifact sau mỗi lượt chấm
-
-Tool không publish artifact được (chạy ở `127.0.0.1`, không có đường tới claude.ai —
-xem `artifact_link.py`), nên việc publish phải do Claude làm. `scripts/watch-cham-moi.py`
-lo phần máy làm được: dò tool, thấy lượt chấm mới chưa publish thì tải report về
-`out/artifact-page.html` rồi in một dòng ra stdout để Claude biết mà publish.
-
-```bash
-.venv/Scripts/python.exe -u scripts/watch-cham-moi.py
-```
-
-Publish xong, Claude `POST /event/artifact` kèm `generated_at` của lượt đó; nút trên
-trang tự đổi thành **Link artifact**. Republish cùng file giữ nguyên URL, nên link
-gửi cho team chỉ cần nhớ một lần.
+1. **Lái hụt ≠ FAIL** — step chết / tiền đề chưa đạt / chưa có flow đều ra `NOT_TESTED`.
+2. **Không `pm clear`** — nó xoá login. Reset đi qua Remote Config + xoá vài file prefs.
+3. `setprop log.tag.FA-SVC` chỉ ăn từ lần app khởi động **sau** nó — `check` đã đặt
+   đúng thứ tự, đừng tự mở app trước.
+4. **Không cài APK.** User tự cài đúng bản; report ghi lại `versionName (versionCode)`
+   đọc được trên máy.
+5. Ảnh trong report là bằng chứng **ngữ cảnh**, không phải bằng chứng thời điểm.
