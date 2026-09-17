@@ -60,6 +60,38 @@ async def ghi_artifact(request: ArtifactRequest) -> dict:
     return artifact_link.ghi(request.url, request.generated_at)
 
 
+@router.get("/event/run")
+async def doc_run() -> dict:
+    """Ket qua luot cham hien tai, dang JSON. CHI DOC, khong cham lai.
+
+    Vi sao can duong rieng thay vi goi lai POST /event/check: cham lai sinh
+    mot `generated_at` MOI, ma moc do chinh la thu chan ghi chu triage cua
+    luot nay dan sang luot khac. Mot agent muon doc ket qua ma lai lam doi moc
+    thi no tu pha cai chot chan do.
+    """
+    run = _run()
+    return {
+        "generated_at": run.generated_at,
+        "package": run.checked_package or run.package,
+        "quick": run.quick,
+        # Dem CA event Firebase tu ban (origin=auto/am). Muon so event thuoc
+        # pham vi spec thi xem tong_app o /event/observed - hai so nay khac
+        # nhau la binh thuong, xem giai_thich o do.
+        "event_count": run.event_count,
+        "event_count_ghi_chu": ("đếm cả event Firebase tự bắn; số event thuộc "
+                                "phạm vi spec xem tong_app ở /event/observed"),
+        "fa_silent": run.fa_silent,
+        "stream_died": run.stream_died,
+        "app_seen": run.app_seen,
+        "summary": run.summary.payload(),
+        "spec": [{"name": e.name, "screen": e.screen, "triggered": e.triggered}
+                 for e in run.spec.events],
+        "results": [r.payload() for r in run.results],
+        "fails": [r.element for r in run.results if r.failed],
+        "da_triage": run.triage is not None,
+    }
+
+
 @router.get("/event/report", response_class=HTMLResponse)
 async def report_html() -> HTMLResponse:
     run = _run()
@@ -70,6 +102,7 @@ async def report_html() -> HTMLResponse:
         app_seen=run.app_seen, foreground=run.foreground,
         checked_package=run.checked_package,
         near_edge=run.near_edge, quick=run.quick,
+        triage=run.triage,
     )
     return HTMLResponse(html)
 

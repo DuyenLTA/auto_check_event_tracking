@@ -16,6 +16,7 @@ from .check_models import (FAIL_VERDICTS, CheckResult, Summary, Verdict,
 from .event_spec_models import SpecSheet
 from .report_event_callouts import _callouts, esc
 from .report_event_css import CSS, FONTS
+from .report_event_triage_html import triage_block, triage_callout
 
 _NO_SCREEN = "Không khai màn"
 
@@ -47,7 +48,7 @@ def _triggered_of(spec: SpecSheet) -> dict[str, str]:
 
 
 def _row(item: CheckResult, triggered: dict[str, str],
-         *, show_event: bool = True) -> str:
+         *, show_event: bool = True, note_triage=None) -> str:
     """Mot dong bang. `show_event=False` -> de trong o Event.
 
     Spec 2 event nhung bang co 5 dong (2 dong event + 3 dong param). Lap ten
@@ -68,11 +69,13 @@ def _row(item: CheckResult, triggered: dict[str, str],
         f"<td class='cell-mono'>{esc(item.actual or '—')}</td>"
         f"<td><span class='status {cls}'><span class='dot'></span>"
         f"{esc(verdict_label(item.verdict))}</span>"
-        f"{f'<div class=\"note\">{esc(note)}</div>' if note else ''}</td></tr>"
+        f"{f'<div class=\"note\">{esc(note)}</div>' if note else ''}"
+        f"{triage_block(note_triage)}</td></tr>"
     )
 
 
-def _section(name: str, rows: list[CheckResult], triggered: dict[str, str]) -> tuple[str, str]:
+def _section(name: str, rows: list[CheckResult], triggered: dict[str, str],
+             triage=None) -> tuple[str, str]:
     checked = [r for r in rows if r.verdict not in
                (Verdict.NOT_TESTED, Verdict.EXTRA)]
     ok = sum(1 for r in checked if r.verdict is Verdict.PASS)
@@ -90,7 +93,10 @@ def _section(name: str, rows: list[CheckResult], triggered: dict[str, str]) -> t
         # Dong khong co param (kiem event co ban khong) len truoc.
         cua_event.sort(key=lambda r: _split_element(r.element)[1] != "—")
         for thu_tu, item in enumerate(cua_event):
-            parts.append(_row(item, triggered, show_event=thu_tu == 0))
+            # Chi dong FAIL moi co ghi chu - xem rang buoc 1 trong event_triage.
+            ghi_chu = triage.cho(item.element) if triage and item.failed else None
+            parts.append(_row(item, triggered, show_event=thu_tu == 0,
+                              note_triage=ghi_chu))
     body = "".join(parts)
     # Mau so 0 nghia la ca man CHUA test dong nao. In "0/0 khop" thi nguoi doc
     # khong hieu gi; noi thang "chua test" moi dung viec da xay ra.
@@ -125,7 +131,7 @@ def build(spec: SpecSheet, results: list[CheckResult], summary: Summary, *,
           app_seen: bool = True, foreground: str = "",
           checked_package: str = "",
           near_edge: tuple[str, ...] = (),
-          quick: bool = False) -> str:
+          quick: bool = False, triage=None) -> str:
     screens = _screen_of(spec)
     triggered = _triggered_of(spec)
 
@@ -138,7 +144,7 @@ def build(spec: SpecSheet, results: list[CheckResult], summary: Summary, *,
 
     chips, sections = [], []
     for name, rows in grouped.items():
-        chip, section = _section(name, rows, triggered)
+        chip, section = _section(name, rows, triggered, triage)
         if chip:
             chips.append(chip)
         sections.append(section)
@@ -176,6 +182,7 @@ def build(spec: SpecSheet, results: list[CheckResult], summary: Summary, *,
   </header>
   {_callouts(results, fa_silent, near_edge, quick, stream_died, app_seen,
                foreground, package, checked_package)}
+  {triage_callout(triage)}
   <div class="sections">{''.join(sections)}</div>
 </div>
 """

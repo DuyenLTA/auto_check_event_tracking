@@ -774,3 +774,143 @@ def test_route_cham_truyen_event_ca_phien_vao_check(client, fake_adb, monkeypatc
     assert client.post("/event/check").status_code == 200
     names = [e.name for e in thay.get("session_events", ())]
     assert "rating_placement_viewed" in names, sorted(thay)
+
+
+# --- triage: ghi chu cua agent, gan vao luot dang xem ---
+
+def _cham_mot_luot(client, fake_adb):
+    """Ghi -> dung -> cham, tra ve body cua /event/check. CO it nhat 1 FAIL.
+
+    Phai bom mot dong FA cua event KHAC: khong co dong FA nao thi `fa_silent`
+    bat len va moi dong thanh "chua ket luan" chu khong phai FAIL - luc do
+    khong con gi de triage.
+    """
+    client.post("/event/spec", json={"text": SPEC_TSV})
+    client.post("/event/record", json={"serial": "FAKE1",
+                                       "package": "com.example.app"})
+    fake_adb.process.stdout.queue.append(
+        (b"09-08 15:00:01.000 V/FA-SVC ( 9): Logging event: origin=app,"
+         b"name=mot_event_khac,params=Bundle[{ga_event_origin(_o)=app}]\n"))
+    client.post("/event/stop")
+    return client.post("/event/check").json()
+
+
+def _mot_fail(check: dict) -> str:
+    for r in check["results"]:
+        if r["verdict"].startswith("FAIL"):
+            return r["element"]
+    raise AssertionError("luot nay khong co dong FAIL nao de triage")
+
+
+def test_triage_gan_duoc_vao_luot_dang_xem(client, fake_adb):
+    check = _cham_mot_luot(client, fake_adb)
+    response = client.post("/event/triage", json={
+        "generated_at": check["generated_at"],
+        "notes": [{"element": _mot_fail(check), "ket_luan": "spec_cu",
+                   "ly_do": "Spec còn khai param đã bỏ.", "dong_y": 2, "tong": 3}],
+    })
+    assert response.status_code == 200, response.text
+    assert response.json()["da_ghi"] == 1
+    assert client.get("/event/triage").json()["co"] is True
+
+
+def test_triage_cua_luot_KHAC_bi_tu_choi(client, fake_adb):
+    """Ghi chu luot cu dan vao luot moi la kieu sai im lang te nhat.
+
+    Da gap dung benh nay o nut artifact: bao cao cu hien ra nhu bao cao moi.
+    """
+    check = _cham_mot_luot(client, fake_adb)
+    response = client.post("/event/triage", json={
+        "generated_at": "2020-01-01 00:00",
+        "notes": [{"element": _mot_fail(check), "ket_luan": "spec_cu",
+                   "ly_do": "x"}],
+    })
+    assert response.status_code == 409, response.text
+    assert "lượt đang xem" in response.json()["detail"]
+
+
+def test_triage_khi_chua_cham_lan_nao_thi_409(client):
+    response = client.post("/event/triage", json={
+        "generated_at": "2026-09-11 09:00", "notes": []})
+    assert response.status_code == 409
+
+
+def test_ghi_chu_sai_tra_400_chu_khong_phai_500(client, fake_adb):
+    """Agent gui du lieu hong la loi DU LIEU, khong phai loi server."""
+    check = _cham_mot_luot(client, fake_adb)
+    response = client.post("/event/triage", json={
+        "generated_at": check["generated_at"],
+        "notes": [{"element": _mot_fail(check), "ket_luan": "bia_ra",
+                   "ly_do": "x"}],
+    })
+    assert response.status_code == 400, response.text
+
+
+def test_ghi_chu_hien_trong_report_html(client, fake_adb):
+    check = _cham_mot_luot(client, fake_adb)
+    client.post("/event/triage", json={
+        "generated_at": check["generated_at"],
+        "notes": [{"element": _mot_fail(check), "ket_luan": "app_doi_ten",
+                   "ly_do": "App bắn tên khác.",
+                   "bang_chung": "rating_star_rated lúc 15:40:29.545",
+                   "dong_y": 3, "tong": 3}],
+    })
+    html = client.get("/event/report").text
+    assert "Nhiều khả năng: App đổi tên event" in html
+    assert "3/3 agent đồng ý" in html
+    assert "rating_star_rated" in html
+
+
+def test_doc_run_KHONG_lam_doi_generated_at(client, fake_adb):
+    """Agent doc ket qua bang GET, khong duoc goi lai POST /event/check.
+
+    Cham lai sinh moc moi, ma chinh moc do la thu chan ghi chu triage cua luot
+    nay dan sang luot khac. Mot duong doc ma lam doi moc thi no tu pha cai
+    chot chan do - nen phai co GET rieng, va phai chung minh no chi doc.
+    """
+    check = _cham_mot_luot(client, fake_adb)
+    moc = check["generated_at"]
+    for _ in range(3):
+        assert client.get("/event/run").json()["generated_at"] == moc
+    assert client.get("/event/run").json()["fails"], "luot nay phai co FAIL"
+
+
+def test_observed_cho_thay_ten_app_THAT_SU_ban(client, fake_adb):
+    """Khong co danh sach nay thi khong phan biet duoc 'app thieu event' voi
+    'app doi ten event' - chi con doan."""
+    _cham_mot_luot(client, fake_adb)
+    body = client.get("/event/observed").json()
+    ten = [t["name"] for t in body["ten"]]
+    assert "mot_event_khac" in ten, ten
+    assert body["tong_app"] >= 1
+
+
+def test_observed_loc_duoc_theo_ten(client, fake_adb):
+    _cham_mot_luot(client, fake_adb)
+    body = client.get("/event/observed", params={"name": "mot_event_khac"}).json()
+    assert body["events"] and all(e["name"] == "mot_event_khac"
+                                  for e in body["events"])
+
+
+def test_observed_khi_chua_ghi_phien_nao_thi_409(client):
+    assert client.get("/event/observed").status_code == 409
+
+
+def test_observed_tach_ro_so_event_APP_voi_so_event_CA_PHIEN(client, fake_adb):
+    """Hai con so phai co ten khac nhau VA co giai thich.
+
+    Da gap that: /event/observed goi 16 la "tong" (chi origin=app) trong khi
+    /event/run goi 25 la "event_count" (dem het ca origin=auto/am). Hai ten
+    deu doc nhu "so event", nguoi doi chieu ket luan log bi cat mat 9 dong roi
+    tu choi ket luan - tu choi DUNG, loi nam o cho tool khong noi ro.
+    """
+    _cham_mot_luot(client, fake_adb)
+    obs = client.get("/event/observed").json()
+    run = client.get("/event/run").json()
+
+    assert "tong" not in obs, "ten mo ho, phai la tong_app / tong_ca_phien"
+    assert obs["tong_app"] <= obs["tong_ca_phien"]
+    assert obs["tong_ca_phien"] == run["event_count"], (
+        "hai duong phai dem cung mot thu khi noi ve ca phien")
+    assert sum(obs["theo_origin"].values()) == obs["tong_ca_phien"]
+    assert "KHÔNG phải log bị cắt" in obs["giai_thich"]
