@@ -46,6 +46,37 @@ def doc_config():
     return config
 
 
+MAN_KHOA = ("Màn hình đang tắt/khoá — mọi thao tác sau đó bấm vào không khí. "
+            "Mở khoá máy (và tắt chế độ tự khoá) rồi chạy lại.")
+
+
+async def danh_thuc(adb, serial: str) -> None:
+    """Danh thuc truoc khi chay. KHONG dat `svc power stayon usb`: do la doi
+    cai dat may cua nguoi khac, va no o lai sau khi tool chay xong."""
+    try:
+        if not await adb.is_awake(serial):
+            await adb.wake(serial)
+            say("[máy] màn đang tắt — đã đánh thức")
+    except AdbError:
+        pass          # doc khong duoc thi cu chay, dung chan
+
+
+async def ghi_chu_man_khoa(adb, serial: str, ket_qua) -> None:
+    """Case hut ma man dang tat -> noi thang ly do.
+
+    Khong noi thi bao cao chi ghi "khong thay element", va nguoi doc di soi
+    selector trong khi loi that nam o cho may tu khoa man giua chung - moi case
+    sau deu hut theo cung mot kieu.
+    """
+    try:
+        if await adb.is_awake(serial):
+            return
+    except AdbError:
+        return
+    ket_qua.notes.append(MAN_KHOA)
+    ket_qua.reason = f"{ket_qua.reason} — {MAN_KHOA}"
+
+
 async def check(*, spec: SpecSheet, package: str, flow: Flow | None, adb,
                 out_dir: Path, serial: str = "", flows_path: str = "") -> dict:
     """Chay ca luot cham. Tra payload de in JSON."""
@@ -76,6 +107,7 @@ async def check(*, spec: SpecSheet, package: str, flow: Flow | None, adb,
     if app_version:
         say(f"[app] {package} {app_version}")
     album = Album(adb, serial)
+    await danh_thuc(adb, serial)
 
     cases = []
     try:
@@ -90,6 +122,7 @@ async def check(*, spec: SpecSheet, package: str, flow: Flow | None, adb,
                                             album=album))
                 trang_thai = cases[-1]
                 if not trang_thai.ran:
+                    await ghi_chu_man_khoa(adb, serial, trang_thai)
                     say(f"    -> {trang_thai.status}: {trang_thai.reason}")
     finally:
         await logcat_stream.stop(recording)
