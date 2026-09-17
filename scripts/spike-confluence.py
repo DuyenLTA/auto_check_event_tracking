@@ -14,25 +14,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
+from usv.cli_spec_load import ENV_KEYS, load_env  # noqa: E402
 from usv.confluence_client import ConfluenceError, fetch_page  # noqa: E402
 from usv.event_spec_confluence import parse_page  # noqa: E402
-
-ENV_KEYS = ("CONFLUENCE_BASE_URL", "CONFLUENCE_TOKEN")
-
-
-def load_env(path: Path) -> None:
-    """KEY=VALUE -> os.environ. Bien da co san thi khong de len."""
-    if not path.exists():
-        return
-    for line in path.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if not line or line.startswith("#"):
-            continue
-        key, _, value = line.partition("=")
-        key, value = key.strip(), value.strip().strip('"').strip("'")
-        if value and key not in os.environ:
-            os.environ[key] = value
-
 
 def main() -> int:
     if len(sys.argv) < 2:
