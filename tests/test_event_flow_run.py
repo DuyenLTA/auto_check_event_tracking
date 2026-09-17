@@ -233,3 +233,61 @@ def test_step_tuy_chon_hut_thi_case_van_chay_tiep(recording):
     assert result.status == "ok"
     assert result.steps_done == 1
     assert any("bỏ qua bước tuỳ chọn" in n for n in result.notes), result.notes
+
+
+def test_cay_ui_dung_lai_giua_hai_buoc_chi_doc(recording, monkeypatch):
+    """`uiautomator dump` mat 2.2s tren may that. Hai buoc lien tiep cung nhin
+    mot man khong doi thi doc lai la tra tien hai lan cho cung mot thu."""
+    client = FakeClient()
+    dem = {"dump": 0}
+    that = client.dump_ui
+
+    async def dem_dump(serial):
+        dem["dump"] += 1
+        return await that(serial)
+
+    client.dump_ui = dem_dump
+    case = _case(steps=(
+        Step(kind="tap", selector=Selector(resource_id="khong_co"), optional=True),
+        Step(kind="tap", selector=Selector(resource_id="cung_khong_co"),
+             optional=True),
+        Step(kind="tap", selector=Selector(resource_id="btnHome")),
+    ))
+    result = run(run_case(client, "S1", METRICS, "com.x", recording, case))
+    assert result.status == "ok"
+    # Ba buoc nhung chi MOT lan dump: hai buoc dau khong bam duoc gi nen man
+    # khong doi, buoc ba dung lai chinh cay do.
+    assert dem["dump"] == 1, dem
+
+
+def test_bam_xong_thi_cay_cu_bi_bo(recording):
+    """Da bam thi man doi. Dung lai cay cu la bam vao toa do cua qua khu."""
+    from usv.ui_cache import CayUI
+
+    cay = CayUI()
+    cay.giu(["node gia"])
+    assert cay.con_dung_duoc()
+    cay.bo()
+    assert not cay.con_dung_duoc()
+
+
+def test_wait_text_dem_bang_dong_ho_that_khong_tru_dan_theo_POLL(recording, monkeypatch):
+    """Mot vong cho ton (dump 2.2s + POLL) nhung code cu chi tru POLL, nen
+    `timeout: 25` chay ~390 giay that. Da lam mot luot cham ton 611s."""
+    from usv import event_flow_run
+
+    dong_ho = {"t": 0.0}
+    monkeypatch.setattr(event_flow_run.time, "monotonic", lambda: dong_ho["t"])
+
+    client = FakeClient()
+
+    async def dump_cham(serial):
+        dong_ho["t"] += 2.2          # dump that mat 2.2s tren may
+        return DUMP
+
+    client.dump_ui = dump_cham
+    thay = run(event_flow_run._wait_text(client, "S1", METRICS,
+                                         "chu-khong-bao-gio-co", 10))
+    assert thay is False
+    # Cho 10s thi duoc phep tieu toi da 10s + mot lan dump dang do.
+    assert dong_ho["t"] <= 10 + 2.2 * 2, dong_ho

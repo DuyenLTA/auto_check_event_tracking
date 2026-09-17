@@ -13,7 +13,9 @@ from . import remote_config
 from .event_flow_models import FlowCase
 
 # Cho app ve man dau sau khi mo lai. Khong cho thi step dau bam vao splash.
-LAUNCH_SETTLE = 2.5
+# 1.5s la du: flow nao can lau hon thi dung `wait_text` cho DUNG man,
+# cho cung them giay chi lam moi case dai them ma khong chac hon.
+LAUNCH_SETTLE = 1.5
 
 
 async def prepare(client, serial: str, package: str,

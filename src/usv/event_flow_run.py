@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from dataclasses import dataclass, field
 
 from .adb_parsers import AdbError
@@ -29,16 +30,15 @@ from .event_flow_reset import LAUNCH_SETTLE, prepare
 from .event_window import mark_label
 from .logcat_stream import Recording, mark
 from .models import DeviceNode
+from .ui_cache import CayUI
 from .ui_dump import parse_dump
 
 log = logging.getLogger(__name__)
 
-# Cho app ve man dau sau khi mo lai. Khong cho thi step dau bam vao splash.
-LAUNCH_SETTLE = 2.5
-# Chu ky doc lai cay UI khi cho mot chuoi xuat hien.
-POLL = 0.5
-
-
+# Chu ky doc lai cay UI khi cho mot chuoi xuat hien. `uiautomator dump` da mat
+# ~2.2s tren may that nen ban than no la cai ham nhip; ngu them nua chi keo dai
+# luot cham.
+POLL = 0.15
 @dataclass(slots=True)
 class CaseResult:
     case: FlowCase
@@ -57,51 +57,75 @@ class CaseResult:
                 "steps_done": self.steps_done, "notes": self.notes}
 
 
-async def _nodes(client, serial: str, metrics) -> list[DeviceNode]:
-    return parse_dump(await client.dump_ui(serial), metrics)
+async def _nodes(client, serial: str, metrics, cay: CayUI | None = None
+                 ) -> list[DeviceNode]:
+    if cay is not None and cay.con_dung_duoc():
+        return cay.nodes
+    nodes = parse_dump(await client.dump_ui(serial), metrics)
+    if cay is not None:
+        cay.giu(nodes)
+    return nodes
 
 
 async def _wait_text(client, serial: str, metrics, needle: str,
-                     timeout: float) -> bool:
+                     timeout: float, cay: CayUI | None = None) -> bool:
     """Cho mot chuoi xuat hien tren man. Het gio -> False, nguoi goi tu xu."""
     folded = needle.casefold()
-    deadline = timeout
-    while deadline > 0:
-        for node in await _nodes(client, serial, metrics):
+    # Dem bang DONG HO THAT, khong tru dan theo POLL: mot vong lap ton
+    # (dump 2.2s + POLL) nhung chi tru POLL, nen `timeout: 25` tung chay
+    # ~390 giay that - do dung mot luot cham 611s.
+    het_gio = time.monotonic() + max(0.0, timeout)
+    while True:
+        if cay is not None:
+            cay.bo()          # cho thi phai doc lai that, khong dung cay cu
+        for node in await _nodes(client, serial, metrics, cay):
             if folded in node.text.casefold() or folded in node.content_desc.casefold():
                 return True
+        if time.monotonic() >= het_gio:
+            return False
         await asyncio.sleep(POLL)
-        deadline -= POLL
-    return False
 
 
-async def run_step(client, serial: str, metrics, package: str, step: Step) -> None:
+async def run_step(client, serial: str, metrics, package: str, step: Step,
+                   cay: CayUI | None = None) -> None:
     """Chay mot step. That bai -> AdbError co message noi ro sai o dau."""
     if step.kind == "launch":
         await client.force_stop(serial, package)
         await client.launch(serial, package)
         await asyncio.sleep(LAUNCH_SETTLE)
+        if cay is not None:
+            cay.bo()
         return
     if step.kind == "wait":
         await asyncio.sleep(max(0.0, step.seconds))
         return
     if step.kind == "key":
         await client.input_keyevent(serial, step.text)
+        if cay is not None:
+            cay.bo()
         return
     if step.kind == "type":
         await client.input_text(serial, step.text)
+        if cay is not None:
+            cay.bo()
         return
     if step.kind == "wait_text":
-        if not await _wait_text(client, serial, metrics, step.text, step.timeout):
+        if not await _wait_text(client, serial, metrics, step.text, step.timeout,
+                                cay):
             raise AdbError(
                 f"Chờ {step.text!r} xuất hiện trong {step.timeout:g}s mà không thấy.")
         return
     if step.kind == "tap":
-        await tap(client, serial, await _nodes(client, serial, metrics), step.selector)
+        await tap(client, serial, await _nodes(client, serial, metrics, cay),
+                  step.selector)
+        if cay is not None:
+            cay.bo()          # da bam -> man doi, cay vua doc thanh qua khu
         return
     if step.kind == "swipe":
-        await swipe(client, serial, await _nodes(client, serial, metrics),
+        await swipe(client, serial, await _nodes(client, serial, metrics, cay),
                     step.selector, step.text or "up")
+        if cay is not None:
+            cay.bo()
         return
     raise AdbError(f"Step {step.kind!r} không hiểu.")
 
@@ -127,12 +151,13 @@ async def run_case(client, serial: str, metrics, package: str,
 
     await mark(client, recording, mark_label(case.event, case.label))
 
+    cay = CayUI()
     cuoi = len(case.steps) - 1
     for order, step in enumerate(case.steps):
         if on_shot is not None and order == cuoi:
             await on_shot("trước bước cuối")
         try:
-            await run_step(client, serial, metrics, package, step)
+            await run_step(client, serial, metrics, package, step, cay)
         except AdbError as exc:
             if step.optional:
                 # Man dong (quang cao, popup) luc co luc khong. Bo qua va di
