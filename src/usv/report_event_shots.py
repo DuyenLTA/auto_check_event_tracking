@@ -27,7 +27,7 @@ def _figure(shot: Shot) -> str:
             f'<figcaption>{esc(shot.moment)}</figcaption></figure>')
 
 
-def build_shots(album: dict[str, list[Shot]]) -> str:
+def build_shots(album: dict[str, list[Shot]], bo_bot: int = 0) -> str:
     """HTML cho ca album. Khong co anh nao -> chuoi rong, khong de lai khoi rong."""
     khoi = []
     for case_label, shots in album.items():
@@ -40,5 +40,7 @@ def build_shots(album: dict[str, list[Shot]]) -> str:
             f'</section>')
     if not khoi:
         return ""
+    them = (f" Đã bỏ {bo_bot} ảnh vì report sắp vượt trần dung lượng."
+            if bo_bot else "")
     return ('<section class="shots"><h2>Ảnh màn hình</h2>'
-            f'<p class="shots-note">{GHI_CHU}</p>{"".join(khoi)}</section>')
+            f'<p class="shots-note">{GHI_CHU}{them}</p>{"".join(khoi)}</section>')

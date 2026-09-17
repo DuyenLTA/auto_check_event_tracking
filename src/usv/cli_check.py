@@ -118,7 +118,7 @@ async def check(*, spec: SpecSheet, package: str, flow: Flow | None, adb,
                  checked_package=recording.checked_package or package,
                  near_edge=tuple(dict.fromkeys(n for w in windows
                                                for n in w.near_edge)),
-                 app_version=app_version, shots=build_shots(album.shots))
+                 app_version=app_version, shots=build_shots(album.shots, album.bo_bot))
     out_dir.mkdir(parents=True, exist_ok=True)
     report = out_dir / f"report-{package}-{datetime.now(VN):%y%m%d-%H%M%S}.html"
     report.write_text(html, encoding="utf-8")

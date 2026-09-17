@@ -26,6 +26,12 @@ class Shot:
     png: bytes
 
 
+# Tran byte anh THO cho ca luot. Base64 phinh ~33%, nen 6 MB anh -> ~8 MB
+# trong report, con cach tran artifact 16 MB mot quang an toan. Vuot tran thi
+# BO anh tiep theo chu khong bo case: mat anh con hon mat ket qua cham.
+MAX_BYTES = 6_000_000
+
+
 @dataclass(slots=True)
 class Album:
     """Gom anh theo nhan case, giu dung thu tu chup."""
@@ -33,11 +39,17 @@ class Album:
     adb: object
     serial: str
     shots: dict[str, list[Shot]] = field(default_factory=dict)
+    da_dung: int = 0
+    bo_bot: int = 0        # so tam bi bo vi het tran
 
     async def snap(self, case_label: str, moment: str) -> None:
+        if self.da_dung >= MAX_BYTES:
+            self.bo_bot += 1
+            return
         png = await self._chup()
         if not png:
             return
+        self.da_dung += len(png)
         self.shots.setdefault(case_label, []).append(
             Shot(moment=moment, png=png))
 

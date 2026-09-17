@@ -112,3 +112,25 @@ def test_version_lay_ban_dau_tien_khong_lay_ban_cu_trong_lich_su():
            "  Hidden system packages:\n"
            "    versionCode=1 minSdk=24\n    versionName=1.0.0\n")
     assert parse_package_version(raw) == ("2.4.1", "125")
+
+
+def test_het_tran_thi_bo_anh_chu_khong_bo_case():
+    """Artifact tran 16 MB. Anh phinh qua thi report khong up duoc - luc do mat
+    CA ket qua cham, khong chi mat anh."""
+    from usv import flow_screenshots
+
+    adb = FakeAdb()
+    album = Album(adb, "S1")
+    album.da_dung = flow_screenshots.MAX_BYTES
+    run(album.snap("case A", "sau"))
+    assert album.shots == {}
+    assert album.bo_bot == 1
+    assert "screencap" not in adb.calls, "het tran thi dung chup luon cho nhanh"
+
+
+def test_dem_dung_so_byte_da_dung():
+    adb = FakeAdb()
+    album = Album(adb, "S1")
+    run(album.snap("case A", "sau"))
+    run(album.snap("case A", "sau nua"))
+    assert album.da_dung == 2 * len(PNG)

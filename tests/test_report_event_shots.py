@@ -35,3 +35,9 @@ def test_noi_ro_anh_la_bang_chung_NGU_CANH_khong_phai_thoi_diem():
 def test_anh_hong_khong_lam_vo_report():
     html = build_shots({"case A": [Shot(moment="sau", png=b"")]})
     assert "case A" not in html
+
+
+def test_bo_bot_anh_thi_noi_ra_chu_khong_im_lang():
+    """Im lang thi nguoi doc tuong case do khong chup duoc, di soi nham cho."""
+    html = build_shots({"case A": [Shot(moment="sau", png=PNG)]}, bo_bot=4)
+    assert "bỏ 4 ảnh" in html
