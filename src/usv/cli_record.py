@@ -44,6 +44,12 @@ def selector_tu_args(args) -> Selector | None:
     return None
 
 
+def _them_tuy_chon(buoc: dict, args) -> dict:
+    if args.optional:
+        buoc["optional"] = True
+    return buoc
+
+
 async def _nodes(adb, serial: str):
     (width, height), density = await adb.screen_metrics(serial)
     metrics = ScreenMetrics(width_px=width, height_px=height, density=density)
@@ -77,7 +83,8 @@ async def lam(args) -> tuple[int, list[dict]]:
         return 0, [{"kind": "wait", "seconds": args.giay}]
 
     if args.lenh == "wait-text":
-        return 0, [{"kind": "wait_text", "text": args.chu, "timeout": args.timeout}]
+        return 0, [_them_tuy_chon({"kind": "wait_text", "text": args.chu,
+                                   "timeout": args.timeout}, args)]
 
     chon = selector_tu_args(args)
     if chon is None:
@@ -86,12 +93,13 @@ async def lam(args) -> tuple[int, list[dict]]:
     if args.lenh == "tap":
         node = await tap(adb, serial, await _nodes(adb, serial), chon)
         say(f"Đã bấm {node.label}")
-        return 0, [{"kind": "tap", chon.kind: chon.needle, "index": chon.index}]
+        return 0, [_them_tuy_chon({"kind": "tap", chon.kind: chon.needle,
+                               "index": chon.index}, args)]
 
     node = await swipe(adb, serial, await _nodes(adb, serial), chon, args.huong)
     say(f"Đã quét {args.huong} trên {node.label}")
-    return 0, [{"kind": "swipe", chon.kind: chon.needle, "index": chon.index,
-                "direction": args.huong}]
+    return 0, [_them_tuy_chon({"kind": "swipe", chon.kind: chon.needle,
+                               "index": chon.index, "direction": args.huong}, args)]
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -111,6 +119,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("giay_hoac_chu", nargs="?", default="")
     parser.add_argument("--huong", default="up", help="swipe: up|down|left|right")
     parser.add_argument("--timeout", type=float, default=10.0)
+    parser.add_argument("--optional", action="store_true",
+                        help="bước có thể không xuất hiện (quảng cáo, popup)")
     parser.add_argument("--event", default="")
     parser.add_argument("--label", default="")
     parser.add_argument("--flows", default="")
@@ -123,7 +133,16 @@ def build_parser() -> argparse.ArgumentParser:
 def parse_args(argv: list[str] | None):
     args = build_parser().parse_args(argv)
     args.chu = args.giay_hoac_chu
-    args.giay = float(args.giay_hoac_chu or 1)
+    # Cung mot o positional: `wait 3` doc la so giay, `wait-text "Add Widget"`
+    # doc la chu. Ep float vo dieu kien thi moi lenh nhan chu deu no ValueError
+    # ngay o tang doc tham so - da gap that voi `wait-text`.
+    args.giay = 1.0
+    if args.lenh == "wait":
+        try:
+            args.giay = float(args.giay_hoac_chu or 1)
+        except ValueError:
+            build_parser().error(
+                f"`wait` cần số giây, đang nhận {args.giay_hoac_chu!r}.")
     return args
 
 

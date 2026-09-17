@@ -1,0 +1,73 @@
+package: com.nxl.aiphotocreator.aivideogenerator.texttoimage
+cases:
+# Happy case cua widget_view: mo app -> qua onboarding -> popup Add Widget hien.
+# Moi buoc quang cao deu `optional`: splash ad, interstitial va paywall luc co
+# luc khong (ad capping), khong danh dau tuy chon thi happy case vo moi lan
+# quang cao doi y - da gap ca hai kieu trong hai lan chay lien tiep.
+- event: widget_view
+  label: popup Add Widget sau paywall
+  steps:
+  - kind: launch
+  - kind: wait_text
+    text: Skip Ad
+    timeout: 25
+    optional: true
+  - kind: tap
+    resource_id: txtSkipAd
+    index: 0
+    optional: true
+  - kind: wait
+    seconds: 3.0
+  - kind: tap
+    resource_id: borderContainer
+    index: 0
+  - kind: tap
+    resource_id: btnNextQuestion
+    index: 0
+  - kind: tap
+    resource_id: dismiss-button
+    index: 0
+    optional: true
+  - kind: tap
+    desc: Close Billing Screen
+    index: 0
+    optional: true
+  - kind: wait_text
+    text: Add Widget
+    timeout: 25
+
+- event: widget_click
+  label: bam Add Widget Now
+  steps:
+  - kind: launch
+  - kind: wait_text
+    text: Skip Ad
+    timeout: 25
+    optional: true
+  - kind: tap
+    resource_id: txtSkipAd
+    index: 0
+    optional: true
+  - kind: wait
+    seconds: 3.0
+  - kind: tap
+    resource_id: borderContainer
+    index: 0
+  - kind: tap
+    resource_id: btnNextQuestion
+    index: 0
+  - kind: tap
+    resource_id: dismiss-button
+    index: 0
+    optional: true
+  - kind: tap
+    desc: Close Billing Screen
+    index: 0
+    optional: true
+  - kind: wait_text
+    text: Add Widget
+    timeout: 25
+  # Khoa theo CHU vi nut khong co resource_id - vo neu app doi ngon ngu.
+  - kind: tap
+    text: Add Widget Now
+    index: 0

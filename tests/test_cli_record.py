@@ -187,3 +187,20 @@ def test_adb_chet_thi_bao_ro_khong_traceback(adb, phien, monkeypatch, capsys):
     ma = chay(["--package", "com.x", "dump"], phien)
     assert ma != 0
     assert "adb rớt cáp" in capsys.readouterr().err
+
+
+def test_wait_text_nhan_chu_khong_bi_ep_thanh_so(adb, phien):
+    """`wait 3` va `wait-text "Add Widget"` dung chung mot o positional. Ep
+    float vo dieu kien thi moi lenh nhan chu deu no ngay o tang doc tham so."""
+    ma = chay(["--package", "com.x", "wait-text", "Add Widget", "--timeout", "15"],
+              phien)
+    assert ma == 0
+    steps = json.loads((phien / "record-com.x.json").read_text(encoding="utf-8"))
+    assert steps["steps"] == [{"kind": "wait_text", "text": "Add Widget",
+                               "timeout": 15.0}]
+
+
+def test_wait_ma_dua_chu_thi_bao_ro(adb, phien, capsys):
+    with pytest.raises(SystemExit):
+        chay(["--package", "com.x", "wait", "ba-giay"], phien)
+    assert "số giây" in capsys.readouterr().err

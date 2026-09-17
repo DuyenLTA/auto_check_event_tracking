@@ -1,0 +1,32 @@
+package: com.nxl.aiphotocreator.aivideogenerator.texttoimage
+cases:
+- event: ad_show
+  label: man cau hoi sau khi skip ad
+  steps:
+  - kind: launch
+  - kind: tap
+    resource_id: txtSkipAd
+    index: 0
+  - kind: wait
+    seconds: 3.0
+- event: widget_view
+  label: popup Add Widget sau paywall
+  steps:
+  - kind: launch
+  - kind: tap
+    resource_id: txtSkipAd
+    index: 0
+  - kind: wait
+    seconds: 3.0
+  - kind: tap
+    resource_id: borderContainer
+    index: 0
+  - kind: tap
+    resource_id: btnNextQuestion
+    index: 0
+  - kind: tap
+    resource_id: dismiss-button
+    index: 0
+  - kind: tap
+    desc: Close Billing Screen
+    index: 0

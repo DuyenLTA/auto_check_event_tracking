@@ -19,6 +19,16 @@ _PROP_KEY = re.compile(r"[A-Za-z0-9_.\-]{1,64}")
 _PROP_VALUE = re.compile(r"[A-Za-z0-9_.\-]{0,64}")
 _LOG_TAG = re.compile(r"[A-Za-z0-9_\-]{1,32}")
 
+
+def _boc_nhay(text: str) -> str:
+    """Boc chuoi cho shell TREN MAY doc nguyen van.
+
+    Nhay don: moi thu ben trong deu la chu, tru chinh dau nhay don. Thoat no
+    theo kieu POSIX: dong nhay, chen mot dau nhay da escape, roi mo nhay lai.
+    """
+    return "'" + text.replace("'", "'\\''") + "'"
+
+
 # Tag chua event Firebase. Do that tren AIP922: 67/67 dong `Logging event` nam o
 # FA-SVC; tag FA chi in `Logging telemetry` khong kem params.
 FA_TAG = "FA-SVC"
@@ -84,7 +94,14 @@ class LogcatMixin:
         check_serial(serial)
         if not _LOG_TAG.fullmatch(tag):
             raise AdbError(f"Tag logcat không hợp lệ: {tag!r}")
-        await self._run("-s", serial, "shell", "log", "-p", "i", "-t", tag, message)
+        # `adb shell` GHEP cac tham so lai roi dua cho /system/bin/sh tren may,
+        # nen nhan phai duoc boc nhay o phia MAY. Do that: nhan
+        # "widget_view | popup Add Widget" bi sh doc dau `|` thanh ONG - logcat
+        # chi nhan duoc "widget_view", note bay mat, va cua so cua case lai hut
+        # khong con khop de bo -> FAIL oan. Chua ke nhan chua `;` hay `$(...)`
+        # se CHAY that tren may.
+        await self._run("-s", serial, "shell", "log", "-p", "i", "-t", tag,
+                        _boc_nhay(message))
 
     async def app_running(self, serial: str, package: str) -> bool:
         """App co process dang chay khong.

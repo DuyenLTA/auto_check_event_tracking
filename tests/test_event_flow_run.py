@@ -220,3 +220,16 @@ def test_cua_so_khong_co_nhan_khop_thi_de_rong():
            + mark_label("ev_a", "nhan khong khop"))
     windows = with_expectations(cut_log(log), {"nhan khac": {"a": "1"}})
     assert windows[0].expect_params == {}
+
+
+def test_step_tuy_chon_hut_thi_case_van_chay_tiep(recording):
+    """Quang cao xen ke khong hien -> bo qua buoc dong no, KHONG phai lai hut."""
+    client = FakeClient()
+    case = _case(steps=(
+        Step(kind="tap", selector=Selector(resource_id="khong_co"), optional=True),
+        Step(kind="tap", selector=Selector(resource_id="btnHome")),
+    ))
+    result = run(run_case(client, "S1", METRICS, "com.x", recording, case))
+    assert result.status == "ok"
+    assert result.steps_done == 1
+    assert any("bỏ qua bước tuỳ chọn" in n for n in result.notes), result.notes

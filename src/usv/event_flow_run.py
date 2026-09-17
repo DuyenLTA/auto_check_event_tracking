@@ -134,6 +134,12 @@ async def run_case(client, serial: str, metrics, package: str,
         try:
             await run_step(client, serial, metrics, package, step)
         except AdbError as exc:
+            if step.optional:
+                # Man dong (quang cao, popup) luc co luc khong. Bo qua va di
+                # tiep, nhung GHI LAI: doc report phai thay duoc lan chay nay
+                # di duong nao.
+                result.notes.append(f"bỏ qua bước tuỳ chọn `{step.label()}`")
+                continue
             result.status = "not_tested"
             result.reason = f"step `{step.label()}` thất bại: {exc}"
             if on_shot is not None:

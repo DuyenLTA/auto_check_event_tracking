@@ -36,6 +36,8 @@ def step_to_dict(step: Step) -> dict:
         ra["seconds"] = step.seconds
     if step.kind == "wait_text":
         ra["timeout"] = step.timeout
+    if step.optional:
+        ra["optional"] = True
     return ra
 
 

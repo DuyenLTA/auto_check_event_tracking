@@ -25,8 +25,16 @@ class Step:
     text: str = ""                  # type: chu can go; swipe: huong
     seconds: float = 0.0            # wait
     timeout: float = 10.0           # wait_text
+    # Buoc co the KHONG xuat hien: quang cao xen ke, popup danh gia, tooltip.
+    # Hut mot buoc nhu vay khong phai lai hut - case van chay tiep.
+    optional: bool = False
 
     def label(self) -> str:
+        if self.optional:
+            return f"{self._label()} (tuỳ chọn)"
+        return self._label()
+
+    def _label(self) -> str:
         if self.selector is not None:
             return f"{self.kind} {self.selector.label()}"
         if self.kind == "wait":

@@ -93,7 +93,8 @@ def _step(raw: object, where: str) -> tuple[Step | None, list[str]]:
         return None, [f"{where}: `timeout` phải là số, đang là {raw.get('timeout')!r}."]
 
     return Step(kind=kind, selector=selector, text=text,
-                seconds=seconds, timeout=timeout), []
+                seconds=seconds, timeout=timeout,
+                optional=bool(raw.get("optional", False))), []
 
 
 def _reset(raw: object, where: str) -> tuple[Reset, list[str]]:

@@ -149,3 +149,15 @@ def test_flow_chay_duoc_bang_run_flow():
     src = inspect.getsource(run_step)
     for kind in kinds:
         assert f'step.kind == "{kind}"' in src, f"run_step khong hieu {kind!r}"
+
+
+def test_step_tuy_chon_doc_duoc_tu_yaml():
+    """Quang cao xen ke luc co luc khong. Khong co `optional` thi happy case
+    vo moi lan quang cao doi y."""
+    flow = parse({"package": "com.x", "cases": [
+        {"event": "e1", "steps": [
+            {"kind": "tap", "resource_id": "dismiss-button", "optional": True},
+            {"kind": "tap", "resource_id": "btnHome"}]}]})
+    assert flow.ok, flow.errors
+    assert [s.optional for s in flow.cases[0].steps] == [True, False]
+    assert "tuỳ chọn" in flow.cases[0].steps[0].label()
