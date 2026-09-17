@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-from test_api_event_route import PARAMS, FakeAdb
+from conftest import PARAMS, FakeAdb
 from usv import cli_check, cli_main, logcat_stream
 from usv.adb_parsers import AdbError, Device
 from usv.density import ScreenMetrics
