@@ -14,6 +14,7 @@ dev = ["pytest>=8.0", "httpx>=0.27"]
 
 [project.scripts]
 usv-check = "usv.cli_main:main"
+usv-record = "usv.cli_record:main"
 
 [build-system]
 requires = ["setuptools>=68"]
