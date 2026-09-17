@@ -19,6 +19,7 @@ from .flow_yaml import load
 
 # Kind nao doc `text` lam DU LIEU (chu de go / de cho / ten phim).
 TEXT_KINDS = frozenset({"type", "key", "wait_text"})
+# `close_ad` tu tim nut tren man nen khong mang selector hay chu nao.
 
 
 def step_to_dict(step: Step) -> dict:

@@ -20,7 +20,8 @@ import yaml
 from .device_actions import Selector
 from .event_flow_models import Flow, FlowCase, Reset, Step
 
-KINDS = frozenset({"launch", "tap", "swipe", "type", "key", "wait", "wait_text"})
+KINDS = frozenset({"launch", "tap", "swipe", "type", "key", "wait", "wait_text",
+                   "close_ad", "allow"})
 # Chi tap/swipe moi lam viec tren mot node. `wait_text` va `type` cung co
 # truong `text` nhung do la chu de TIM / de GO, doc no thanh selector thi
 # `wait_text` bi danh dau fragile oan va Step.label() in ra sai viec.
@@ -87,8 +88,13 @@ def _step(raw: object, where: str) -> tuple[Step | None, list[str]]:
         except (TypeError, ValueError):
             return None, [f"{where}: `seconds` phải là số, đang là {raw['seconds']!r}."]
 
+    # `close_ad` mac dinh KIEM MOT LAN (timeout 0): man khong co quang cao la
+    # truong hop thuong gap nhat, cho 10s o moi buoc do la moi case dai them
+    # vai chuc giay khong de lam gi. Flow nao can cho (splash ad) thi khai
+    # `timeout` ro rang.
+    mac_dinh = 0.0 if kind in {"close_ad", "allow"} else DEFAULT_TIMEOUT
     try:
-        timeout = float(raw.get("timeout") or DEFAULT_TIMEOUT)
+        timeout = float(raw.get("timeout") or mac_dinh)
     except (TypeError, ValueError):
         return None, [f"{where}: `timeout` phải là số, đang là {raw.get('timeout')!r}."]
 

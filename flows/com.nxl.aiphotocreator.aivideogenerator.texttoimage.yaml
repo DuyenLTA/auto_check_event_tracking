@@ -1,45 +1,55 @@
 package: com.nxl.aiphotocreator.aivideogenerator.texttoimage
 cases:
 # Happy case cua widget_view: mo app -> qua onboarding -> popup Add Widget hien.
-# Moi buoc quang cao deu `optional`: splash ad, interstitial va paywall luc co
-# luc khong (ad capping). Khong danh dau tuy chon thi happy case vo moi lan
-# quang cao doi y - da gap ca hai kieu trong hai lan chay lien tiep.
+# `close_ad` tu tim nut dong (Skip Ad / dismiss-button / Close Billing Screen...)
+# thay vi ghi cung mot resource_id: app nay co it nhat 3 kieu quang cao chan
+# duong, moi kieu mot nut khac nhau, va kieu nao hien thi cung khong chac.
 - event: widget_view
   label: popup Add Widget sau paywall
   steps:
   - kind: launch
-  - kind: wait_text
-    text: Skip Ad
+  # Android 13+ hoi quyen thong bao ngay lan mo dau - dialog he thong nam de
+  # tren app nen khong bam Cho phep thi moi selector sau deu khong thay gi.
+  - kind: allow
+    timeout: 15
+  # Splash ad mat 5-8s moi ra nut Skip -> phai cho, khong kiem mot lan roi thoi.
+  - kind: close_ad
     timeout: 25
-    optional: true
-  - kind: tap
-    resource_id: txtSkipAd
-    index: 0
-    optional: true
-  - kind: wait
-    seconds: 3.0
+  - kind: allow
+    timeout: 5
+  # Chu tren man cau hoi KHAC nhau giua lan dau ("Which style fits your
+  # vision?") va nhung lan sau ("Welcome back!..."), nen lay ten the lam moc -
+  # no giong nhau ca hai lan.
+
+  # --- CHUA XONG (18/09): app quay lai man Choose Language sau moi lan relaunch
+  # cho toi khi di het onboarding toi home. Mai them cac buoc `optional: true`
+  # duoi day vao dung sau `close_ad` splash, da do tay ca roi:
+  #   tap rootLanguageItem index=1        (English - chi mo rong danh sach con)
+  #   tap text "English (US)"             (phai chon ca BIEN THE moi tinh)
+  #   tap imageButtonLanguageNext         (dau tich goc phai)
+  #   tap btnNextOnboarding  x3, cach nhau ~3s
+  - kind: wait_text
+    text: Glow Up Style
+    timeout: 25
   - kind: tap
     resource_id: borderContainer
     index: 0
   - kind: tap
     resource_id: btnNextQuestion
     index: 0
-  - kind: tap
-    resource_id: dismiss-button
-    index: 0
-    optional: true
-  - kind: tap
-    desc: Close Billing Screen
-    index: 0
-    optional: true
+  # Interstitial: lúc co lúc khong, cho toi 20s roi di tiep neu khong co.
+  - kind: close_ad
+    timeout: 20
+  # Paywall cung vay.
+  - kind: close_ad
+    timeout: 15
   - kind: wait_text
     text: Add Widget
     timeout: 25
 
-# Case nay CHAY TIEP tren man cua case tren (`relaunch: false`), khong mo lai app.
-# Ly do: popup Add Widget chi hien MOT LAN moi luot mo app - mo lai la mat popup,
-# va widget_click khong bao gio lai toi duoc. Da do that: hai lan chay lien tiep
-# ra ket qua nguoc nhau vi ly do nay.
+# Case nay CHAY TIEP tren man cua case tren (`relaunch: false`), khong mo lai app:
+# popup Add Widget chi hien MOT LAN moi luot mo app. Ca luot chi ton dung mot
+# lan khoi dong app cho ca hai event.
 - event: widget_click
   label: bam Add Widget Now
   reset:

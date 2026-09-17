@@ -21,6 +21,8 @@ import json
 import sys
 from pathlib import Path
 
+from .ad_close import tim_nut_dong
+from .quyen_he_thong import tim_nut_cho_phep
 from .adb_parsers import AdbError
 from .cli_device import CliError, make_client, pick_serial
 from .density import ScreenMetrics
@@ -82,6 +84,28 @@ async def lam(args) -> tuple[int, list[dict]]:
     if args.lenh == "wait":            # cho cung, khong dong vao may
         return 0, [{"kind": "wait", "seconds": args.giay}]
 
+    if args.lenh == "allow":
+        node = tim_nut_cho_phep(await _nodes(adb, serial))
+        if node is None:
+            say("Không thấy dialog quyền nào.")
+        else:
+            box = node.bounds_px
+            await adb.input_tap(serial, (box.left + box.right) / 2,
+                                (box.top + box.bottom) / 2)
+            say(f"Đã cấp quyền bằng {node.label}")
+        return 0, [{"kind": "allow"}]
+
+    if args.lenh == "close-ad":
+        node = tim_nut_dong(await _nodes(adb, serial))
+        if node is None:
+            say("Không thấy nút đóng quảng cáo nào — màn đang sạch.")
+        else:
+            box = node.bounds_px
+            await adb.input_tap(serial, (box.left + box.right) / 2,
+                                (box.top + box.bottom) / 2)
+            say(f"Đã đóng quảng cáo bằng {node.label}")
+        return 0, [{"kind": "close_ad"}]
+
     if args.lenh == "wait-text":
         return 0, [_them_tuy_chon({"kind": "wait_text", "text": args.chu,
                                    "timeout": args.timeout}, args)]
@@ -114,8 +138,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--index", type=int, default=0,
                         help="node thứ mấy trong số các node khớp")
     parser.add_argument("lenh", choices=["dump", "tap", "swipe", "back", "launch",
-                                         "type", "wait", "wait-text", "show",
-                                         "save", "drop"])
+                                         "type", "wait", "wait-text", "close-ad", "allow",
+                                         "show", "save", "drop"])
     parser.add_argument("giay_hoac_chu", nargs="?", default="")
     parser.add_argument("--huong", default="up", help="swipe: up|down|left|right")
     parser.add_argument("--timeout", type=float, default=10.0)

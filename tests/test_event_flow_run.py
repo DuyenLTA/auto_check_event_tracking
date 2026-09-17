@@ -274,10 +274,10 @@ def test_bam_xong_thi_cay_cu_bi_bo(recording):
 def test_wait_text_dem_bang_dong_ho_that_khong_tru_dan_theo_POLL(recording, monkeypatch):
     """Mot vong cho ton (dump 2.2s + POLL) nhung code cu chi tru POLL, nen
     `timeout: 25` chay ~390 giay that. Da lam mot luot cham ton 611s."""
-    from usv import event_flow_run
+    from usv import flow_screen
 
     dong_ho = {"t": 0.0}
-    monkeypatch.setattr(event_flow_run.time, "monotonic", lambda: dong_ho["t"])
+    monkeypatch.setattr(flow_screen.time, "monotonic", lambda: dong_ho["t"])
 
     client = FakeClient()
 
@@ -286,8 +286,29 @@ def test_wait_text_dem_bang_dong_ho_that_khong_tru_dan_theo_POLL(recording, monk
         return DUMP
 
     client.dump_ui = dump_cham
-    thay = run(event_flow_run._wait_text(client, "S1", METRICS,
+    thay = run(flow_screen.wait_text(client, "S1", METRICS,
                                          "chu-khong-bao-gio-co", 10))
     assert thay is False
     # Cho 10s thi duoc phep tieu toi da 10s + mot lan dump dang do.
     assert dong_ho["t"] <= 10 + 2.2 * 2, dong_ho
+
+
+def test_close_ad_bam_dung_nut_dong_va_cho_man_lang(recording, monkeypatch):
+    client = FakeClient()
+    case = _case(steps=(Step(kind="close_ad"),))
+    monkeypatch.setattr("usv.event_flow_run.tim_nut_dong",
+                        lambda nodes: nodes[-1])
+    result = run(run_case(client, "S1", METRICS, "com.x", recording, case))
+    assert result.status == "ok"
+    assert client.taps == 1
+
+
+def test_close_ad_man_sach_thi_di_tiep_khong_bao_loi(recording):
+    """Khong co quang cao chan duong la truong hop binh thuong nhat - bao loi
+    o day la moi flow deu vo khi quang cao khong hien."""
+    client = FakeClient()
+    case = _case(steps=(Step(kind="close_ad"),
+                        Step(kind="tap", selector=Selector(resource_id="btnHome"))))
+    result = run(run_case(client, "S1", METRICS, "com.x", recording, case))
+    assert result.status == "ok"
+    assert result.steps_done == 2
