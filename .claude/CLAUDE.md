@@ -11,6 +11,7 @@ Tài liệu cho Claude Code khi làm việc trong repo này. Cập nhật tay kh
 | `flows/README.md` | Format file flow YAML — đường đi để lái app |
 | `.claude/workflows/triage-event-fail.js` | Fan-out agent soi nguyên nhân từng dòng FAIL |
 | `.claude/workflows/spec-to-cases.js` | Sinh khung case từ trang spec + dò bước bấm trên máy thật |
+| `.claude/commands/check-event.md` | Slash command `/check-event <pkg> <link spec>`: chạy cả lượt, publish artifact |
 
 ## Lệnh hay dùng
 
@@ -22,6 +23,18 @@ usv-cases dump "<link Confluence>"                  # spec -> text cho agent doc
 usv-cases check out/cases.json --url "<link>"       # doi chieu case voi bang spec
 PYTHONPATH=src .venv/bin/python -m pytest -q        # test (hiện 678 passed)
 ```
+
+## Slash command
+
+`.claude/commands/check-event.md` là bản nguồn, version cùng tool. Claude Code chỉ
+đọc `~/.claude/commands/`, nên máy mới phải nối vào đó một lần:
+
+```bash
+ln -sf "$PWD/.claude/commands/check-event.md" ~/.claude/commands/check-event.md
+```
+
+Symlink chứ không copy: sửa command trong repo là máy dùng ngay, không phải copy lại
+rồi quên mất bản nào mới hơn. Command mới chỉ hiện ở **phiên Claude Code mới**.
 
 ## Trạng thái git (18/09/2026)
 
