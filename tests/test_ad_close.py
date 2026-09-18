@@ -117,3 +117,50 @@ def test_khong_co_dialog_quyen_thi_tra_None():
     from usv.quyen_he_thong import tim_nut_cho_phep
 
     assert tim_nut_cho_phep(_man(_node(rid="com.x:id/btnHome", text="Home"))) is None
+
+
+# --- mau mo ho: "Close" mot chu ---
+
+def _man_long(khung_rid: str, con: str) -> list:
+    """Man co mot khung `khung_rid` boc `con`, canh mot native ad ROI RA."""
+    xml = ("<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>"
+           "<hierarchy rotation=\"0\"><node index=\"0\" text=\"\" resource-id=\"\""
+           " class=\"a.b.FrameLayout\" package=\"com.x\" content-desc=\"\""
+           " clickable=\"false\" enabled=\"true\" visible-to-user=\"true\""
+           " bounds=\"[0,0][1080,2400]\">"
+           f"<node index=\"0\" text=\"\" resource-id=\"{khung_rid}\""
+           " class=\"a.b.FrameLayout\" package=\"com.x\" content-desc=\"\""
+           " clickable=\"false\" enabled=\"true\" visible-to-user=\"true\""
+           f" bounds=\"[0,600][1080,1400]\">{con}</node>"
+           "<node index=\"1\" text=\"\" resource-id=\"com.x:id/nativeAdView\""
+           " class=\"a.b.FrameLayout\" package=\"com.x\" content-desc=\"\""
+           " clickable=\"false\" enabled=\"true\" visible-to-user=\"true\""
+           " bounds=\"[0,1440][1080,2400]\">"
+           "<node index=\"0\" text=\"Ad\" resource-id=\"com.x:id/txtAds\""
+           " class=\"a.b.TextView\" package=\"com.x\" content-desc=\"\""
+           " clickable=\"false\" enabled=\"true\" visible-to-user=\"true\""
+           " bounds=\"[39,1487][102,1539]\" /></node>"
+           "</node></hierarchy>")
+    return parse_dump(xml, METRICS)
+
+
+def test_khong_dong_popup_CUA_APP_du_no_ghi_Close():
+    """Popup Add Widget co content-desc='Close' y het nut dong quang cao. Dong
+    nham no thi event vua ban xong bi tat man, buoc cho sau do bao 'Chua test'
+    - hong ma trong nhu app thieu event. Native ad o duoi man khong lien quan."""
+    nodes = _man_long("com.x:id/widgetPopupContainer",
+                      _node(desc="Close") + _node(text="Add Widget"))
+    assert tim_nut_dong(nodes) is None
+
+
+def test_nut_Close_NAM_TRONG_khung_quang_cao_thi_dong():
+    nodes = _man_long("com.x:id/nativeAdView2", _node(desc="Close"))
+    node = tim_nut_dong(nodes)
+    assert node is not None and node.content_desc == "Close"
+
+
+def test_paywall_van_dong_duoc_du_khong_co_khung_ads():
+    """'Close Billing Screen' la mau CHAC - paywall khong boc trong khung ads
+    nao, chan no lai thi flow khong bao gio vao duoc man home."""
+    node = tim_nut_dong(_man(_node(desc="Close Billing Screen")))
+    assert node is not None

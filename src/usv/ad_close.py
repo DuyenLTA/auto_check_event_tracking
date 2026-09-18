@@ -14,6 +14,20 @@ chac chan nhat truoc.
 
 KHONG nhan mau "x" mot chu: no khop ca `boxTitle`, `checkbox`, `pixel`... va bam
 nham vao mot cai gi do trong app la hong ca case ma khong ai biet.
+
+HAI BAC MAU, va vi sao phai tach:
+
+1. Mau CHAC - chi quang cao moi dat ten the nay: `dismiss-button`, `txtSkipAd`,
+   "Close Billing Screen". Thay la dong, khong hoi gi them.
+
+2. Mau MO HO - dung mot chu "Close" / "Đóng" / "Dismiss". Popup cua CHINH APP
+   cung dat y het the: da do tren may that, popup Add Widget co
+   `content-desc="Close"`. Dong nham no thi event vua ban ra xong bi tat man,
+   buoc `wait_text` sau do nhin vao man trong va bao "Chua test" - hong ma
+   trong nhu app thieu event. Nen mau mo ho CHI duoc dong khi node nam TRONG
+   khung quang cao (xet to tien, khong xet ca man): mot native ad nam chung
+   man voi popup la chuyen binh thuong, co mat no khong bien nut X cua app
+   thanh nut X cua quang cao.
 """
 
 from __future__ import annotations
@@ -22,15 +36,36 @@ from .models import DeviceNode
 
 # Uu tien tu tren xuong: resource_id ben nhat, roi desc, cuoi cung moi den chu
 # hien tren man (vo khi doi ngon ngu).
-MAU_ID = ("dismiss-button", "interstitial_close", "ad_close", "btnclose",
-          "ivclose", "img_close", "close_button", "btnskip", "txtskipad")
-MAU_DESC = ("close", "dismiss", "skip ad", "đóng")
-MAU_TEXT = ("skip ad", "close", "đóng", "bỏ qua")
+MAU_ID = ("dismiss-button", "interstitial_close", "ad_close", "btnskip",
+          "txtskipad")
+MAU_DESC = ("close billing", "close ad", "skip ad", "dismiss ad")
+MAU_TEXT = ("skip ad", "bỏ qua", "close ad")
+
+# Mau mo ho: app dung y het the cho popup cua no. Xem docstring.
+MAU_MO_HO = ("close", "đóng", "dismiss", "btnclose", "ivclose", "img_close",
+             "close_button")
+# Khung quang cao: to tien phai la mot trong so nay thi mau mo ho moi tinh.
+MAU_KHUNG_ADS = ("nativead", "adview", "ad_media", "ad_container",
+                 "adcontainer", "ad_frame", "interstitial", "ad_overlay")
 
 
 def _khop(gia_tri: str, mau: tuple[str, ...]) -> bool:
     thap = gia_tri.strip().casefold()
     return bool(thap) and any(m in thap for m in mau)
+
+
+def _trong_khung_ads(node: DeviceNode, theo_id: dict[str, DeviceNode]) -> bool:
+    """Node co to tien nao la khung quang cao khong.
+
+    Xet to tien chu khong xet ca man: home cua app nao cung co the co mot
+    native ad o duoi, ma no khong lien quan gi toi cai popup dang che giua man.
+    """
+    cha = theo_id.get(node.parent_id or "")
+    while cha is not None:
+        if _khop(cha.resource_id, MAU_KHUNG_ADS):
+            return True
+        cha = theo_id.get(cha.parent_id or "")
+    return False
 
 
 def tim_nut_dong(nodes: list[DeviceNode]) -> DeviceNode | None:
@@ -45,5 +80,15 @@ def tim_nut_dong(nodes: list[DeviceNode]) -> DeviceNode | None:
                      (MAU_TEXT, lambda n: n.text)):
         for node in dung_duoc:
             if _khop(lay(node), mau):
+                return node
+
+    # Het mau chac moi den mau mo ho, va chi trong khung quang cao.
+    theo_id = {n.node_id: n for n in nodes}
+    for node in dung_duoc:
+        if not _trong_khung_ads(node, theo_id):
+            continue
+        for lay in (lambda n: n.resource_id, lambda n: n.content_desc,
+                    lambda n: n.text):
+            if _khop(lay(node), MAU_MO_HO):
                 return node
     return None
