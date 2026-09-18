@@ -255,6 +255,63 @@ Chạy bằng Claude Code: `.claude/workflows/triage-event-fail.js` — fan-out 
 agent mỗi dòng lỗi, mỗi kết luận có 2 agent độc lập thử bác bỏ, quá bán mới
 được ghi.
 
+## Sinh khung case từ trang spec (tuỳ chọn)
+
+Bảng Event tracking chỉ nói event **tên gì**. Điều kiện để nó bắn — "từ session 2
+trở đi", "hiện 1 lần/1 session", "không hiện lại khi user đã bấm rate" — nằm ở
+mục Requirements dưới dạng văn xuôi, và ở bảng Remote Key. Bỏ qua chúng thì case
+thiếu tiền đề, và lượt chạy báo `Chưa test` hàng loạt mà không ai biết vì sao.
+
+Đọc văn xuôi là việc của **agent**; đối chiếu lại với bảng là việc của Python:
+
+```bash
+usv-cases dump "<link Confluence>"
+usv-cases check out/cases.json --url "<link>"
+```
+
+Chưa `pip install -e .` thì gọi thẳng module:
+`PYTHONPATH=src .venv/bin/python -m usv.spec_cases_cli dump "<link>"`.
+
+`dump` đổ trang ra text (đã tách mục, bảng thành TSV, ô gộp không làm lệch cột).
+`check` trả exit code 0/1 — agent tự đọc kết luận của mình thì lúc nào cũng thấy
+mình đúng, nên chốt chặn phải là con số.
+
+Ba thứ `check` chặn được:
+
+| Chặn | Vì sao |
+|---|---|
+| Event / param / giá trị không có trong bảng spec | Agent đọc nhầm mục khác của trang là sinh ra event không tồn tại |
+| `burns_popup` mà `reset` chưa phải `pm_clear` | Spec nói đã bấm rate là popup tắt vĩnh viễn; `relaunch` không gỡ được, các case sau `Chưa test` im lặng |
+| Remote key không có trong trang | Case đặt tiền đề lên một key không tồn tại thì tiền đề đó không bao giờ thành |
+| Đổi remote config mà `reset` là `none` | App chỉ đọc giá trị mới lúc process start — không mở lại thì case chạy trên giá trị cũ, sai im lặng |
+| `reset: none` mà không khai `sau` | Case chạy tiếp trạng thái case trước để lại; không khai thì thứ tự chạy nằm ở thứ tự dòng trong file, đổi chỗ hai dòng là case chạy trên màn khác rồi báo `Chưa test` — hỏng mà không báo lỗi |
+| `sau` trỏ tới id không có, trỏ vào chính nó, hoặc tạo vòng tròn | Dây case không chạy được nhưng vẫn trông hợp lệ |
+| Giá trị spec khai mà không case nào phủ | In ra **Bỏ sót**, kể cả khi rỗng — soi 3/15 mà im thì báo cáo trông như đã soi hết |
+
+Thứ tự chạy **suy ra từ chuỗi `sau`**, không lấy theo thứ tự dòng — `check` in ra
+dây đã sắp xếp. Case độc lập giữ nguyên thứ tự xuất hiện cho dễ đọc diff.
+
+`remote_config` trong case là **tiền đề**, không phải thứ đem đi kiểm — dùng khi
+trang nói rõ một vị trí bị remote key chặn. Đừng với tay tới nó khi một thao tác
+trên màn hình đã đủ: đo trên máy thật, popup ở `home` tự hiện, tap **ra ngoài**
+cho nó tắt rồi bấm back thì popup ở `exit_click` hiện ra — một phiên ghi, hai
+cửa sổ, không đổi cấu hình gì.
+
+Đo trên máy thật (Pixel 4, `ai.photogenerator.aivideo.aivideogenerator.aiart`
+3.1.0), vì nó quyết định `reset` của cả nhóm case: `rating_star_clicked` bắn
+**ngay khi chạm sao**, không đợi bấm RATE. Chạm đủ 5 sao trong **một** popup thì
+ra đủ 5 giá trị `star_value`, popup vẫn còn, và phiên sau popup vẫn lên — tức
+nhóm star **không cần `pm_clear`**. Chỉ nút **RATE** mới tắt popup vĩnh viễn
+(spec: *"Không hiện pop-up rating khi user đã bấm rate"*), nên flow phải chạm
+sao rồi dừng, đừng bấm RATE.
+
+Khung case **không chứa `steps`**. Spec không nói nút Continue nằm ở đâu; bước bấm
+phải dò trên máy thật mới biết. Chạy cả hai bước bằng workflow:
+`.claude/workflows/spec-to-cases.js`.
+
+Trang spec thường là tài liệu **SDK dùng chung** cho nhiều app, nên khung case
+sinh ra xài lại được cho mọi app dùng SDK đó — chỉ `steps` mới riêng từng app.
+
 ## Cấu hình
 
 `config/event-check-rules.yaml` — bật/tắt từng check. Sửa xong có hiệu lực ngay, không phải khởi động lại.
