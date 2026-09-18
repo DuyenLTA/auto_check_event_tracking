@@ -17,17 +17,51 @@ cases:
     timeout: 25
   - kind: allow
     timeout: 5
+  # Man Choose Language hien lai sau MOI lan relaunch cho toi khi di het
+  # onboarding. Ca nhom duoi day `optional: true`: luot sau da qua onboarding
+  # thi may man nay khong hien nua, khong tim thay node khong phai lai hut.
+  - kind: tap
+    resource_id: rootLanguageItem
+    index: 1
+    optional: true
+  # Bam English chi MO RONG danh sach con - phai bam them bien the moi duoc
+  # tinh la da chon. Khoa theo chu vi bien the khong co resource_id rieng.
+  - kind: tap
+    text: English (US)
+    optional: true
+  - kind: tap
+    resource_id: imageButtonLanguageNext
+    optional: true
+  # Onboarding co BON trang (dem `indicatorPageOnboarding`: 4 dot), khong phai
+  # ba. Ca bon trang dung chung mot id `btnNextOnboarding`, trang cuoi chi doi
+  # chu thanh "Get Started" - nen bam id bon lan la di het.
+  # Cho truoc khi bam phat dau: bam ngay sau man ngon ngu thi trang 1 chua kip
+  # layout, buoc bi bo qua va con lai khong du so lan bam.
+  - kind: wait
+    seconds: 3
+  - kind: tap
+    resource_id: btnNextOnboarding
+    optional: true
+  - kind: wait
+    seconds: 3
+  - kind: tap
+    resource_id: btnNextOnboarding
+    optional: true
+  - kind: wait
+    seconds: 3
+  - kind: tap
+    resource_id: btnNextOnboarding
+    optional: true
+  - kind: wait
+    seconds: 3
+  - kind: tap
+    resource_id: btnNextOnboarding
+    optional: true
+  - kind: wait
+    seconds: 3
   # Chu tren man cau hoi KHAC nhau giua lan dau ("Which style fits your
   # vision?") va nhung lan sau ("Welcome back!..."), nen lay ten the lam moc -
   # no giong nhau ca hai lan.
-
-  # --- CHUA XONG (18/09): app quay lai man Choose Language sau moi lan relaunch
-  # cho toi khi di het onboarding toi home. Mai them cac buoc `optional: true`
-  # duoi day vao dung sau `close_ad` splash, da do tay ca roi:
-  #   tap rootLanguageItem index=1        (English - chi mo rong danh sach con)
-  #   tap text "English (US)"             (phai chon ca BIEN THE moi tinh)
-  #   tap imageButtonLanguageNext         (dau tich goc phai)
-  #   tap btnNextOnboarding  x3, cach nhau ~3s
   - kind: wait_text
     text: Glow Up Style
     timeout: 25
