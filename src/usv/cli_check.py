@@ -96,8 +96,16 @@ async def check(*, spec: SpecSheet, package: str, flow: Flow | None, adb,
 
     # start() tu goi enable_fa TRUOC khi mo lai app - thu tu do la bat buoc,
     # setprop chi an tu lan app khoi dong sau no.
+    #
+    # Flow nao co step `launch` thi CHINH NO mo app, va mo SAU khi chen moc.
+    # Mo them o day la mo TRUOC moc: event kieu "1 lan/session" ban o luot mo
+    # nay thi no nam ngoai cua so, va case bao "khong ban" - FAIL oan. Ke ca
+    # khong oan thi cung ton them mot luot splash ad cho moi lan mo.
+    tu_mo = flow is not None and any(
+        step.kind == "launch" for case in flow.cases for step in case.steps)
     try:
-        recording = await logcat_stream.start(adb, serial, package)
+        recording = await logcat_stream.start(adb, serial, package,
+                                              from_launch=not tu_mo)
     except AdbError as exc:
         raise CliError(str(exc)) from exc
     await lay_mau_app(adb, recording)

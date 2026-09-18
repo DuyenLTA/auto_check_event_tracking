@@ -40,10 +40,19 @@ async def prepare(client, serial: str, package: str,
         if applied.mirrors:
             notes.append("prefs mirror đã sửa: " + ", ".join(sorted(applied.mirrors)))
 
-    if reset.relaunch:
+    # Case tu mo app bang step `launch` thi o day KHONG mo lai: mo lai o day la
+    # mo truoc moc, con step chay sau moc. Hai lan mo lien tiep thi event kieu
+    # "1 lan/session" chay o lan dau va khong lap lai o lan sau -> cua so trong,
+    # bao "khong ban" trong khi log co - FAIL oan.
+    # Co `remote_config` / `clear_prefs` thi VAN phai mo lai o day: app chi doc
+    # gia tri moi luc process start, va buoc verify ngay duoi doc lai sau do.
+    tu_mo = any(step.kind == "launch" for step in case.steps)
+    if reset.relaunch and not (tu_mo and reset.empty):
         await client.force_stop(serial, package)
         await client.launch(serial, package)
         await asyncio.sleep(LAUNCH_SETTLE)
+    elif tu_mo:
+        notes.append("bỏ lần mở lại của reset — case tự mở bằng step `launch`")
 
     if reset.remote_config:
         # Doc lai SAU khi mo lai app: build dev dat minimumFetchInterval = 0 thi

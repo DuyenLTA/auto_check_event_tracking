@@ -390,3 +390,26 @@ def test_case_hut_vi_man_khoa_thi_noi_thang_ly_do(adb, tmp_path, monkeypatch):
     payload = _run(adb, SPEC_TSV, _flow(hong), tmp_path)
     assert "khoá" in payload["cases"][0]["reason"], payload["cases"][0]
     assert payload["fail"] == 0
+
+
+def test_flow_tu_mo_app_thi_KHONG_mo_them_mot_lan_truoc_moc(adb, tmp_path):
+    """Moc chen sau reset, truoc step. Mo app truoc moc thi event kieu
+    "1 lan/session" ban o luot mo do - ngoai cua so - va case bao "khong ban"
+    trong khi log co: FAIL oan. Flow co step `launch` thi chi duoc mo MOT lan,
+    va lan do phai nam sau moc."""
+    case = FlowCase(event="rating_placement_viewed", name="tai home",
+                    steps=(Step(kind="launch"),
+                           Step(kind="tap",
+                                selector=Selector(resource_id="btnHome"))))
+    _run(adb, SPEC_TSV, _flow(case), tmp_path)
+    assert adb.calls.count("force_stop") == 1, adb.calls
+    # setprop van phai dung truoc lan mo duy nhat do.
+    assert adb.calls.index("setprop") < adb.calls.index("force_stop"), adb.calls
+
+
+def test_case_khong_co_step_launch_thi_van_duoc_mo_lai(adb, tmp_path):
+    """Case lai tiep tren man cua case truoc (`relaunch: false`) la truong hop
+    khac; con case thuong khong tu mo thi reset phai mo ho, khong thi app dang
+    o man nao thi chay tu man do."""
+    _run(adb, SPEC_TSV, _flow(_case("rating_placement_viewed")), tmp_path)
+    assert adb.calls.count("force_stop") >= 1, adb.calls
