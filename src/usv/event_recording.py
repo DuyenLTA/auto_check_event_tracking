@@ -26,6 +26,15 @@ class Recording:
     lines: list[str] = field(default_factory=list)
     marks: list[str] = field(default_factory=list)
     process: object | None = None
+    # AdbClient cua phien, de vong doc stream chup duoc man hinh ngay khi mot
+    # event trong spec ban ra. Xem event_shot.
+    client: object | None = None
+    shots: list = field(default_factory=list)
+    shot_dir: str = ""
+    # Ten event trong spec - chi chup cho chung. Chup cho moi event thi mot lan
+    # mo app la ~40 tam, phan lon la ad_load.
+    watch_events: frozenset = field(default_factory=frozenset)
+    shot_busy: bool = False
     reader: object | None = None      # asyncio.Task doc stream lien tuc
     stopped: bool = False
     # Stream chet TRUOC khi ai bam Dung: rut may, USB ngu, mat authorize.

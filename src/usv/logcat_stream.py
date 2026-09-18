@@ -21,6 +21,7 @@ import logging
 
 from .adb_logcat import FA_TAG, MARK_TAG
 from .adb_parsers import AdbError
+from . import event_shot
 from .event_recording import Recording
 
 log = logging.getLogger(__name__)
@@ -51,7 +52,9 @@ async def enable_fa(client, serial: str) -> bool:
 
 
 async def start(client, serial: str, package: str, *,
-                from_launch: bool = True) -> Recording:
+                from_launch: bool = True,
+                watch_events: frozenset | None = None,
+                shot_dir: str = "") -> Recording:
     """Bat dau ghi. Thu tu QUAN TRONG, khong doi duoc.
 
     1. setprop  - phai truoc khi app start, property doc luc process start
@@ -62,7 +65,9 @@ async def start(client, serial: str, package: str, *,
     await enable_fa(client, serial)
     await client.logcat_clear(serial)
     process = await client.logcat_spawn(serial, TAGS)
-    recording = Recording(serial=serial, package=package, process=process)
+    recording = Recording(serial=serial, package=package, process=process,
+                          client=client, shot_dir=shot_dir,
+                          watch_events=watch_events or frozenset())
     # Bat doc NGAY, truoc khi mo app: khong thi event dau tien (first_open,
     # session_start) ban ra ma chua ai doc.
     recording.reader = asyncio.create_task(_pump(recording))
@@ -134,7 +139,12 @@ async def _pump(recording: Recording) -> None:
                         "Stream logcat dut truoc khi Dung ghi - chi doc duoc "
                         "%d dong.", len(recording.lines))
                 return
-            recording.lines.append(raw.decode("utf-8", "replace").rstrip("\n"))
+            line = raw.decode("utf-8", "replace").rstrip("\n")
+            recording.lines.append(line)
+            if recording.watch_events and recording.client is not None:
+                # Tao task roi tra ve ngay - xem chup_neu_can, chan vong doc
+                # 0.65s la du lam day pipe 64KB va mat log am tham.
+                await event_shot.chup_neu_can(recording.client, recording, line)
     except asyncio.CancelledError:
         raise
     except Exception as exc:       # noqa: BLE001 - doc log hong khong duoc lam sap phien
