@@ -1,7 +1,7 @@
 ---
 phase: 7
 title: "Driver tự động lái app theo flow"
-status: in-progress
+status: completed
 priority: P2
 effort: "8h"
 dependencies: [6]
@@ -86,12 +86,14 @@ giá trị cho phép, tester chỉ điền `steps`.
 6. Test cần máy → `@pytest.mark.device`.
 
 ## Success Criteria
-- [ ] Flow YAML chạy được tuần tự nhiều case, mỗi case một cửa sổ
-- [ ] Step thất bại ra `NOT_TESTED` kèm lý do, không phải `FAIL`
-- [ ] Selector không thấy → lỗi kèm gợi ý node gần giống
-- [ ] Cảnh báo khi flow dùng `tap_text`
-- [ ] `pytest -m "not device"` xanh khi rút cáp
-- [ ] Không thêm dependency. Cả 4 file mới <200 LOC
+- [x] Flow YAML chạy được tuần tự nhiều case, mỗi case một cửa sổ — `flow_yaml.py`;
+  đo trên máy thật 18/09: 2 case, 2 event, cùng một lần mở app
+- [x] Step thất bại ra `NOT_TESTED` kèm lý do, không phải `FAIL` — 4 lượt hỏng đầu
+      đều ra `Chưa test` kèm tên step chết và số giây đã chờ
+- [x] Selector không thấy → lỗi kèm gợi ý node gần giống (`difflib` trong `device_actions`)
+- [x] Cảnh báo khi flow dùng `tap_text` — `FlowCase.fragile_steps`, không chặn
+- [x] `pytest -m "not device"` xanh khi rút cáp — 678 test
+- [x] Không thêm dependency. Mọi module mới <200 LOC
 
 ## Risk Assessment
 - **Popup rating bị chặn tần suất — RỦI RO LỚN NHẤT CỦA PHASE NÀY.** Rating thường
@@ -208,11 +210,58 @@ case đòi hỏi, không có thì rơi về danh sách cho phép của spec. Tes
 ### Test
 +24 (12 selector trên dump thật, 12 runner). Tổng **262**, xanh khi không cắm máy.
 
-## Còn lại — chờ file test case của user
+## Xong (18/09/2026)
 
-**Chưa viết `event_flow_parse`.** Đây là phần duy nhất phụ thuộc định dạng file. `Flow`
-dựng được từ Python nên runner dùng được ngay; khi file của user tới thì chỉ viết parser
-khớp đúng định dạng đó, không phải sửa gì khác.
+Parser đã viết, tên khác kế hoạch: **`flow_yaml.py`** (+ `flow_yaml_write.py` để
+`usv-record` ghi ngược ra YAML), không phải `event_flow_parse.py`. Nó **gom hết lỗi**
+thay vì dừng ở dòng sai đầu tiên — sửa một dòng rồi chạy lại để gặp dòng sai tiếp theo
+là vòng lặp vô nghĩa. `FlowError` chỉ dành cho trường hợp cả file không đọc được.
 
 User nói không cần lo chuyện 5 sao không hiện lại — tiền đề đó họ tự lo, nên không xây
 thêm gì quanh `clear_prefs`.
+
+### Lượt chấm thật đầu tiên — 7 lượt, 4 lỗi phải sửa
+
+App `com.nxl.aiphotocreator.aivideogenerator.texttoimage` 2.1.0 (14), Pixel 7
+(`29301FDH2006K7`), spec = trang SDK Widget (`widget_view`, `widget_click`).
+Kết quả: **2/2 khớp**, artifact `2mkNh33qpZrNk9tVgKHjia`.
+
+| Lượt | Kết quả | Lỗi tìm ra |
+|---|---|---|
+| 1 | 0/0/2 | flow thiếu hẳn onboarding — app quay lại Choose Language sau mỗi relaunch |
+| 2 | 0/0/2 | onboarding **4** trang (đếm `indicatorPageOnboarding`), không phải 3; và bấm ngay sau màn ngôn ngữ thì trang 1 chưa kịp layout |
+| 3 | 0/0/2 | `close_ad` bấm luôn `desc='Close'` của popup Add Widget → event bắn xong popup bị tắt, `wait_text` nhìn màn trống |
+| 4 | **2/2** | — |
+| 5 | 2/2 | ảnh "sau bước cuối" chụp giữa animation; 3 ảnh trùng byte |
+| 6 | 0/0/2 | paywall lên **sau** khi hai bước `close_ad` hết hạn chờ |
+| 7 | **2/2** | — (chạy từ đúng trạng thái xấu của lượt 6) |
+
+### Bốn bản sửa, và bài học chung của chúng
+
+1. **`ad_close` tách hai bậc mẫu** (`10eb622`). Mẫu chắc (`dismiss-button`,
+   `txtSkipAd`, `"Close Billing Screen"`) đóng ngay; mẫu mơ hồ (`"close"`, `"đóng"`,
+   `btnClose`, `ivClose`) chỉ đóng khi node có **tổ tiên** là khung quảng cáo. Xét tổ
+   tiên chứ không xét cả màn: home app nào cũng có thể có native ad ở dưới.
+2. **Mở app đúng một lần, sau mốc** (`2a861db`). Ba tầng cùng force-stop + launch:
+   `logcat_stream.start`, `reset.relaunch` (mặc định `True`), và step `launch`. Mốc chèn
+   **sau** reset nên hai lần mở đầu nằm ngoài cửa sổ — với event "1 lần/session" thì
+   event cháy ở đó và case báo "không bắn": **FAIL oan**, không phải `Chưa test`.
+3. **`wait_text` tự dọn màn chắn** (`4ae2ee0`). Màn chắn lên sau khi `close_ad` hết hạn
+   chờ thì ghim thêm một `close_ad` chỉ đẩy vấn đề xuống dưới. Vòng chờ đã poll cây UI
+   rồi, nên thấy nút đóng **bậc chắc** thì bấm, gia hạn thêm `timeout`, tối đa 3 màn.
+   Chỉ bậc chắc: màn đang chờ có nút `Close` của chính nó.
+4. **Ảnh bằng chứng** (`4ae2ee0`). Chờ `SHOT_SETTLE = 1s` trước tấm "sau bước cuối"
+   (bottom sheet hệ thống còn đang bay ra); hai tấm giống hệt từng byte thì giữ một,
+   caption gộp thành "(màn không đổi)".
+
+Bài học chung: **không màn nào trong app này lên đúng giờ.** Mọi bước ghim cứng thứ tự
+và thời gian đều là xúc xắc; chốt chặn phải là "thấy gì thì xử cái đó", không phải
+"đến giây thứ N thì chắc màn X đang hiện".
+
+### Chưa làm
+
+- Dedupe ảnh chỉ xét **trong cùng một case**; hai case liền nhau vẫn giữ 2 bản của cùng
+  một tấm (đo được 212 KB × 2). Xét chéo case thì report phải chỉ "xem tấm ở case trên".
+- Popup Add Widget **không** bị `pm_clear`/`clear_prefs` nào chạm tới trong luồng hiện
+  tại; nó hiện lại được vì widget chưa add (`dumpsys appwidget`: 0 instance). Case nào
+  bấm tới "Thêm vào màn hình chính" thật thì tiền đề cháy — chưa xử.

@@ -1,6 +1,6 @@
 ---
 title: "Auto-verify Event Tracking (Firebase Analytics)"
-status: in-progress
+status: completed
 created: 2026-09-08
 source: plans/reports/from-brainstorm-to-planner-260908-1521-event-tracking-auto-verify-report.md
 blockedBy: []
@@ -26,9 +26,19 @@ ra report pass/fail theo mẫu tool check ID ads. Tab mới trong `ui-spec-verif
 | 4 | Cắt cửa sổ theo marker + chấm check | P1 | completed | [phase-04](phase-04-cat-cua-so-va-cham-check.md) |
 | 5 | Report theo mẫu tool ads | P2 | completed | [phase-05](phase-05-report-theo-mau-tool-ads.md) |
 | 6 | Route + tab web (luồng bấm tay) | P2 | completed | [phase-06](phase-06-route-va-tab-web.md) |
-| 7 | Driver tự động lái app theo flow | P2 | in-progress | [phase-07](phase-07-driver-tu-dong-lai-app.md) |
+| 7 | Driver tự động lái app theo flow | P2 | completed | [phase-07](phase-07-driver-tu-dong-lai-app.md) |
 
 Phụ thuộc tuyến tính 1→2→3→4→5→6→7. Phase 2 và 3 độc lập nhau, chạy song song được.
+
+**Cả 7 phase xong (18/09/2026).** Lượt chấm thật đầu tiên: app texttoimage 2.1.0 trên
+Pixel 7, spec SDK Widget → **2/2 khớp** (artifact `2mkNh33qpZrNk9tVgKHjia`). Mất 7 lượt
+và 4 bản sửa mới ra được — xem cuối [phase-07](phase-07-driver-tu-dong-lai-app.md).
+
+**Làm thêm ngoài kế hoạch**, không phase nào cover: CLI một lệnh (`usv-check`,
+`usv-record`, `usv-artifact`, `usv-cases`) chạy cả lượt không qua web; ghi flow có người
+ngồi xem rồi xuất YAML; ảnh chụp từng case vào report; tự đóng quảng cáo và cấp quyền hệ
+thống; chạy được trên Windows; sinh khung case từ văn xuôi trang spec + `usv-cases check`
+đối chiếu lại bằng exit code.
 
 **Phase 7 thay cái NÚT BẤM marker, không thay tầng check** — script tự chèn `USV_MARK`
 nên phase 1→6 không đổi một dòng. Luồng bấm tay ở phase 6 **vẫn cần** làm fallback:
@@ -68,10 +78,11 @@ nên phase 1→6 không đổi một dòng. Luồng bấm tay ở phase 6 **vẫ
 2. Bảng spec thật có bao nhiêu event/screen — đổi hẳn UX bấm marker
 3. Có app nào global param tự khai không (AIP922 không có)
 4. `NOT_VERIFIABLE` String-vs-Number có gây ồn không — chưa đo được
-5. **Reset giữa các case ở phase 7** — popup rating bị chặn tần suất nên lái tới
-   `home` 4 lần không hiện 4 lần. `pm clear` (mất data/login) hay override Remote
-   Config (đã có kỹ thuật patch `frc_*.json` + throttle)? Phần khó nhất của phase 7,
-   khó hơn chuyện tapping.
+5. ~~**Reset giữa các case ở phase 7**~~ — **đã chốt**: override Remote Config, không
+   `pm clear`. Cài trong `remote_config.py` + `event_flow_reset.py`; app không
+   debuggable thì ra `BLOCKED` kèm cách sửa, không phải FAIL. Đo thêm 18/09: popup
+   Add Widget hiện lại mỗi lần mở app khi widget chưa add, nên nhóm case widget không
+   cần reset gì. Còn chuyện 5 sao rating thì user tự lo tiền đề.
 6. Đổi tên repo/tool khi thêm tab
 
 ---
