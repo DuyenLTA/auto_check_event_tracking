@@ -1,0 +1,199 @@
+package: com.aiprofile.aiheadshot.aiimagegenerator.aiphotogenerator
+cases:
+# Popup rating o HOME chi hien tu session 2 tro di, 1 lan/session, va xep SAU
+# hai popup khac: Add Widget -> Today's Check-In -> rating. Do tay tren Pixel 7
+# (ban 3.5.0): khong dong hai cai truoc thi rating khong bao gio toi luot.
+- event: rating_placement_viewed
+  label: popup rating tai home
+  expect_params:
+    placement_name: home
+  steps:
+  - kind: launch
+  - kind: allow
+    timeout: 15
+  # Splash ad: doi den khi ra duoc nut dong.
+  - kind: close_ad
+    timeout: 30
+  - kind: wait
+    seconds: 3
+  # Man Select Language + onboarding chi hien khi may chua di het onboarding.
+  # Ca nhom `optional: true` de flow chay duoc ca may sach lan may da dung roi.
+  # Bam "English" chi mo rong danh sach con - phai bam them bien the moi tinh.
+  - kind: tap
+    resource_id: rootLanguageItem
+    index: 1
+    optional: true
+  - kind: tap
+    text: English (US)
+    optional: true
+  - kind: tap
+    resource_id: buttonLanguageNext
+    optional: true
+  - kind: wait
+    seconds: 3
+  # Onboarding bon trang (dem `indicatorPageOnboarding`: 4 dot), ca bon dung
+  # chung id, trang cuoi doi chu thanh "Get Started".
+  - kind: tap
+    resource_id: btnNextOnboarding
+    optional: true
+  - kind: wait
+    seconds: 3
+  - kind: tap
+    resource_id: btnNextOnboarding
+    optional: true
+  - kind: wait
+    seconds: 3
+  - kind: tap
+    resource_id: btnNextOnboarding
+    optional: true
+  - kind: wait
+    seconds: 3
+  - kind: tap
+    resource_id: btnNextOnboarding
+    optional: true
+  - kind: wait
+    seconds: 3
+  # Man cau hoi "Choose your vibe": chon mot the roi Next.
+  - kind: tap
+    resource_id: borderContainer
+    index: 0
+    optional: true
+  - kind: tap
+    resource_id: btnNextQuestion
+    optional: true
+  # Interstitial roi paywall - luc co luc khong, va lan nao cung khac nhau.
+  - kind: close_ad
+    timeout: 25
+  - kind: close_ad
+    timeout: 20
+  - kind: wait
+    seconds: 3
+  # Hai popup xep truoc rating. Nut X cua chung khoa bang content-desc="Close",
+  # KHONG dung `close_ad` duoc: day la popup cua app, khong phai quang cao.
+  #
+  # Moi lan dong deu NEO VAO CHU cua dung popup do, khong bam theo nhip dem.
+  # Do duoc: bam ngay sau `close_ad` thi popup chua kip bat len, buoc tuy chon
+  # truot, roi `wait_text` ngoi nhin man bi popup che cho het gio.
+  # `close_popup` dong theo DANH TINH popup, khong theo thu tu: ca ba popup o
+  # home (Add Widget, Check-In, rating) deu dat nut X la content-desc="Close",
+  # ma Check-In chi hien 1 lan/ngay. Bam "Close" ba lan theo thu tu thi hom nao
+  # Check-In vang mat, cu bam do trot xuong dong mat chinh popup rating.
+  - kind: close_popup
+    text: Add Widget
+    timeout: 25
+  - kind: close_popup
+    text: Check-In
+    timeout: 8
+  - kind: wait_text
+    text: rate us
+    timeout: 30
+
+# Moi placement mot CUA SO rieng: moc chen o dau case, nen gop hai placement
+# vao mot case thi ca hai lan ban deu roi vao cung cua so va bao "ban trung" -
+# do duoc luot 14:17, khi popup home va popup exit_click cung nam trong mot case.
+- event: rating_placement_viewed
+  label: popup rating khi bam thoat
+  reset:
+    relaunch: false
+  expect_params:
+    placement_name: exit_click
+  steps:
+  # Dong popup rating cua home truoc (nut X hien sau ~2s), khong thi BACK chi
+  # dong popup do chu khong chay luong thoat app.
+  - kind: tap
+    desc: Close
+    optional: true
+  - kind: wait
+    seconds: 2
+  - kind: key
+    text: BACK
+  - kind: wait_text
+    text: rate us
+    timeout: 25
+
+# Nam case duoi chay TIEP tren popup cua case tren (`relaunch: false`): cham sao
+# KHONG tat popup - chi nut RATE moi tat vinh vien ("Không hiện pop-up rating khi
+# user đã bấm rate"), nen mot lan mo popup do duoc ca nam gia tri star_value.
+# Vi the flow tuyet doi KHONG bam RATE.
+- event: rating_star_clicked
+  label: cham 1 sao khi bam thoat
+  reset:
+    relaunch: false
+  expect_params:
+    star_value: "1"
+    placement_name: exit_click
+  steps:
+  - kind: tap
+    desc: Star 1
+
+- event: rating_star_clicked
+  label: cham 2 sao khi bam thoat
+  reset:
+    relaunch: false
+  expect_params:
+    star_value: "2"
+    placement_name: exit_click
+  steps:
+  - kind: tap
+    desc: Star 2
+
+- event: rating_star_clicked
+  label: cham 3 sao khi bam thoat
+  reset:
+    relaunch: false
+  expect_params:
+    star_value: "3"
+    placement_name: exit_click
+  steps:
+  - kind: tap
+    desc: Star 3
+
+- event: rating_star_clicked
+  label: cham 4 sao khi bam thoat
+  reset:
+    relaunch: false
+  expect_params:
+    star_value: "4"
+    placement_name: exit_click
+  steps:
+  - kind: tap
+    desc: Star 4
+
+- event: rating_star_clicked
+  label: cham 5 sao khi bam thoat
+  reset:
+    relaunch: false
+  expect_params:
+    star_value: "5"
+    placement_name: exit_click
+  steps:
+  - kind: tap
+    desc: Star 5
+
+# Man Rating o app shortcut: nhan giu icon tren launcher moi toi duoc, khong co
+# nut nao trong app dan sang. `cmd shortcut` tren may chi co `reset-throttling`
+# nen phai goi thang intent ma shortcut khai - doc bang `dumpsys shortcut`.
+- event: rating_placement_viewed
+  label: man rating tu app shortcut
+  reset:
+    relaunch: false
+  expect_params:
+    placement_name: app_shortcut
+  steps:
+  - kind: intent
+    action: com.apero.rating.action.RATING
+    component: com.aiprofile.aiheadshot.aiimagegenerator.aiphotogenerator/com.apero.rating.internal.features.activity.rating.VslRatingActivity
+  - kind: wait_text
+    text: rate us
+    timeout: 20
+
+- event: rating_star_clicked
+  label: cham 3 sao tu app shortcut
+  reset:
+    relaunch: false
+  expect_params:
+    star_value: "3"
+    placement_name: app_shortcut
+  steps:
+  - kind: tap
+    desc: Star 3
