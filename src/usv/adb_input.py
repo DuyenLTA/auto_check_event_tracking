@@ -55,7 +55,12 @@ class InputMixin:
 
     async def input_keyevent(self, serial: str, name: str) -> None:
         check_serial(serial)
-        key = KEYEVENTS.get(name.strip().upper())
+        # Nhan ca "BACK" lan "KEYCODE_BACK": flows/README va `usv-record back`
+        # deu viet dang co tien to, con bang tra thi khoa bang ten tran. Chenh
+        # nhau mot tien to ma bao "khong duoc phep" thi nguoi doc di tim xem
+        # minh go sai chu nao, trong khi ca hai deu la y dung.
+        goi = name.strip().upper()
+        key = KEYEVENTS.get(goi.removeprefix("KEYCODE_"))
         if key is None:
             raise AdbError(
                 f"keyevent {name!r} không được phép. Chỉ nhận: "

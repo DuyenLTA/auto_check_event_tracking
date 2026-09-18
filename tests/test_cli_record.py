@@ -204,3 +204,41 @@ def test_wait_ma_dua_chu_thi_bao_ro(adb, phien, capsys):
     with pytest.raises(SystemExit):
         chay(["--package", "com.x", "wait", "ba-giay"], phien)
     assert "số giây" in capsys.readouterr().err
+
+
+def test_keyevent_nhan_ca_hai_cach_viet():
+    """`usv-record back` va flows/README deu viet KEYCODE_BACK, con bang tra
+    khoa bang ten tran. Chenh mot tien to ma bao 'khong duoc phep' thi buoc
+    `back` khong bao gio chay duoc - da gap that tren may."""
+    import asyncio
+
+    from usv.adb_input import InputMixin
+
+    class Adb(InputMixin):
+        def __init__(self):
+            self.cmd = []
+
+        async def _run(self, *args):
+            self.cmd.append(args[-1])
+
+    adb = Adb()
+    asyncio.run(adb.input_keyevent("S1", "BACK"))
+    asyncio.run(adb.input_keyevent("S1", "KEYCODE_BACK"))
+    asyncio.run(adb.input_keyevent("S1", "keycode_back"))
+    assert adb.cmd == ["KEYCODE_BACK"] * 3
+
+
+def test_keyevent_van_chan_phim_lam_hong_phien():
+    import asyncio
+
+    import pytest
+
+    from usv.adb_input import InputMixin
+    from usv.adb_parsers import AdbError
+
+    class Adb(InputMixin):
+        async def _run(self, *args):
+            return None
+
+    with pytest.raises(AdbError):
+        asyncio.run(Adb().input_keyevent("S1", "KEYCODE_POWER"))
