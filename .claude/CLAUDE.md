@@ -12,6 +12,7 @@ Tài liệu cho Claude Code khi làm việc trong repo này. Cập nhật tay kh
 | `.claude/workflows/triage-event-fail.js` | Fan-out agent soi nguyên nhân từng dòng FAIL |
 | `.claude/workflows/spec-to-cases.js` | Sinh khung case từ trang spec + dò bước bấm trên máy thật |
 | `.claude/commands/check-event.md` | Slash command `/check-event <pkg> <link spec>`: chạy cả lượt, publish artifact |
+| `.claude/commands/record-flow.md` | Slash command `/record-flow <pkg>`: dò đường lái app rồi chốt case vào `flows/` |
 
 ## Lệnh hay dùng
 
@@ -31,6 +32,7 @@ PYTHONPATH=src .venv/bin/python -m pytest -q        # test (hiện 678 passed)
 
 ```bash
 ln -sf "$PWD/.claude/commands/check-event.md" ~/.claude/commands/check-event.md
+ln -sf "$PWD/.claude/commands/record-flow.md" ~/.claude/commands/record-flow.md
 ```
 
 Symlink chứ không copy: sửa command trong repo là máy dùng ngay, không phải copy lại
