@@ -13,6 +13,16 @@ Tài liệu cho Claude Code khi làm việc trong repo này. Cập nhật tay kh
 | `.claude/workflows/spec-to-cases.js` | Sinh khung case từ trang spec + dò bước bấm trên máy thật |
 | `.claude/commands/check-event.md` | Slash command `/check-event <pkg> <link spec>`: chạy cả lượt, publish artifact |
 | `.claude/commands/record-flow.md` | Slash command `/record-flow <pkg>`: dò đường lái app rồi chốt case vào `flows/` |
+| `.claude/commands/spec-cases.md` | Slash command `/spec-cases <link spec>`: sinh khung case từ trang spec |
+
+## Ba lệnh, theo thứ tự dùng
+
+`/spec-cases <link>` sinh khung case từ trang spec (không có `steps`) →
+`/record-flow <pkg>` dò `steps` trên máy thật, chốt vào `flows/<pkg>.yaml` →
+`/check-event <pkg> <link>` chấm thật rồi publish artifact.
+
+Trang spec là tài liệu SDK dùng chung nhiều app: khung case xài lại được, chỉ
+`steps` mới riêng từng app.
 
 ## Lệnh hay dùng
 
@@ -33,6 +43,7 @@ PYTHONPATH=src .venv/bin/python -m pytest -q        # test (hiện 678 passed)
 ```bash
 ln -sf "$PWD/.claude/commands/check-event.md" ~/.claude/commands/check-event.md
 ln -sf "$PWD/.claude/commands/record-flow.md" ~/.claude/commands/record-flow.md
+ln -sf "$PWD/.claude/commands/spec-cases.md" ~/.claude/commands/spec-cases.md
 ```
 
 Symlink chứ không copy: sửa command trong repo là máy dùng ngay, không phải copy lại
