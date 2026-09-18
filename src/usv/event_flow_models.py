@@ -20,9 +20,10 @@ from .device_actions import Selector
 class Step:
     """Mot thao tac. `kind` quyet dinh truong nao co nghia."""
 
-    kind: str                       # launch|tap|swipe|type|key|wait|wait_text
+    kind: str                       # launch|tap|swipe|type|key|wait|wait_text|intent
     selector: Selector | None = None
-    text: str = ""                  # type: chu can go; swipe: huong
+    text: str = ""                  # type: chu can go; swipe: huong; intent: action
+    component: str = ""             # intent: <package>/<Activity>, de trong thi de `am` tu chon
     seconds: float = 0.0            # wait
     timeout: float = 10.0           # wait_text
     # Buoc co the KHONG xuat hien: quang cao xen ke, popup danh gia, tooltip.

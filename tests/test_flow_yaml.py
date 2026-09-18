@@ -161,3 +161,44 @@ def test_step_tuy_chon_doc_duoc_tu_yaml():
     assert flow.ok, flow.errors
     assert [s.optional for s in flow.cases[0].steps] == [True, False]
     assert "tuỳ chọn" in flow.cases[0].steps[0].label()
+
+
+def test_buoc_intent_doc_duoc_action_va_component(tmp_path):
+    """Man Rating o app shortcut khong co nut nao trong app dan sang - intent la
+    duong duy nhat toi no."""
+    from usv import flow_yaml
+
+    path = tmp_path / "f.yaml"
+    path.write_text(
+        "package: com.x\n"
+        "cases:\n"
+        "  - event: rating_placement_viewed\n"
+        "    steps:\n"
+        "      - kind: intent\n"
+        "        action: com.apero.rating.action.RATING\n"
+        "        component: com.x/com.apero.rating.RatingActivity\n",
+        encoding="utf-8")
+    flow = flow_yaml.load(path)
+    assert flow.errors == ()
+    step = flow.cases[0].steps[0]
+    assert step.kind == "intent"
+    assert step.text == "com.apero.rating.action.RATING"
+    assert step.component == "com.x/com.apero.rating.RatingActivity"
+
+
+def test_intent_thieu_action_thi_bao_ngay(tmp_path):
+    """Thieu action thi `am start` mo mot man bat ky - case chay tren man khac
+    ma van bao ket qua."""
+    from usv import flow_yaml
+
+    path = tmp_path / "f.yaml"
+    path.write_text(
+        "package: com.x\n"
+        "cases:\n"
+        "  - event: e\n"
+        "    steps:\n"
+        "      - kind: intent\n"
+        "        component: com.x/A\n",
+        encoding="utf-8")
+    flow = flow_yaml.load(path)
+    assert flow.errors and "action" in flow.errors[0]

@@ -207,6 +207,30 @@ class AdbClient(LogcatMixin, InputMixin, AppDataMixin):
             raise AdbError("screencap không trả về PNG hợp lệ.")
         return png
 
+    async def start_intent(self, serial: str, action: str,
+                           component: str = "") -> None:
+        """Mo mot man bang intent. Duong DUY NHAT toi vai man trong app.
+
+        Man Rating o app shortcut la vi du: nhan giu icon tren launcher moi toi
+        duoc, khong co nut nao trong app dan sang. `cmd shortcut` tren may chi
+        co `reset-throttling`, khong co `start`, nen phai goi thang intent ma
+        shortcut do khai (doc bang `dumpsys shortcut`).
+
+        Khong dung shell=True: tung doi so di rieng, `am` tu nhan.
+        """
+        check_serial(serial)
+        if not action.strip():
+            raise AdbError("Intent phải có `action`.")
+        args = ["-s", serial, "shell", "am", "start", "-a", action.strip()]
+        if component.strip():
+            args += ["-n", component.strip()]
+        out, err, _ = await self._run(*args)
+        loi = f"{out}\n{err}"
+        # `am start` in loi ra stdout nhung van tra exit code 0 - giong monkey.
+        if "Error:" in loi or "Exception" in loi:
+            raise AdbError(
+                f"Mở intent {action!r} thất bại: {loi.strip().splitlines()[-1]}")
+
     async def launch(self, serial: str, package: str) -> None:
         """Mo app. Chi dung khi tester bam nut - tool KHONG tu dieu huong flow.
 

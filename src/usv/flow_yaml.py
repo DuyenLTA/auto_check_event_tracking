@@ -21,6 +21,7 @@ from .device_actions import Selector
 from .event_flow_models import Flow, FlowCase, Reset, Step
 
 KINDS = frozenset({"launch", "tap", "swipe", "type", "key", "wait", "wait_text",
+                   "intent", "close_popup",
                    "close_ad", "allow"})
 # Chi tap/swipe moi lam viec tren mot node. `wait_text` va `type` cung co
 # truong `text` nhung do la chu de TIM / de GO, doc no thanh selector thi
@@ -72,9 +73,18 @@ def _step(raw: object, where: str) -> tuple[Step | None, list[str]]:
     # Voi tap/swipe thi `text` la SELECTOR, khong phai chu de go. Chi nhung
     # kind that su can chu moi doc `text` lam du lieu.
     text = ""
+    component = ""
     if kind == "swipe":
         text = str(raw.get("direction") or "up").strip()
-    elif kind in {"type", "key", "wait_text"}:
+    elif kind == "intent":
+        # `action` chu khong phai `text`: doc lai flow mot thang sau, "action"
+        # noi ngay day la intent cua he thong, con "text" thi doc nhu chu de go.
+        text = str(raw.get("action") or "").strip()
+        if not text:
+            return None, [f"{where}: `intent` cần `action` (vd "
+                          f"com.apero.rating.action.RATING)."]
+        component = str(raw.get("component") or "").strip()
+    elif kind in {"type", "key", "wait_text", "close_popup"}:
         text = str(raw.get("text") or "").strip()
         if not text:
             return None, [f"{where}: `{kind}` cần `text`."]
@@ -98,7 +108,7 @@ def _step(raw: object, where: str) -> tuple[Step | None, list[str]]:
     except (TypeError, ValueError):
         return None, [f"{where}: `timeout` phải là số, đang là {raw.get('timeout')!r}."]
 
-    return Step(kind=kind, selector=selector, text=text,
+    return Step(kind=kind, selector=selector, text=text, component=component,
                 seconds=seconds, timeout=timeout,
                 optional=bool(raw.get("optional", False))), []
 

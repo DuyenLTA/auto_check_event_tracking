@@ -180,3 +180,51 @@ def test_chi_chac_van_dong_paywall_va_splash_ad():
     splash = tim_nut_dong(_man(_node(rid="com.x:id/txtSkipAd", text="Skip Ad")),
                           chi_chac=True)
     assert paywall is not None and splash is not None
+
+
+# --- close_popup: nut dong phai thuoc CHINH popup do ---
+
+def _man_hai_lop() -> list:
+    """Paywall dang chong len popup Add Widget - dung canh do duoc luc 14:35."""
+    xml = ("<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>"
+           "<hierarchy rotation=\"0\"><node index=\"0\" text=\"\" resource-id=\"\""
+           " class=\"a.b.F\" package=\"com.x\" content-desc=\"\" clickable=\"false\""
+           " enabled=\"true\" visible-to-user=\"true\" bounds=\"[0,0][1080,2400]\">"
+           # popup cua app, nam duoi
+           "<node index=\"0\" text=\"\" resource-id=\"com.x:id/widgetPopup\""
+           " class=\"a.b.F\" package=\"com.x\" content-desc=\"\" clickable=\"false\""
+           " enabled=\"true\" visible-to-user=\"true\" bounds=\"[60,600][1020,1500]\">"
+           "<node index=\"0\" text=\"Add Widget\" resource-id=\"\" class=\"a.b.T\""
+           " package=\"com.x\" content-desc=\"\" clickable=\"false\" enabled=\"true\""
+           " visible-to-user=\"true\" bounds=\"[100,650][900,720]\" />"
+           "<node index=\"1\" text=\"\" resource-id=\"\" class=\"a.b.V\""
+           " package=\"com.x\" content-desc=\"Close\" clickable=\"true\""
+           " enabled=\"true\" visible-to-user=\"true\" bounds=\"[930,640][990,700]\" />"
+           "</node>"
+           # paywall chong len tren, nut X cua no cung chua chu "close"
+           "<node index=\"1\" text=\"\" resource-id=\"com.x:id/billing\""
+           " class=\"a.b.F\" package=\"com.x\" content-desc=\"\" clickable=\"false\""
+           " enabled=\"true\" visible-to-user=\"true\" bounds=\"[0,0][1080,2400]\">"
+           "<node index=\"0\" text=\"\" resource-id=\"\" class=\"a.b.Image\""
+           " package=\"com.x\" content-desc=\"Close Billing Screen\""
+           " clickable=\"true\" enabled=\"true\" visible-to-user=\"true\""
+           " bounds=\"[34,64][166,196]\" /></node>"
+           "</node></hierarchy>")
+    return parse_dump(xml, METRICS)
+
+
+def test_dong_popup_khong_bam_nham_X_cua_lop_dang_chong_len():
+    """Do duoc tren may that: paywall dat nut X la 'Close Billing Screen' - chu
+    do cung chua 'close'. Quet ca man thi bam X cua paywall, popup van nguyen,
+    roi buoc cho sau do bao 'khong thay chu' - mat mot luot cham."""
+    from usv.ad_close import tim_nut_dong_popup
+
+    nut = tim_nut_dong_popup(_man_hai_lop(), "Add Widget")
+    assert nut is not None
+    assert nut.content_desc == "Close"       # X cua popup, khong phai cua paywall
+
+
+def test_dong_popup_khong_thay_chu_neo_thi_tra_None():
+    from usv.ad_close import tim_nut_dong_popup
+
+    assert tim_nut_dong_popup(_man_hai_lop(), "Check-In") is None

@@ -22,7 +22,7 @@ import asyncio
 import logging
 from dataclasses import dataclass, field
 
-from .ad_close import tim_nut_dong
+from .ad_close import tim_nut_dong, tim_nut_dong_popup
 from .adb_parsers import AdbError
 from .device_actions import swipe, tap
 from .event_flow_models import Flow, FlowCase, Step
@@ -89,6 +89,41 @@ async def run_step(client, serial: str, metrics, package: str, step: Step,
         if cay is not None:
             cay.bo()
         return
+    if step.kind == "close_popup":
+        # Dong popup theo DANH TINH cua no, khong theo thu tu trong day.
+        #
+        # Vi sao can rieng mot kind: ba popup o man home (Add Widget, Check-In,
+        # rating) deu dat nut X la content-desc="Close". Viet "tap desc=Close"
+        # ba lan theo thu tu thi hom nao mot popup khong hien - Check-In chi
+        # hien 1 lan/ngay - cu bam do trot xuong popup ke tiep va dong mat
+        # chinh cai man dang can do. Do duoc: luot 14:28 tu tay dong popup
+        # rating roi bao "khong thay chu".
+        #
+        # Khong thay popup KHONG phai loi: popup vang mat la chuyen binh thuong.
+        if not await wait_text(client, serial, metrics, step.text, step.timeout,
+                               cay, don_man_chan=False):
+            log.info("Khong thay popup %r - bo qua", step.text)
+            return
+        nut = tim_nut_dong_popup(await nodes(client, serial, metrics, cay),
+                                 step.text)
+        if nut is None:
+            raise AdbError(
+                f"Thấy popup {step.text!r} nhưng không tìm được nút đóng của nó.")
+        await _bam_node(client, serial, nut)
+        if cay is not None:
+            cay.bo()
+        await asyncio.sleep(AD_SETTLE)
+        return
+
+    if step.kind == "intent":
+        # Mo thang mot man bang intent. Man Rating o app shortcut khong co nut
+        # nao trong app dan sang - day la duong duy nhat toi no.
+        await client.start_intent(serial, step.text, step.component)
+        await asyncio.sleep(LAUNCH_SETTLE)
+        if cay is not None:
+            cay.bo()
+        return
+
     if step.kind == "wait_text":
         if not await wait_text(client, serial, metrics, step.text,
                                step.timeout, cay):

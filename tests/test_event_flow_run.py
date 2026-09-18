@@ -445,3 +445,25 @@ def test_wait_text_khong_don_man_chan_qua_nhieu_lan(recording, monkeypatch):
     adb = Adb()
     assert run(flow_screen.wait_text(adb, "S1", METRICS, "Home", 0)) is False
     assert len(adb.taps) == flow_screen.MAN_CHAN_TOI_DA, adb.taps
+
+
+def test_buoc_intent_goi_am_start(recording):
+    """Buoc `intent` phai goi start_intent voi dung action va component."""
+    from usv.event_flow_models import Step
+
+    class Adb(FakeClient):
+        def __init__(self):
+            super().__init__()
+            self.intents = []
+
+        async def start_intent(self, serial, action, component=""):
+            self.intents.append((action, component))
+
+    client = Adb()
+    case = _case(steps=(Step(kind="intent",
+                             text="com.apero.rating.action.RATING",
+                             component="com.x/com.apero.RatingActivity"),))
+    result = run(run_case(client, "S1", METRICS, "com.x", recording, case))
+    assert result.status == "ok"
+    assert client.intents == [("com.apero.rating.action.RATING",
+                               "com.x/com.apero.RatingActivity")]

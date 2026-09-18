@@ -101,3 +101,58 @@ def tim_nut_dong(nodes: list[DeviceNode], *,
             if _khop(lay(node), MAU_MO_HO):
                 return node
     return None
+
+
+# Nut X cua popup CUA APP - khac han nut dong quang cao o tren. O day mau mo ho
+# lai la mau DUNG: popup cua app dat ten nut dong y nhu the that.
+MAU_NUT_POPUP = ("close", "đóng", "dismiss", "btnclose", "ivclose", "img_close",
+                 "close_button")
+
+
+def tim_nut_dong_popup(nodes: list[DeviceNode],
+                       neo: str = "") -> DeviceNode | None:
+    """Nut dong cua popup mang chu `neo`, hoac None.
+
+    Tach khoi `tim_nut_dong`: ben kia dong quang cao va phai DE PHONG bam nham
+    popup cua app; ben nay nguoc lai - goi no la da biet ro dang dong popup nao.
+
+    PHAI di theo cay tu chu neo len, khong duoc quet ca man: do duoc tren may
+    that - paywall dat nut X la content-desc "Close Billing Screen", ma chu do
+    cung chua "close". Paywall con dang chong len popup thi quet ca man se bam
+    X cua paywall, popup van nguyen, roi buoc cho sau do bao "khong thay chu".
+    Nut dong dung la nut nam TRONG cung khoi voi chu neo.
+    """
+    dung_duoc = [n for n in nodes if n.visible and not n.bounds_px.empty]
+
+    def la_nut_dong(node: DeviceNode) -> bool:
+        return any(_khop(gia_tri, MAU_NUT_POPUP) for gia_tri in
+                   (node.resource_id, node.content_desc, node.text))
+
+    if not neo:
+        for node in dung_duoc:
+            if la_nut_dong(node):
+                return node
+        return None
+
+    thap = neo.strip().casefold()
+    theo_id = {n.node_id: n for n in nodes}
+    moc = [n for n in dung_duoc
+           if thap in n.text.casefold() or thap in n.content_desc.casefold()]
+
+    def to_tien(node: DeviceNode) -> list[str]:
+        duong = []
+        cha = theo_id.get(node.parent_id or "")
+        while cha is not None:
+            duong.append(cha.node_id)
+            cha = theo_id.get(cha.parent_id or "")
+        return duong
+
+    # Tu khoi NHO NHAT chua chu neo noi ra: nut dong gan chu neo nhat moi la
+    # nut cua chinh popup do, khong phai nut cua lop dang chong len no.
+    for anchor in moc:
+        for khoi in to_tien(anchor):
+            trong_khoi = [n for n in dung_duoc
+                          if khoi in to_tien(n) and la_nut_dong(n)]
+            if trong_khoi:
+                return trong_khoi[0]
+    return None
