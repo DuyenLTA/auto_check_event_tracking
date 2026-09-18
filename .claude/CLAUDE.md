@@ -20,31 +20,29 @@ usv-check --spec <link Confluence> --package <pkg>  # chạy nền, stdout = 1 d
 usv-record --package <pkg> dump                     # ghi flow
 usv-cases dump "<link Confluence>"                  # spec -> text cho agent doc
 usv-cases check out/cases.json --url "<link>"       # doi chieu case voi bang spec
-PYTHONPATH=src .venv/bin/python -m pytest -q        # test (hiện 665 passed)
+PYTHONPATH=src .venv/bin/python -m pytest -q        # test (hiện 678 passed)
 ```
 
 ## Trạng thái git (18/09/2026)
 
-- `main` = `213e156`, đã fast-forward từ remote `anduyen`
-  (`github.com/LuuThiAnDuyen/check_event_track` — cùng root commit `43972c0`, đi trước 22 commit).
-- `main` **đi trước `origin/main` 22 commit — chưa push**.
-- Remote: `origin` (DuyenLTA/auto_check_event_tracking), `anduyen` (LuuThiAnDuyen/check_event_track),
-  `archive` (DuyenLTA/ui-spec-verifier — history cũ).
-- Toàn bộ test pass sau merge.
+- `main` = `4ae2ee0`, **đã push, khớp `origin/main`**. Đã fast-forward 22 commit từ
+  remote `anduyen` (`github.com/LuuThiAnDuyen/check_event_track` — cùng root commit).
+- Remote: `origin` (DuyenLTA/auto_check_event_tracking), `anduyen`
+  (LuuThiAnDuyen/check_event_track), `archive` (DuyenLTA/ui-spec-verifier — history cũ).
+- Plan `plans/260908-1521-event-tracking-auto-verify/`: **cả 7 phase completed**.
 
-## Việc còn dở (uncommitted)
+## Lượt chấm thật đầu tiên (18/09/2026)
 
-Nhánh sinh khung case từ trang spec — chưa commit:
+App `com.nxl.aiphotocreator.aivideogenerator.texttoimage` 2.1.0 (14), Pixel 7
+`29301FDH2006K7`, spec SDK Widget → **2/2 khớp**.
+Artifact: https://claude.ai/artifact/2mkNh33qpZrNk9tVgKHjia
 
-- Sửa: `README.md` (thêm mục "Sinh khung case từ trang spec"), `src/usv/event_recording.py`,
-  `src/usv/logcat_stream.py`
-- Mới: `src/usv/spec_case_skeleton.py`, `spec_case_rules.py`, `spec_cases_cli.py`,
-  `spec_prose_sections.py`, `event_shot.py`, `.claude/workflows/spec-to-cases.js`,
-  `tests/test_spec_case_skeleton.py`, `tests/test_event_shot.py`
+Mất 7 lượt mới ra, 4 bản sửa: `ad_close` hai bậc mẫu · mở app đúng 1 lần sau mốc ·
+`wait_text` tự dọn màn chắn · ảnh bằng chứng đúng lúc. Chi tiết ở cuối
+`plans/260908-1521-event-tracking-auto-verify/phase-07-driver-tu-dong-lai-app.md`.
 
-Đo trên máy thật (Pixel 4, `ai.photogenerator.aivideo.aivideogenerator.aiart` 3.1.0):
-`rating_star_clicked` bắn ngay khi chạm sao, không đợi RATE → nhóm case star **không cần**
-`pm_clear`; chỉ nút RATE mới tắt popup vĩnh viễn.
+**Bài học:** không màn nào trong app này lên đúng giờ — mọi bước ghim cứng thời gian
+đều là xúc xắc. Chốt chặn phải là "thấy gì xử cái đó".
 
 ## Nguyên tắc
 
