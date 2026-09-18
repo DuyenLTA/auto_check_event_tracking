@@ -11,7 +11,7 @@ nhat la khi may vua rot khoi USB o case cuoi.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from .adb_parsers import AdbError
 from .png_nho import RawError, tu_raw
@@ -49,6 +49,15 @@ class Album:
             return
         png = await self._chup()
         if not png:
+            return
+        da_co = self.shots.get(case_label)
+        if da_co and da_co[-1].png == png:
+            # Giong het TUNG BYTE: man khong doi qua buoc cuoi - vd buoc cuoi la
+            # `wait_text`, khong bam gi ca. Nhet hai tam vao report la ton hai
+            # lan dung luong cho mot thong tin, va nguoi doc tuong minh dang co
+            # hai bang chung khac nhau.
+            da_co[-1] = replace(da_co[-1],
+                                moment=f"{da_co[-1].moment} và {moment} (màn không đổi)")
             return
         self.da_dung += len(png)
         self.shots.setdefault(case_label, []).append(

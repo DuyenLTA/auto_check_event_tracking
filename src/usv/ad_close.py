@@ -68,11 +68,17 @@ def _trong_khung_ads(node: DeviceNode, theo_id: dict[str, DeviceNode]) -> bool:
     return False
 
 
-def tim_nut_dong(nodes: list[DeviceNode]) -> DeviceNode | None:
+def tim_nut_dong(nodes: list[DeviceNode], *,
+                 chi_chac: bool = False) -> DeviceNode | None:
     """Node dong quang cao dau tien tim duoc, hoac None neu man khong co.
 
     None KHONG phai loi: khong co quang cao chan duong la truong hop binh
     thuong nhat, va `close_ad` phai im lang di tiep luc do.
+
+    `chi_chac=True` bo han bac mau mo ho. Dung khi dang CHO mot man cu the
+    hien ra (`wait_text`): chinh man dang cho co the co nut "Close" cua no -
+    popup Add Widget la vi du - va tu bam vao do la tu tay dong cai man minh
+    vua doi.
     """
     dung_duoc = [n for n in nodes if n.visible and not n.bounds_px.empty]
     for mau, lay in ((MAU_ID, lambda n: n.resource_id),
@@ -81,6 +87,9 @@ def tim_nut_dong(nodes: list[DeviceNode]) -> DeviceNode | None:
         for node in dung_duoc:
             if _khop(lay(node), mau):
                 return node
+
+    if chi_chac:
+        return None
 
     # Het mau chac moi den mau mo ho, va chi trong khung quang cao.
     theo_id = {n.node_id: n for n in nodes}

@@ -312,3 +312,136 @@ def test_close_ad_man_sach_thi_di_tiep_khong_bao_loi(recording):
     result = run(run_case(client, "S1", METRICS, "com.x", recording, case))
     assert result.status == "ok"
     assert result.steps_done == 2
+
+
+def test_cho_man_dung_lai_TRUOC_khi_chup_tam_sau_buoc_cuoi(recording, monkeypatch):
+    """Bam xong thi bottom sheet / dialog cua he thong con dang bay ra: chup
+    ngay la duoc mot tam nua trong nua man - do duoc tren may that voi nut
+    "Add Widget Now". Tam nay la bang chung ngu canh nen cham mot nhip khong
+    lam sai ket qua nao."""
+    client = FakeClient()
+    thu_tu: list[str] = []
+
+    async def sleep_ghi(giay):
+        thu_tu.append(f"sleep {giay}")
+
+    monkeypatch.setattr(event_flow_run.asyncio, "sleep", sleep_ghi)
+
+    async def chup(moment: str) -> None:
+        thu_tu.append(f"chụp {moment}")
+
+    run(run_case(client, "S1", METRICS, "com.x", recording, _case(), on_shot=chup))
+    assert thu_tu[-2:] == [f"sleep {event_flow_run.SHOT_SETTLE}",
+                           "chụp sau bước cuối"], thu_tu
+
+
+def test_wait_text_tu_don_man_chan_roi_cho_tiep(recording, monkeypatch):
+    """Paywall len SAU khi cac buoc close_ad het han cho. Vong cho ngoi nhin no
+    het gio thi case bao Chua test trong khi app chang sai gi - do duoc tren
+    may that voi paywall cua app texttoimage."""
+    from usv import flow_screen
+
+    PAYWALL = ("<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>"
+               "<hierarchy rotation=\"0\"><node index=\"0\" text=\"\""
+               " resource-id=\"\" class=\"a.b.F\" package=\"com.x\""
+               " content-desc=\"\" clickable=\"false\" enabled=\"true\""
+               " visible-to-user=\"true\" bounds=\"[0,0][1080,2280]\">"
+               "<node index=\"0\" text=\"\" resource-id=\"\" class=\"a.b.Image\""
+               " package=\"com.x\" content-desc=\"Close Billing Screen\""
+               " clickable=\"true\" enabled=\"true\" visible-to-user=\"true\""
+               " bounds=\"[34,64][166,196]\" /></node></hierarchy>")
+
+    class Adb:
+        def __init__(self) -> None:
+            self.taps: list[tuple[float, float]] = []
+            self.lan = 0
+
+        async def dump_ui(self, serial):
+            self.lan += 1
+            # Hai vong dau la paywall; bam dong roi moi ra man co chu.
+            return PAYWALL if not self.taps else DUMP
+
+        async def input_tap(self, serial, x, y):
+            self.taps.append((x, y))
+
+    async def instant(_s):
+        return None
+
+    monkeypatch.setattr(flow_screen.asyncio, "sleep", instant)
+    adb = Adb()
+    thay = run(flow_screen.wait_text(adb, "S1", METRICS, "Home", 5))
+    assert thay is True
+    # Bam vao TAM nut dong, khong phai goc tren-trai.
+    assert adb.taps == [(100.0, 130.0)], adb.taps
+
+
+def test_wait_text_KHONG_dong_nut_mo_ho_cua_man_dang_cho(recording, monkeypatch):
+    """Popup Add Widget co desc='Close' cua chinh no. Tu bam vao do la tu tay
+    dong mat cai man vua doi duoc, roi bao khong thay."""
+    from usv import flow_screen
+
+    POPUP = ("<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>"
+             "<hierarchy rotation=\"0\"><node index=\"0\" text=\"\""
+             " resource-id=\"com.x:id/nativeAdView\" class=\"a.b.F\""
+             " package=\"com.x\" content-desc=\"\" clickable=\"false\""
+             " enabled=\"true\" visible-to-user=\"true\""
+             " bounds=\"[0,0][1080,2280]\">"
+             "<node index=\"0\" text=\"\" resource-id=\"\" class=\"a.b.V\""
+             " package=\"com.x\" content-desc=\"Close\" clickable=\"true\""
+             " enabled=\"true\" visible-to-user=\"true\""
+             " bounds=\"[900,200][960,260]\" />"
+             "<node index=\"1\" text=\"Add Widget\" resource-id=\"\""
+             " class=\"a.b.T\" package=\"com.x\" content-desc=\"\""
+             " clickable=\"false\" enabled=\"true\" visible-to-user=\"true\""
+             " bounds=\"[100,300][900,400]\" /></node></hierarchy>")
+
+    class Adb:
+        def __init__(self) -> None:
+            self.taps = []
+
+        async def dump_ui(self, serial):
+            return POPUP
+
+        async def input_tap(self, serial, x, y):
+            self.taps.append((x, y))
+
+    async def instant(_s):
+        return None
+
+    monkeypatch.setattr(flow_screen.asyncio, "sleep", instant)
+    adb = Adb()
+    assert run(flow_screen.wait_text(adb, "S1", METRICS, "Add Widget", 5)) is True
+    assert adb.taps == []
+
+
+def test_wait_text_khong_don_man_chan_qua_nhieu_lan(recording, monkeypatch):
+    """Chuoi quang cao vo tan thi vong cho phai chiu het gio, khong song mai."""
+    from usv import flow_screen
+
+    PAYWALL = ("<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>"
+               "<hierarchy rotation=\"0\"><node index=\"0\" text=\"\""
+               " resource-id=\"\" class=\"a.b.F\" package=\"com.x\""
+               " content-desc=\"\" clickable=\"false\" enabled=\"true\""
+               " visible-to-user=\"true\" bounds=\"[0,0][1080,2280]\">"
+               "<node index=\"0\" text=\"\" resource-id=\"\" class=\"a.b.Image\""
+               " package=\"com.x\" content-desc=\"Close Billing Screen\""
+               " clickable=\"true\" enabled=\"true\" visible-to-user=\"true\""
+               " bounds=\"[34,64][166,196]\" /></node></hierarchy>")
+
+    class Adb:
+        def __init__(self) -> None:
+            self.taps = []
+
+        async def dump_ui(self, serial):
+            return PAYWALL      # dong bao nhieu lan cung ra cai khac y het
+
+        async def input_tap(self, serial, x, y):
+            self.taps.append((x, y))
+
+    async def instant(_s):
+        return None
+
+    monkeypatch.setattr(flow_screen.asyncio, "sleep", instant)
+    adb = Adb()
+    assert run(flow_screen.wait_text(adb, "S1", METRICS, "Home", 0)) is False
+    assert len(adb.taps) == flow_screen.MAN_CHAN_TOI_DA, adb.taps

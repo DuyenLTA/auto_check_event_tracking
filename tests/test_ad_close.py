@@ -164,3 +164,19 @@ def test_paywall_van_dong_duoc_du_khong_co_khung_ads():
     nao, chan no lai thi flow khong bao gio vao duoc man home."""
     node = tim_nut_dong(_man(_node(desc="Close Billing Screen")))
     assert node is not None
+
+
+def test_chi_chac_bo_han_bac_mau_mo_ho():
+    """`wait_text` dang cho popup Add Widget hien ra, ma chinh popup do co nut
+    'Close'. Neu vong cho tu bam nut mo ho thi no dong mat cai man vua doi."""
+    nodes = _man_long("com.x:id/nativeAdView2", _node(desc="Close"))
+    assert tim_nut_dong(nodes) is not None            # binh thuong: dong duoc
+    assert tim_nut_dong(nodes, chi_chac=True) is None  # dang cho: khong dong
+
+
+def test_chi_chac_van_dong_paywall_va_splash_ad():
+    """Hai thu nay chan duong that, va ten cua chung khong nhap nhang."""
+    paywall = tim_nut_dong(_man(_node(desc="Close Billing Screen")), chi_chac=True)
+    splash = tim_nut_dong(_man(_node(rid="com.x:id/txtSkipAd", text="Skip Ad")),
+                          chi_chac=True)
+    assert paywall is not None and splash is not None

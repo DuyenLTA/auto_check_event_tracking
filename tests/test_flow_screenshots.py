@@ -32,6 +32,10 @@ class FakeAdb:
         self.awake = awake
         self.calls: list[str] = []
         self.no_png = False
+        # Mac dinh moi lan chup ra y het nhau (man khong doi). Bat len de gia
+        # lap man doi that giua hai tam.
+        self.khac_nhau = False
+        self.lan = 0
 
     async def is_awake(self, serial):
         self.calls.append("is_awake")
@@ -45,6 +49,9 @@ class FakeAdb:
         self.calls.append("screencap")
         if self.no_png:
             raise AdbError("screencap không trả về PNG hợp lệ.")
+        if self.khac_nhau:
+            self.lan += 1
+            return PNG + bytes([self.lan])
         return PNG
 
 
@@ -76,6 +83,7 @@ def test_chup_hong_khong_lam_sap_luot_cham():
 
 def test_anh_gom_theo_case_va_giu_thu_tu():
     adb = FakeAdb()
+    adb.khac_nhau = True       # man doi that giua hai tam
     album = Album(adb, "S1")
     run(album.snap("case A", "trước bước cuối"))
     run(album.snap("case A", "sau bước cuối"))
@@ -83,7 +91,7 @@ def test_anh_gom_theo_case_va_giu_thu_tu():
     assert list(album.shots) == ["case A", "case B"]
     assert [s.moment for s in album.shots["case A"]] == [
         "trước bước cuối", "sau bước cuối"]
-    assert album.shots["case A"][0].png == PNG
+    assert album.shots["case A"][0].png.startswith(PNG)
 
 
 def test_recorder_dung_duoc_lam_callback_cua_run_case():
@@ -130,7 +138,31 @@ def test_het_tran_thi_bo_anh_chu_khong_bo_case():
 
 def test_dem_dung_so_byte_da_dung():
     adb = FakeAdb()
+    adb.khac_nhau = True
     album = Album(adb, "S1")
     run(album.snap("case A", "sau"))
     run(album.snap("case A", "sau nua"))
-    assert album.da_dung == 2 * len(PNG)
+    assert album.da_dung == 2 * (len(PNG) + 1)
+
+
+def test_hai_tam_giong_het_thi_chi_giu_mot():
+    """Buoc cuoi la `wait_text` thi man khong doi, hai tam ra y het nhau tung
+    byte. Giu ca hai la ton gap doi dung luong cho mot thong tin, va nguoi doc
+    report tuong minh dang co hai bang chung khac nhau."""
+    adb = FakeAdb()
+    album = Album(adb, "S1")
+    run(album.snap("case A", "trước bước cuối"))
+    run(album.snap("case A", "sau bước cuối"))
+    assert len(album.shots["case A"]) == 1
+    assert album.shots["case A"][0].moment == (
+        "trước bước cuối và sau bước cuối (màn không đổi)")
+    assert album.da_dung == len(PNG)      # tam trung khong tinh vao tran
+
+
+def test_man_doi_that_thi_giu_ca_hai_tam():
+    adb = FakeAdb()
+    adb.khac_nhau = True
+    album = Album(adb, "S1")
+    run(album.snap("case A", "trước bước cuối"))
+    run(album.snap("case A", "sau bước cuối"))
+    assert len(album.shots["case A"]) == 2

@@ -30,7 +30,7 @@ from .event_flow_reset import LAUNCH_SETTLE, prepare
 from .event_window import mark_label
 from .logcat_stream import Recording, mark
 from .models import DeviceNode
-from .flow_screen import cho_nut, nodes, wait_text
+from .flow_screen import bam_node as _bam_node, cho_nut, nodes, wait_text
 from .quyen_he_thong import tim_nut_cho_phep
 from .ui_cache import CayUI
 
@@ -42,6 +42,12 @@ log = logging.getLogger(__name__)
 # Cho man lang lai sau khi dong quang cao: interstitial thuong co animation
 # dong, bam ngay buoc sau la bam vao lop dang bay ra.
 AD_SETTLE = 1.0
+# Cho man dung lai truoc khi chup tam "sau buoc cuoi": bam xong thi bottom
+# sheet / dialog cua he thong con dang bay ra, chup ngay la duoc mot tam nua
+# trong nua man - do duoc tren may that khi bam "Add Widget Now". Tam nay la
+# bang chung NGU CANH ("cuoi buoc cuoi man nao dang hien"), khong phai bang
+# chung thoi diem, nen cham mot nhip khong lam sai ket qua cham nao.
+SHOT_SETTLE = 1.0
 @dataclass(slots=True)
 class CaseResult:
     case: FlowCase
@@ -58,13 +64,6 @@ class CaseResult:
         return {"case": self.case.label, "event": self.case.event,
                 "status": self.status, "reason": self.reason,
                 "steps_done": self.steps_done, "notes": self.notes}
-
-
-async def _bam_node(client, serial: str, node) -> None:
-    """Bam vao TAM node - goc tren-trai co the nam ngoai vung bam duoc."""
-    box = node.bounds_px
-    await client.input_tap(serial, (box.left + box.right) / 2,
-                           (box.top + box.bottom) / 2)
 
 
 async def run_step(client, serial: str, metrics, package: str, step: Step,
@@ -184,6 +183,7 @@ async def run_case(client, serial: str, metrics, package: str,
             return result
         result.steps_done += 1
     if on_shot is not None:
+        await asyncio.sleep(SHOT_SETTLE)
         await on_shot("sau bước cuối")
     return result
 
