@@ -80,7 +80,7 @@ cases:
   # Check-In vang mat, cu bam do trot xuong dong mat chinh popup rating.
   - kind: close_popup
     text: Add Widget
-    timeout: 25
+    timeout: 40
   - kind: close_popup
     text: Check-In
     timeout: 8

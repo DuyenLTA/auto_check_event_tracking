@@ -467,3 +467,65 @@ def test_buoc_intent_goi_am_start(recording):
     assert result.status == "ok"
     assert client.intents == [("com.apero.rating.action.RATING",
                                "com.x/com.apero.RatingActivity")]
+
+
+def test_close_popup_don_lop_che_roi_bam_lai(recording):
+    """Nut X cua popup co that va tim dung, nhung paywall dang phu len tren nen
+    cu tap dau roi vao lop tren - do duoc tren may that, anh luc lai hut cho
+    thay popup van nguyen sau khi 'da bam'."""
+    from usv.event_flow_models import Step
+
+    POPUP_VA_PAYWALL = (
+        "<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>"
+        "<hierarchy rotation=\"0\"><node index=\"0\" text=\"\" resource-id=\"\""
+        " class=\"a.b.F\" package=\"com.x\" content-desc=\"\" clickable=\"false\""
+        " enabled=\"true\" visible-to-user=\"true\" bounds=\"[0,0][1080,2400]\">"
+        "<node index=\"0\" text=\"\" resource-id=\"com.x:id/popup\" class=\"a.b.F\""
+        " package=\"com.x\" content-desc=\"\" clickable=\"false\" enabled=\"true\""
+        " visible-to-user=\"true\" bounds=\"[60,600][1020,1500]\">"
+        "<node index=\"0\" text=\"Add Widget\" resource-id=\"\" class=\"a.b.T\""
+        " package=\"com.x\" content-desc=\"\" clickable=\"false\" enabled=\"true\""
+        " visible-to-user=\"true\" bounds=\"[100,650][900,720]\" />"
+        "<node index=\"1\" text=\"\" resource-id=\"\" class=\"a.b.V\" package=\"com.x\""
+        " content-desc=\"Close\" clickable=\"true\" enabled=\"true\""
+        " visible-to-user=\"true\" bounds=\"[930,640][990,700]\" /></node>"
+        "<node index=\"1\" text=\"\" resource-id=\"com.x:id/billing\" class=\"a.b.F\""
+        " package=\"com.x\" content-desc=\"\" clickable=\"false\" enabled=\"true\""
+        " visible-to-user=\"true\" bounds=\"[0,0][1080,2400]\">"
+        "<node index=\"0\" text=\"\" resource-id=\"\" class=\"a.b.Image\""
+        " package=\"com.x\" content-desc=\"Close Billing Screen\" clickable=\"true\""
+        " enabled=\"true\" visible-to-user=\"true\" bounds=\"[34,64][166,196]\" />"
+        "</node></node></hierarchy>")
+    CHI_POPUP = POPUP_VA_PAYWALL.replace(
+        "<node index=\"1\" text=\"\" resource-id=\"com.x:id/billing\" class=\"a.b.F\""
+        " package=\"com.x\" content-desc=\"\" clickable=\"false\" enabled=\"true\""
+        " visible-to-user=\"true\" bounds=\"[0,0][1080,2400]\">"
+        "<node index=\"0\" text=\"\" resource-id=\"\" class=\"a.b.Image\""
+        " package=\"com.x\" content-desc=\"Close Billing Screen\" clickable=\"true\""
+        " enabled=\"true\" visible-to-user=\"true\" bounds=\"[34,64][166,196]\" />"
+        "</node>", "")
+    SACH = ("<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>"
+            "<hierarchy rotation=\"0\"><node index=\"0\" text=\"Home\""
+            " resource-id=\"com.x:id/btnHome\" class=\"a.b.T\" package=\"com.x\""
+            " content-desc=\"\" clickable=\"true\" enabled=\"true\""
+            " visible-to-user=\"true\" bounds=\"[100,200][300,400]\" /></hierarchy>")
+
+    class Adb(FakeClient):
+        def __init__(self):
+            super().__init__()
+            self.taps_at = []
+            self.man = [POPUP_VA_PAYWALL, POPUP_VA_PAYWALL, CHI_POPUP, SACH, SACH]
+
+        async def dump_ui(self, serial):
+            return self.man[min(len(self.taps_at), len(self.man) - 1)]
+
+        async def input_tap(self, serial, x, y):
+            self.taps_at.append((x, y))
+
+    client = Adb()
+    case = _case(steps=(Step(kind="close_popup", text="Add Widget", timeout=5),))
+    result = run(run_case(client, "S1", METRICS, "com.x", recording, case))
+    assert result.status == "ok", result.reason
+    # Bam X popup (khong an vi paywall che) -> don paywall -> bam lai X popup.
+    assert client.taps_at == [(960.0, 670.0), (100.0, 130.0), (960.0, 670.0)], \
+        client.taps_at

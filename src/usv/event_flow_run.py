@@ -42,6 +42,9 @@ log = logging.getLogger(__name__)
 # Cho man lang lai sau khi dong quang cao: interstitial thuong co animation
 # dong, bam ngay buoc sau la bam vao lop dang bay ra.
 AD_SETTLE = 1.0
+# So vong thu dong mot popup. Lop che (paywall, quang cao) an mat cu tap dau
+# tien, nen mot vong la khong du; nhieu hon ba thi thuong la man khac han.
+VONG_DONG_POPUP = 3
 # Cho man dung lai truoc khi chup tam "sau buoc cuoi": bam xong thi bottom
 # sheet / dialog cua he thong con dang bay ra, chup ngay la duoc mot tam nua
 # trong nua man - do duoc tren may that khi bam "Add Widget Now". Tam nay la
@@ -64,6 +67,50 @@ class CaseResult:
         return {"case": self.case.label, "event": self.case.event,
                 "status": self.status, "reason": self.reason,
                 "steps_done": self.steps_done, "notes": self.notes}
+
+
+async def _dong_popup(client, serial: str, metrics, neo: str,
+                      cay: CayUI | None) -> None:
+    """Bam X cua popup mang chu `neo`, kiem lai, con thi don lop che roi bam lai.
+
+    Bam mot phat roi tin la xong thi hong: nut X co that va tim dung, nhung
+    PAYWALL dang phu len tren nen cu tap roi vao lop tren - do duoc tren may
+    that, anh chup luc lai hut cho thay popup van nguyen sau khi "da bam".
+    Nen phai doc lai man: popup con thi don lop che (chi mau CHAC, khong dong
+    nham popup khac) roi bam lai.
+    """
+    thap = neo.strip().casefold()
+
+    async def con_hien() -> bool:
+        return any(thap in n.text.casefold() or thap in n.content_desc.casefold()
+                   for n in await nodes(client, serial, metrics, cay))
+
+    da_bam = False
+    for _ in range(VONG_DONG_POPUP):
+        tren_man = await nodes(client, serial, metrics, cay)
+        if not any(thap in n.text.casefold() or thap in n.content_desc.casefold()
+                   for n in tren_man):
+            return                      # popup da dong
+        # Bam roi ma van con -> co lop che. Don no truoc, dung bam lai vo ich.
+        nut = None if da_bam else tim_nut_dong_popup(tren_man, neo)
+        if nut is None:
+            nut = tim_nut_dong(tren_man, chi_chac=True)
+            da_bam = False              # don xong thi thu lai nut cua popup
+            if nut is None:
+                raise AdbError(
+                    f"Thấy popup {neo!r} nhưng không đóng được: không tìm ra nút "
+                    "đóng nào dùng được trên màn.")
+        else:
+            da_bam = True
+        await _bam_node(client, serial, nut)
+        if cay is not None:
+            cay.bo()
+        await asyncio.sleep(AD_SETTLE)
+    # Cu bam cuoi cung cung phai duoc kiem: khong thi mot popup dong dung o
+    # vong chot lai bao that bai.
+    if not await con_hien():
+        return
+    raise AdbError(f"Bấm đóng {VONG_DONG_POPUP} lần mà popup {neo!r} vẫn còn.")
 
 
 async def run_step(client, serial: str, metrics, package: str, step: Step,
@@ -96,23 +143,17 @@ async def run_step(client, serial: str, metrics, package: str, step: Step,
         # rating) deu dat nut X la content-desc="Close". Viet "tap desc=Close"
         # ba lan theo thu tu thi hom nao mot popup khong hien - Check-In chi
         # hien 1 lan/ngay - cu bam do trot xuong popup ke tiep va dong mat
-        # chinh cai man dang can do. Do duoc: luot 14:28 tu tay dong popup
-        # rating roi bao "khong thay chu".
+        # chinh cai man dang can do.
         #
         # Khong thay popup KHONG phai loi: popup vang mat la chuyen binh thuong.
+        # Don quang cao NGAY TRONG luc cho: paywall len tre thi popup cua app
+        # nam duoi no va chua vao cay UI, cho suong het gio la bo qua nham -
+        # do duoc, popup Add Widget hien ngay sau khi paywall bi dong.
         if not await wait_text(client, serial, metrics, step.text, step.timeout,
-                               cay, don_man_chan=False):
+                               cay, don_man_chan=True):
             log.info("Khong thay popup %r - bo qua", step.text)
             return
-        nut = tim_nut_dong_popup(await nodes(client, serial, metrics, cay),
-                                 step.text)
-        if nut is None:
-            raise AdbError(
-                f"Thấy popup {step.text!r} nhưng không tìm được nút đóng của nó.")
-        await _bam_node(client, serial, nut)
-        if cay is not None:
-            cay.bo()
-        await asyncio.sleep(AD_SETTLE)
+        await _dong_popup(client, serial, metrics, step.text, cay)
         return
 
     if step.kind == "intent":
