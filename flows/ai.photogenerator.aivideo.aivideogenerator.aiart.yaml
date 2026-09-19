@@ -1,0 +1,342 @@
+package: ai.photogenerator.aivideo.aivideogenerator.aiart
+
+# Do tay tren Pixel 7 (ban 3.2.0), tai khoan Play la license tester nen goi sub
+# mua bang "the thu nghiem, luon phe duyet" - het ads, va man result khong con
+# cong "Watch Ads (0/3)" chan truoc khi gen.
+#
+# `placement_name` phan biet theo CACH popup bat len, khong theo man dang hien:
+# popup tu bat luc vao app tu session 2 tro di la `home`, bam BACK o home moi la
+# `exit_click`. Hai popup nay trong y het nhau va cung nam tren man home - do gop
+# mot luot la bat nham popup roi ket luan sai app. Vi the case `home` chi CHO
+# popup tu bat, khong bam gi; case `exit_click` dong popup `home` di truoc roi
+# moi bam BACK.
+#
+# Cac buoc `close_ad` de timeout ngan: co sub thi khong con quang cao nao, de dai
+# la ngoi cho het gio o moi buoc. Van giu lai vi sub thu nghiem het han sau vai
+# phut, luc do ads quay lai.
+
+cases:
+- event: rating_placement_viewed
+  label: popup rating tu bat o home
+  expect_params:
+    placement_name: home
+  steps:
+  - kind: launch
+  # Quyen thong bao hoi lai sau moi lan force-stop.
+  - kind: allow
+    timeout: 15
+  - kind: close_ad
+    timeout: 10
+  - kind: wait
+    seconds: 3
+  # Khoi onboarding: may sach thi di het Language -> Onboarding -> Question,
+  # may da dung roi thi vao thang home. Ca khoi de `optional` de chay duoc ca hai.
+  # Bam "English" chi BUNG danh sach con, phai bam tiep "English (US)" moi chon.
+  - kind: tap
+    resource_id: rootLanguageItem
+    index: 1
+    optional: true
+  - kind: tap
+    text: English (US)
+    optional: true
+  - kind: tap
+    resource_id: imageButtonLanguageNext
+    optional: true
+  - kind: wait
+    seconds: 3
+  # Onboarding bon trang, dem `dot` trong `indicatorPageOnboarding`: 4 dot.
+  - kind: tap
+    resource_id: btnNextOnboarding
+    optional: true
+  - kind: wait
+    seconds: 2
+  - kind: tap
+    resource_id: btnNextOnboarding
+    optional: true
+  - kind: wait
+    seconds: 2
+  - kind: tap
+    resource_id: btnNextOnboarding
+    optional: true
+  - kind: wait
+    seconds: 2
+  - kind: tap
+    resource_id: btnNextOnboarding
+    optional: true
+  - kind: wait
+    seconds: 2
+  # Man "Which style fits your vision?": nut Next ten khac han onboarding.
+  - kind: tap
+    resource_id: borderContainer
+    index: 0
+    optional: true
+  - kind: tap
+    resource_id: btnNextOnboardingImage
+    optional: true
+  - kind: close_ad
+    timeout: 10
+  # Paywall RevenueCat dung Compose - khong node nao co resource_id nen phai neo
+  # vao chu. Co sub thi paywall khong hien, buoc nay bi bo qua.
+  - kind: tap
+    text: Continue with ads
+    optional: true
+  - kind: wait
+    seconds: 4
+  # Popup "Today's Check-In" o home. Dong theo DANH TINH chu khong bam theo nhip
+  # dem: nut X cua no cung la desc="Close" y het nut X cua popup rating.
+  - kind: close_popup
+    text: Check-In
+    timeout: 15
+  # KHONG bam gi them - popup rating phai tu bat len thi moi dung `home`.
+  - kind: wait_text
+    text: rate us
+    timeout: 30
+
+- event: rating_star_clicked
+  label: cham 3 sao tren popup tu bat o home
+  reset:
+    relaunch: false
+  expect_params:
+    star_value: "3"
+    placement_name: home
+  steps:
+  - kind: tap
+    desc: Star 3
+
+# Cham sao KHONG tat popup, chi nut RATE moi tat vinh vien ("khong hien pop-up
+# rating khi user da bam rate") - nen flow tuyet doi KHONG bam RATE.
+- event: rating_placement_viewed
+  label: popup rating khi bam thoat
+  reset:
+    relaunch: false
+  expect_params:
+    placement_name: exit_click
+  steps:
+  # Dong popup `home` truoc, khong thi BACK chi dong popup do chu khong chay
+  # luong thoat app - va event do duoc se van la `home`.
+  - kind: tap
+    desc: Close
+  - kind: wait
+    seconds: 3
+  - kind: key
+    text: BACK
+  - kind: wait_text
+    text: rate us
+    timeout: 25
+
+- event: rating_star_clicked
+  label: cham 1 sao khi bam thoat
+  reset:
+    relaunch: false
+  expect_params:
+    star_value: "1"
+    placement_name: exit_click
+  steps:
+  - kind: tap
+    desc: Star 1
+
+- event: rating_star_clicked
+  label: cham 2 sao khi bam thoat
+  reset:
+    relaunch: false
+  expect_params:
+    star_value: "2"
+    placement_name: exit_click
+  steps:
+  - kind: tap
+    desc: Star 2
+
+- event: rating_star_clicked
+  label: cham 3 sao khi bam thoat
+  reset:
+    relaunch: false
+  expect_params:
+    star_value: "3"
+    placement_name: exit_click
+  steps:
+  - kind: tap
+    desc: Star 3
+
+- event: rating_star_clicked
+  label: cham 4 sao khi bam thoat
+  reset:
+    relaunch: false
+  expect_params:
+    star_value: "4"
+    placement_name: exit_click
+  steps:
+  - kind: tap
+    desc: Star 4
+
+- event: rating_star_clicked
+  label: cham 5 sao khi bam thoat
+  reset:
+    relaunch: false
+  expect_params:
+    star_value: "5"
+    placement_name: exit_click
+  steps:
+  - kind: tap
+    desc: Star 5
+
+# Man rating cua app shortcut: nhan giu icon tren launcher moi toi duoc, trong
+# app khong co nut nao dan sang. Goi thang intent ma shortcut khai (doc bang
+# `dumpsys shortcut`), vi `cmd shortcut` tren may chi co `reset-throttling`.
+- event: rating_placement_viewed
+  label: man rating tu app shortcut
+  reset:
+    relaunch: false
+  expect_params:
+    placement_name: app_shortcut
+  steps:
+  - kind: intent
+    action: com.apero.rating.action.RATING
+    component: ai.photogenerator.aivideo.aivideogenerator.aiart/com.apero.rating.internal.features.activity.rating.VslRatingActivity
+  - kind: wait_text
+    text: rate us
+    timeout: 20
+
+- event: rating_star_clicked
+  label: cham 3 sao tu app shortcut
+  reset:
+    relaunch: false
+  expect_params:
+    star_value: "3"
+    placement_name: app_shortcut
+  steps:
+  - kind: tap
+    desc: Star 3
+
+# Placement `result`: phai gen xong mot anh that. Duong ngan nhat do duoc tren
+# may: bam MOT the style o home -> chon anh co san -> gen thang, khong qua man
+# nhap prompt. Gen xong ~15s la popup rating bat len ngay tren man Result.
+#
+# KHONG di duong "Text to Image Generate" o dau home nua: ba the do nam trong
+# carousel TU TROI, the sap khuat con ho 20px o mep phai van la node hop le nen
+# `tap` bam vao tam no - tuc la bam trung the ke ben. Do duoc luot 15:59: dinh
+# vao Text to Image ma mo ra man "Image to Video", ca case chet theo.
+#
+# Case nay chay TIEP tren session cua cac case tren (`relaunch: false`), KHONG
+# mo lai app. Mo lai la sang session moi, popup `home` tu bat len va ban
+# `rating_placement_viewed` NGAY TRONG cua so cua case nay - tool cham vao lan
+# ban dau tien nen doc ra `home`, va bao luon "ban 2 lan". Do duoc luot 14:58:
+# mot lan `home` luc 14:58:11 roi moi toi lan `result` that luc 14:59:35.
+- event: rating_placement_viewed
+  label: popup rating o man result sau khi gen anh
+  reset:
+    relaunch: false
+  expect_params:
+    placement_name: result
+  steps:
+  # Thoat man rating cua app_shortcut de ve lai home cua session dang chay.
+  - kind: key
+    text: BACK
+  - kind: wait
+    seconds: 3
+  - kind: close_popup
+    text: rate us
+    timeout: 8
+  # Chua co sub thi mua NGAY o day, dung doi popup mua sub hien sau khi bam
+  # style. Chu `PREMIUM` canh ten app tren home CHI hien khi chua co sub - do
+  # duoc: truoc khi mua home in `Nexus AI` + `PREMIUM`, mua xong chi con
+  # `Nexus AI`. Nen no vua la nut mo paywall vua la co bao "chua co sub": dang
+  # co sub thi khong tim thay chu do, ca cum duoi bi bo qua, khong mua lai.
+  #
+  # Mua o DAY chu khong o case dau: goi sub thu nghiem co chu ky nen 5 phut,
+  # ma case nay chay o phut thu ~4 cua luot - mua tu dau thi den luc gen da het
+  # han (do duoc luot 15:33).
+  - kind: tap
+    text: PREMIUM
+    optional: true
+  - kind: wait
+    seconds: 5
+  - kind: tap
+    text: Weekly
+    optional: true
+  - kind: wait
+    seconds: 2
+  - kind: tap
+    text: Subscribe Now
+    optional: true
+  # Sheet thanh toan cua Google Play mo cham hon paywall trong app.
+  - kind: wait
+    seconds: 6
+  - kind: tap
+    text: "Đăng ký"
+    optional: true
+  - kind: wait
+    seconds: 6
+  # Chac chan da ve home truoc khi tim the style. Khong neo o day thi lo cum
+  # mua di lac sang man khac, cac buoc duoi bam mu roi case chet tan cuoi ma
+  # khong noi duoc chet vi cai gi.
+  - kind: wait_text
+    text: Visual Creation
+    timeout: 20
+  # Ten the style do remote config day xuong nen co the doi. Doi thi buoc nay
+  # bao thang "Khong thay element text='Retro 80s'" kem goi y ten dang co tren
+  # man - sua lai ten o day la xong.
+  - kind: tap
+    text: Retro 80s
+  # Picker la app KHAC (com.google.android.photopicker) nen no mo cham, co luot
+  # qua 4s van chua thay. Cho mu la bam khi con dang o man app, roi picker moi
+  # truot len - man hinh nhin thi dung ma chang co anh nao duoc chon, den buoc
+  # `Xong` moi vo (do duoc luot 16:19). Neo vao o tim kiem cua picker.
+  - kind: wait_text
+    text: Tìm kiếm
+    timeout: 30
+  - kind: wait
+    seconds: 2
+  # O anh la node Compose tron - khong id, khong chu, khong content-desc (desc
+  # "Ảnh được chụp lúc ..." nam o node con va doi theo ngay chup nen khong neo
+  # duoc). Chi con duong dem theo ten lop: o anh dau luoi la View thu 19.
+  - kind: tap
+    cls: View
+    index: 19
+  - kind: wait
+    seconds: 2
+  - kind: tap
+    text: Xong
+  # Luoi an toan khi goi sub thu nghiem het han giua luot (chu ky nen con 5
+  # phut): popup mua sub quay lai chan truoc khi gen. Mua lai bang the thu
+  # nghiem cua tai khoan license tester - con han thi ca bon buoc nay deu khong
+  # tim thay nut nen tu bo qua. Cho 10s truoc da: popup hien SAU vai giay, khong
+  # cho thi cum buoc mua bo qua sach roi case chet o `wait_text` cuoi (do duoc
+  # luot 15:33, sub het han giua chung).
+  - kind: wait
+    seconds: 10
+  - kind: tap
+    text: Unlock With Premium
+    optional: true
+  - kind: wait
+    seconds: 6
+  - kind: tap
+    text: Weekly
+    optional: true
+  - kind: wait
+    seconds: 2
+  - kind: tap
+    text: Subscribe Now
+    optional: true
+  - kind: wait
+    seconds: 6
+  - kind: tap
+    text: "Đăng ký"
+    optional: true
+  - kind: wait
+    seconds: 6
+  - kind: close_ad
+    timeout: 20
+  - kind: wait_text
+    text: rate us
+    timeout: 120
+
+- event: rating_star_clicked
+  label: cham 3 sao o man result
+  reset:
+    relaunch: false
+  expect_params:
+    star_value: "3"
+    placement_name: result
+  steps:
+  - kind: tap
+    desc: Star 3
