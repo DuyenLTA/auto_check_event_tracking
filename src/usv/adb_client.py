@@ -14,7 +14,7 @@ import logging
 from .adb_appdata import AppDataMixin
 from .adb_input import InputMixin
 from .adb_logcat import LogcatMixin
-from .adb_foreground_parse import parse_current_focus
+from .adb_foreground_parse import parse_current_focus, parse_top_activity
 from .adb_parsers import (
     AdbError, AdbTransportError, Device, check_package, check_serial, find_adb,
     parse_devices, parse_package_version, parse_packages, parse_wm_density,
@@ -152,6 +152,13 @@ class AdbClient(LogcatMixin, InputMixin, AppDataMixin):
         check_serial(serial)
         out, _, _ = await self._run("-s", serial, "shell", "dumpsys", "window")
         return parse_current_focus(out)
+
+    async def top_activity(self, serial: str) -> str | None:
+        """'pkg/Activity' dang o truoc, hoac None neu khong doc duoc."""
+        check_serial(serial)
+        out, _, _ = await self._run(
+            "-s", serial, "shell", "dumpsys", "activity", "activities")
+        return parse_top_activity(out)
 
     async def is_awake(self, serial: str) -> bool:
         """False khi man hinh dang tat/doze - luc do screencap ra anh den."""

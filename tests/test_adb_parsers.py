@@ -163,3 +163,33 @@ def test_doc_duoc_package_launcher():
 def test_khong_resolve_duoc_launcher_thi_tra_None():
     from usv.adb_foreground_parse import parse_home_package
     assert parse_home_package("No activity found") is None
+
+
+# --- man quang cao: doc TEN ACTIVITY, khong doc package ---
+
+DUMPSYS_ADS = """
+  Task{a1 #12 type=standard A=com.x}
+    topResumedActivity=ActivityRecord{abc u0 com.x/com.google.android.gms.ads.AdActivity t441}
+"""
+DUMPSYS_APP = """
+    topResumedActivity=ActivityRecord{def u0 com.x/.ui.feature.main.MainActivity t441}
+"""
+
+
+def test_doc_duoc_ten_activity_dang_o_truoc():
+    from usv.adb_foreground_parse import parse_top_activity
+
+    assert parse_top_activity(DUMPSYS_ADS) == (
+        "com.x/com.google.android.gms.ads.AdActivity")
+    assert parse_top_activity(DUMPSYS_APP) == "com.x/.ui.feature.main.MainActivity"
+    assert parse_top_activity("") is None
+
+
+def test_phan_biet_man_quang_cao_voi_man_app():
+    """Man quang cao chay TRONG process app nen package van la package app -
+    phai xem ten activity moi biet. Do la ly do khong dung `current_focus`."""
+    from usv.adb_foreground_parse import la_man_quang_cao, parse_top_activity
+
+    assert la_man_quang_cao(parse_top_activity(DUMPSYS_ADS))
+    assert not la_man_quang_cao(parse_top_activity(DUMPSYS_APP))
+    assert not la_man_quang_cao(None)

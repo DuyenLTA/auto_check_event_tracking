@@ -30,7 +30,8 @@ from .event_flow_reset import LAUNCH_SETTLE, prepare
 from .event_window import mark_label
 from .logcat_stream import Recording, mark
 from .models import DeviceNode
-from .flow_screen import bam_node as _bam_node, cho_nut, nodes, wait_text
+from .flow_screen import (bam_node as _bam_node, cho_nut,
+                          dang_trong_quang_cao, nodes, wait_text)
 from .quyen_he_thong import tim_nut_cho_phep
 from .ui_cache import CayUI
 
@@ -94,7 +95,9 @@ async def _dong_popup(client, serial: str, metrics, neo: str,
         # Bam roi ma van con -> co lop che. Don no truoc, dung bam lai vo ich.
         nut = None if da_bam else tim_nut_dong_popup(tren_man, neo)
         if nut is None:
-            nut = tim_nut_dong(tren_man, chi_chac=True)
+            nut = tim_nut_dong(
+                tren_man, chi_chac=True,
+                man_ads=await dang_trong_quang_cao(client, serial))
             da_bam = False              # don xong thi thu lai nut cua popup
             if nut is None:
                 raise AdbError(
@@ -190,8 +193,17 @@ async def run_step(client, serial: str, metrics, package: str, step: Step,
         # binh thuong nhat, nen im lang di tiep chu KHONG bao loi.
         # `timeout` de cho quang cao KIP hien: splash ad mat 5-8s moi ra nut
         # Skip, kiem mot lan roi bo qua la luon truot.
-        node = await cho_nut(client, serial, metrics, cay, step.timeout,
-                             tim_nut_dong)
+        # Dang dung TRONG man quang cao thi nut "Close" mot chu chac chan la
+        # nut dong quang cao - noi long mau o do. Quang cao thuong (rewarded)
+        # dat nut dong trong WebView khong co resource_id nao, nen luat "phai
+        # co to tien la khung ads" khong bat duoc; do duoc khi di do placement
+        # `result`, phai xem ba quang cao thuong moi gen duoc anh.
+        man_ads = await dang_trong_quang_cao(client, serial)
+        # Ngoai man quang cao thi goi y NGUYEN BAN `tim_nut_dong` - de cho
+        # duong tim nut khong doi gi so voi truoc, va de test thay the duoc no.
+        tim = (lambda ds: tim_nut_dong(ds, man_ads=True)) if man_ads \
+            else tim_nut_dong
+        node = await cho_nut(client, serial, metrics, cay, step.timeout, tim)
         if node is not None:
             await _bam_node(client, serial, node)
             log.info("Da dong quang cao bang %s", node.label)

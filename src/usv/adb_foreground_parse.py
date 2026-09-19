@@ -70,3 +70,31 @@ def parse_home_package(output: str) -> str | None:
         if "/" in line and " " not in line:
             return line.split("/")[0] or None
     return None
+
+
+# Activity cua SDK quang cao. Man quang cao chay TRONG process app nen
+# `current_focus` (chi tra package) khong phan biet duoc - phai xem ten activity.
+MAU_ACTIVITY_ADS = ("com.google.android.gms.ads.", ".adactivity", "admob",
+                    "rewardedactivity", "interstitialactivity")
+
+
+def parse_top_activity(output: str) -> str | None:
+    """'pkg/Activity' dang o truoc, tu 'dumpsys activity activities'."""
+    for line in output.splitlines():
+        if "topResumedActivity" not in line and "mResumedActivity" not in line:
+            continue
+        match = re.search(r"([A-Za-z0-9._]+/[A-Za-z0-9._$]+)", line.split("=", 1)[-1])
+        if match:
+            return match.group(1)
+    return None
+
+
+def la_man_quang_cao(activity: str | None) -> bool:
+    """Man dang hien co phai man cua SDK quang cao khong.
+
+    Dung de noi long viec dong nut "Close" mot chu: trong man quang cao thi
+    "Close" chac chan la nut dong quang cao, con o man cua app thi chinh no
+    cung la nut dong popup cua app - do la ly do mau do bi that chat.
+    """
+    thap = (activity or "").casefold()
+    return bool(thap) and any(m in thap for m in MAU_ACTIVITY_ADS)

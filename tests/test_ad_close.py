@@ -228,3 +228,13 @@ def test_dong_popup_khong_thay_chu_neo_thi_tra_None():
     from usv.ad_close import tim_nut_dong_popup
 
     assert tim_nut_dong_popup(_man_hai_lop(), "Check-In") is None
+
+
+def test_trong_man_quang_cao_thi_nhan_nut_Close_mot_chu():
+    """Quang cao thuong (rewarded) dat nut dong trong WebView khong co
+    resource_id nao o ca chuoi to tien, nen luat 'phai co to tien la khung ads'
+    khong bat duoc. Trong man quang cao thi khong co popup nao cua app de bam
+    nham, nen noi long o day la an toan."""
+    nodes = _man(_node(desc="Close"))
+    assert tim_nut_dong(nodes) is None                      # o man app: khong dong
+    assert tim_nut_dong(nodes, man_ads=True) is not None    # trong man ads: dong

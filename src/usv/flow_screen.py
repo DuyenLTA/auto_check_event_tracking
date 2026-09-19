@@ -12,6 +12,7 @@ import logging
 import time
 
 from .ad_close import tim_nut_dong
+from .adb_foreground_parse import la_man_quang_cao
 from .models import DeviceNode
 from .ui_cache import CayUI
 from .ui_dump import parse_dump
@@ -39,6 +40,18 @@ async def nodes(client, serial: str, metrics, cay: CayUI | None = None
     if cay is not None:
         cay.giu(nodes)
     return nodes
+
+
+async def dang_trong_quang_cao(client, serial: str) -> bool:
+    """Man dang hien co phai man cua SDK quang cao khong. Loi -> coi nhu khong.
+
+    Doc `dumpsys activity activities` chu khong doc focus: man quang cao chay
+    TRONG process app nen package van la package app.
+    """
+    try:
+        return la_man_quang_cao(await client.top_activity(serial))
+    except Exception:            # noqa: BLE001 - khong doc duoc thi cu coi la man app
+        return False
 
 
 async def bam_node(client, serial: str, node: DeviceNode) -> None:
@@ -81,7 +94,9 @@ async def wait_text(client, serial: str, metrics, needle: str,
             if folded in node.text.casefold() or folded in node.content_desc.casefold():
                 return True
         if don_man_chan and da_don < MAN_CHAN_TOI_DA:
-            nut = tim_nut_dong(tren_man, chi_chac=True)
+            nut = tim_nut_dong(
+                tren_man, chi_chac=True,
+                man_ads=await dang_trong_quang_cao(client, serial))
             if nut is not None:
                 log.info("Cho %r: don man chan bang %s", needle, nut.label)
                 await bam_node(client, serial, nut)
