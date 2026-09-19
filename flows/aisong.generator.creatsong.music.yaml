@@ -181,12 +181,71 @@ cases:
   expect_params:
     placement_name: result
   steps:
+  # Case truoc de lai man Rating TOAN MAN HINH cua app shortcut, ma nut `+`
+  # Create chi co o home - khong ve home truoc thi buoc duoi khong thay gi.
+  - kind: key
+    text: BACK
+  - kind: wait
+    seconds: 2
+  # Ve toi home thi popup rating cua home co the dang mo, che mat thanh duoi.
+  - kind: tap
+    desc: Close
+    optional: true
+  - kind: wait
+    seconds: 2
+  # Nut `+` mo MENU hai lua chon (Create Song / Create MV), khong vao thang
+  # man tao. Do tay khong thay menu nay vi luc do dang co mot luot gen do.
   - kind: tap
     desc: Create
   - kind: wait
-    seconds: 3
+    seconds: 2
+  - kind: tap
+    text: Create Song
+  # Interstitial chen vao ngay sau khi chon Create Song. `tap` cung tu don
+  # quang cao roi bam lai, buoc nay chi de di nhanh hon.
+  - kind: close_ad
+    timeout: 25
+  # Ca HAI o deu bat buoc: trong thi bam Generate khong an gi (o Title trong
+  # thi bao "Name your song first"). Hai o deu la EditText TRON - khong id,
+  # khong chu, khong content-desc - nen phai khoa bang `cls` + `index`.
+  #
+  # Chu go phai tranh to hop Telex: ban phim may dang la tieng Viet nen
+  # "TestMV" go ra "TétMV" (es -> é).
+  - kind: wait_text
+    text: Title
+    timeout: 20
+  - kind: tap
+    cls: EditText
+    index: 0
+  - kind: type
+    text: bai hat 123
+  - kind: key
+    text: BACK
+  - kind: tap
+    cls: EditText
+    index: 1
+  - kind: type
+    text: aaa bbb 111
+  - kind: key
+    text: BACK
+  - kind: wait_text
+    text: Generate Song
+    timeout: 20
   - kind: tap
     text: Generate Song
+  # Het luot gen mien phi trong ngay thi app hoi "How do you want to generate?":
+  # Watch ads (~90s) hoac Go Premium. May nay la license tester nen mua goi la
+  # giao dich TEST ("Thẻ thử nghiệm, luôn phê duyệt"), nhanh hon xem quang cao.
+  # Tai khoan da Premium thi hop thoai nay khong hien - nen ca nhom `optional`.
+  - kind: tap
+    text: Go Premium
+    optional: true
+  - kind: tap
+    text: Subscribe Now
+    optional: true
+  - kind: tap
+    text: Đăng ký
+    optional: true
   # Gen mat ~30s ("This usually takes about 30 seconds"), cho rong tay.
   - kind: wait_text
     text: rate us
