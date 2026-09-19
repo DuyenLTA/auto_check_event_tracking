@@ -11,6 +11,7 @@ report ads.
 
 from __future__ import annotations
 
+from .report_event_row_collapse import gop_dong_trung
 from .check_models import (FAIL_VERDICTS, CheckResult, Summary, Verdict,
                            verdict_label)
 from .event_spec_models import SpecSheet
@@ -48,7 +49,7 @@ def _triggered_of(spec: SpecSheet) -> dict[str, str]:
 
 
 def _row(item: CheckResult, triggered: dict[str, str],
-         *, show_event: bool = True, note_triage=None) -> str:
+         *, show_event: bool = True, note_triage=None, so_lan: int = 1) -> str:
     """Mot dong bang. `show_event=False` -> de trong o Event.
 
     Spec 2 event nhung bang co 5 dong (2 dong event + 3 dong param). Lap ten
@@ -64,7 +65,10 @@ def _row(item: CheckResult, triggered: dict[str, str],
         + (f"<td class='cell-ev'><code>{esc(event)}</code>"
            f"<span class='trig'>{esc(triggered.get(base, ''))}</span></td>"
            if show_event else "<td class='cell-ev'></td>")
-        + f"<td class='cell-mono'>{esc(param)}</td>"
+        + f"<td class='cell-mono'>{esc(param)}"
+        + (f"<span class='times' title='{so_lan} case cho ra dòng giống hệt nhau'>×{so_lan}</span>"
+           if so_lan > 1 else "")
+        + "</td>"
         f"<td class='cell-mono cell-want'>{esc(item.expected or '—')}</td>"
         f"<td class='cell-mono'>{esc(item.actual or '—')}</td>"
         f"<td><span class='status {cls}'><span class='dot'></span>"
@@ -92,11 +96,14 @@ def _section(name: str, rows: list[CheckResult], triggered: dict[str, str],
     for ten, cua_event in nhom.items():
         # Dong khong co param (kiem event co ban khong) len truoc.
         cua_event.sort(key=lambda r: _split_element(r.element)[1] != "—")
-        for thu_tu, item in enumerate(cua_event):
+        # Gop dong trung TRUOC khi in: moi case kiem lai het param cua event
+        # nen cot `placement_name` lap y het nhau theo so case. Chi gop phan
+        # hien; `checked`/`ok` o tren van dem tung ket qua mot.
+        for thu_tu, (item, so_lan) in enumerate(gop_dong_trung(cua_event)):
             # Chi dong FAIL moi co ghi chu - xem rang buoc 1 trong event_triage.
             ghi_chu = triage.cho(item.element) if triage and item.failed else None
             parts.append(_row(item, triggered, show_event=thu_tu == 0,
-                              note_triage=ghi_chu))
+                              note_triage=ghi_chu, so_lan=so_lan))
     body = "".join(parts)
     # Mau so 0 nghia la ca man CHUA test dong nao. In "0/0 khop" thi nguoi doc
     # khong hieu gi; noi thang "chua test" moi dung viec da xay ra.

@@ -127,6 +127,10 @@ CSS = """<style>
   .cell-mono{font-family:'JetBrains Mono',monospace;font-size:0.83rem;
     color:var(--ink-soft);}
   .cell-want{max-width:22ch;}
+  /* "x5" = nam case cho ra dong giong het nhau, da gop lai lam mot. */
+  .times{display:inline-block;margin-left:0.4rem;padding:0.05rem 0.3rem;
+    border-radius:0.25rem;background:var(--surface-alt);border:1px solid var(--line);
+    font-size:0.72rem;font-weight:600;color:var(--ink-soft);}
   .cell-ev code{font-family:'JetBrains Mono',monospace;font-size:0.83rem;
     color:var(--ink);}
   .trig{display:block;font-size:0.76rem;color:var(--ink-soft);
