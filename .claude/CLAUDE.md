@@ -26,13 +26,15 @@ Trang spec là tài liệu SDK dùng chung nhiều app: khung case xài lại đ
 
 ## Lệnh hay dùng
 
+`<venv>` = `.venv/Scripts` trên Windows (file lệnh có đuôi `.exe`), `.venv/bin` nơi khác.
+
 ```bash
-.venv/bin/python -m pip install -e .                # lần đầu
+<venv>/python -m pip install -e .                   # lần đầu
 usv-check --spec <link Confluence> --package <pkg>  # chạy nền, stdout = 1 dòng JSON
 usv-record --package <pkg> dump                     # ghi flow
 usv-cases dump "<link Confluence>"                  # spec -> text cho agent doc
 usv-cases check out/cases.json --url "<link>"       # doi chieu case voi bang spec
-PYTHONPATH=src .venv/bin/python -m pytest -q        # test (hiện 678 passed)
+PYTHONPATH=src <venv>/python -m pytest -q           # test (hiện 678 passed)
 ```
 
 ## Slash command
@@ -48,6 +50,11 @@ ln -sf "$PWD/.claude/commands/spec-cases.md" ~/.claude/commands/spec-cases.md
 
 Symlink chứ không copy: sửa command trong repo là máy dùng ngay, không phải copy lại
 rồi quên mất bản nào mới hơn. Command mới chỉ hiện ở **phiên Claude Code mới**.
+
+Trên Windows, `ln -sf` trong Git Bash chỉ tạo symlink thật khi bật Developer Mode
+(hoặc `MSYS=winsymlinks:nativestrict`); không có thì nó copy im lặng. Copy vẫn chạy
+được, nhưng sửa command trong repo sẽ **không** tự sang `~/.claude/commands/` —
+phải copy lại tay sau mỗi lần sửa.
 
 ## Trạng thái git (18/09/2026)
 

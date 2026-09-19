@@ -20,11 +20,13 @@ Lấy cái đầu tiên có `src/usv/cli_record.py`:
 2. biến môi trường `$EVENT_CHECK_REPO`
 3. `~/projects/auto_check_event_tracking`
 
-Không thấy thì dừng, nói rõ đã tìm ở đâu. Gọi đường dẫn tìm được là `<repo>`;
-mọi lệnh gọi qua `<repo>/.venv/bin/usv-record` — đường dẫn tuyệt đối, vì
-`usv-record` không có trong PATH toàn cục.
+Không thấy thì dừng, nói rõ đã tìm ở đâu. Gọi đường dẫn tìm được là `<repo>`.
 
-Đặt `R="cd <repo> && .venv/bin/usv-record --package <pkg> [--serial <S>]"` cho gọn
+Gọi `<venv>` = `<repo>/.venv/Scripts` trên Windows (file lệnh có đuôi `.exe`),
+`<repo>/.venv/bin` trên macOS/Linux. Mọi lệnh dưới đây gõ **đường dẫn tuyệt đối**
+qua `<venv>`: mấy lệnh `usv-*` không có trong PATH toàn cục.
+
+Đặt `R="cd <repo> && <venv>/usv-record --package <pkg> [--serial <S>]"` cho gọn
 trong đầu, nhưng **vẫn gõ đủ** mỗi lệnh: mỗi lần gọi là một tiến trình riêng.
 
 ## 1. Package, máy, event

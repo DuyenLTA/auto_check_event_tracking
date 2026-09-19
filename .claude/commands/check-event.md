@@ -16,9 +16,11 @@ tiên có `src/usv/cli_check.py`:
 
 Không thấy thì dừng, nói rõ đã tìm ở đâu. Gọi đường dẫn tìm được là `<repo>`.
 
-Lệnh luôn gọi qua `<repo>/.venv/bin/usv-check` — **đường dẫn tuyệt đối**.
-`usv-check` không có trong PATH toàn cục, và `.venv/bin` chỉ đúng cho repo này.
-Báo `command not found` thì chạy `cd <repo> && .venv/bin/python -m pip install -e .`
+Gọi `<venv>` = `<repo>/.venv/Scripts` trên Windows (file lệnh có đuôi `.exe`),
+`<repo>/.venv/bin` trên macOS/Linux. Mọi lệnh dưới đây gõ **đường dẫn tuyệt đối**
+qua `<venv>`: mấy lệnh `usv-*` không có trong PATH toàn cục.
+
+Báo `command not found` thì chạy `cd <repo> && <venv>/python -m pip install -e .`
 rồi thử lại: venv cài từ trước khi mấy lệnh này được thêm thì thiếu file lệnh.
 
 ## 1. Package và spec
@@ -60,7 +62,7 @@ Một lượt mất vài phút (qua splash ad, onboarding, paywall), nên **luô
 `run_in_background`, đừng để người dùng ngồi chờ:
 
 ```
-cd <repo> && .venv/bin/usv-check --package <pkg> --spec "<link>" [--serial <S>] \
+cd <repo> && <venv>/usv-check --package <pkg> --spec "<link>" [--serial <S>] \
   > <scratchpad>/check-stdout.json 2> <scratchpad>/check-stderr.log
 ```
 
@@ -116,7 +118,7 @@ nhất chỉ Claude làm được — đừng bỏ qua khi đã có kết quả 
 3. Publish xong ghi link lại:
 
    ```
-   cd <repo> && .venv/bin/usv-artifact --url "<url>" --generated-at "<generated_at trong JSON>"
+   cd <repo> && <venv>/usv-artifact --url "<url>" --generated-at "<generated_at trong JSON>"
    ```
 
    `usv-artifact` không tham số thì in link đã lưu của lượt trước.

@@ -36,7 +36,10 @@ if (!url) {
   throw new Error('Chua co trang spec: truyen args.url la link Confluence.')
 }
 
-const PY = `cd ${repoDir} && PYTHONPATH=src .venv/bin/python -m usv.spec_cases_cli`
+// Venv de python o `.venv/bin` tren macOS/Linux nhung `.venv/Scripts` tren Windows,
+// nen do ngay trong shell thay vi hardcode mot nhanh roi chet o may kia.
+const VENV_PY = '$([ -x .venv/bin/python ] && echo .venv/bin/python || echo .venv/Scripts/python.exe)'
+const PY = `cd ${repoDir} && PYTHONPATH=src ${VENV_PY} -m usv.spec_cases_cli`
 
 const CASES_SCHEMA = {
   type: 'object',
