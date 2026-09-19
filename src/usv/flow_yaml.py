@@ -27,7 +27,7 @@ KINDS = frozenset({"launch", "tap", "swipe", "type", "key", "wait", "wait_text",
 # truong `text` nhung do la chu de TIM / de GO, doc no thanh selector thi
 # `wait_text` bi danh dau fragile oan va Step.label() in ra sai viec.
 NEEDS_SELECTOR = frozenset({"tap", "swipe"})
-SELECTOR_FIELDS = ("resource_id", "text", "desc")
+SELECTOR_FIELDS = ("resource_id", "text", "desc", "cls")
 DEFAULT_TIMEOUT = 10.0
 
 

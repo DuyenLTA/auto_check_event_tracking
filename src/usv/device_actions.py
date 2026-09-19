@@ -28,22 +28,30 @@ MIN_RATIO = 0.5
 
 @dataclass(frozen=True, slots=True)
 class Selector:
-    """Mot cach chi ra node. Dung dung MOT trong ba truong."""
+    """Mot cach chi ra node. Dung dung MOT trong bon truong."""
 
     resource_id: str = ""
     text: str = ""
     desc: str = ""
+    # Ten lop (vd "EditText"). Loi thoat cuoi cung cho node KHONG co id, khong
+    # chu, khong content-desc - o nhap cua man Create Song la vi du: ca hai o
+    # deu la EditText tron, chu goi y hien ra o node khac. Khong co `cls` thi
+    # flow khong cach nao cham toi chung.
+    # Vo khi app doi cay view, nen chi dung khi ba truong kia dung het cach.
+    cls: str = ""
     index: int = 0        # node thu may trong so cac node khop, tinh tu 0
 
     @property
     def kind(self) -> str:
         if self.resource_id:
             return "resource_id"
-        return "text" if self.text else "desc"
+        if self.text:
+            return "text"
+        return "desc" if self.desc else "cls"
 
     @property
     def needle(self) -> str:
-        return self.resource_id or self.text or self.desc
+        return self.resource_id or self.text or self.desc or self.cls
 
     @property
     def fragile(self) -> bool:
@@ -62,6 +70,9 @@ def _candidates(nodes: list[DeviceNode], selector: Selector) -> list[DeviceNode]
     elif selector.kind == "text":
         folded = needle.casefold()
         hits = [n for n in nodes if n.text.strip().casefold() == folded]
+    elif selector.kind == "cls":
+        folded = needle.casefold()
+        hits = [n for n in nodes if n.short_cls.casefold() == folded]
     else:
         folded = needle.casefold()
         hits = [n for n in nodes if n.content_desc.strip().casefold() == folded]
@@ -70,6 +81,10 @@ def _candidates(nodes: list[DeviceNode], selector: Selector) -> list[DeviceNode]
 
 
 def _near_misses(nodes: list[DeviceNode], selector: Selector) -> list[str]:
+    if selector.kind == "cls":
+        pool = {n.short_cls for n in nodes if n.short_cls}
+        return difflib.get_close_matches(selector.needle, sorted(pool),
+                                         n=SUGGEST, cutoff=MIN_RATIO)
     pool = {n.resource_id for n in nodes if n.resource_id} if \
         selector.kind == "resource_id" else \
         {n.text.strip() for n in nodes if n.text.strip()} | \

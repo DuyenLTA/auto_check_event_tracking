@@ -39,6 +39,8 @@ def selector_tu_args(args) -> Selector | None:
         return Selector(resource_id=args.id, index=args.index)
     if args.desc:
         return Selector(desc=args.desc, index=args.index)
+    if getattr(args, "cls", ""):
+        return Selector(cls=args.cls, index=args.index)
     if args.text:
         # Canh bao, khong chan: nhieu man khong co resource_id nao dung duoc.
         say("Cảnh báo: selector khoá bằng chữ sẽ vỡ khi app đổi ngôn ngữ — "
@@ -139,6 +141,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--out", default="", help="thư mục giữ phiên đang ghi")
     for ten in ("--id", "--text", "--desc"):
         parser.add_argument(ten, default="")
+    # `--cls` la loi thoat cuoi cung: node khong co id/chu/desc nao (o nhap
+    # tron, container cua nut) thi khong selector nao kia cham toi duoc.
+    parser.add_argument("--cls", default="",
+                        help="tên lớp, vd EditText — dùng khi node không có "
+                             "id/chữ/desc")
     parser.add_argument("--index", type=int, default=0,
                         help="node thứ mấy trong số các node khớp")
     parser.add_argument("lenh", choices=["dump", "tap", "swipe", "back", "launch",

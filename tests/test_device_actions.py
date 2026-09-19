@@ -109,3 +109,38 @@ def test_selector_theo_chu_bi_danh_dau_de_vo():
 def test_selector_nhan_ro_kieu_va_gia_tri():
     assert Selector(resource_id="btnA").label() == "resource_id='btnA'"
     assert Selector(text="Xin chao", index=2).label() == "text='Xin chao'[2]"
+
+
+# --- selector theo TEN LOP: loi thoat cho node khong co id/chu/desc ---
+
+def _o_nhap(metrics):
+    """Man Create Song: hai o nhap deu la EditText TRON - khong resource_id,
+    khong text, khong content-desc (chu goi y nam o node khac)."""
+    xml = ("<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>"
+           "<hierarchy rotation=\"0\"><node index=\"0\" text=\"\" resource-id=\"\""
+           " class=\"a.b.FrameLayout\" package=\"com.x\" content-desc=\"\""
+           " clickable=\"false\" enabled=\"true\" visible-to-user=\"true\""
+           " bounds=\"[0,0][1080,2400]\">"
+           "<node index=\"0\" text=\"\" resource-id=\"\" class=\"android.widget.EditText\""
+           " package=\"com.x\" content-desc=\"\" clickable=\"true\" enabled=\"true\""
+           " visible-to-user=\"true\" bounds=\"[88,376][992,508]\" />"
+           "<node index=\"1\" text=\"\" resource-id=\"\" class=\"android.widget.EditText\""
+           " package=\"com.x\" content-desc=\"\" clickable=\"true\" enabled=\"true\""
+           " visible-to-user=\"true\" bounds=\"[88,768][992,1122]\" />"
+           "</node></hierarchy>")
+    return parse_dump(xml, metrics)
+
+
+def test_khoa_selector_bang_ten_lop_va_index(metrics):
+    """Ba truong kia khong cham toi duoc hai o nay, nen `cls` la duong duy
+    nhat - do la ly do no ton tai."""
+    hai_o = _o_nhap(metrics)
+    o_thu_hai = [n for n in hai_o if n.short_cls == "EditText"][1]
+    assert find(hai_o, Selector(cls="EditText", index=1)) is o_thu_hai
+
+
+def test_selector_cls_khong_thay_thi_goi_y_ten_lop_gan_giong(metrics):
+    """Goi y phai la TEN LOP, khong phai resource_id - nguoi doc dang tim lop."""
+    with pytest.raises(AdbError) as err:
+        find(_o_nhap(metrics), Selector(cls="EditTextt"))
+    assert "EditText" in str(err.value)
