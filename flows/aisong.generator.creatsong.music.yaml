@@ -1,0 +1,205 @@
+package: aisong.generator.creatsong.music
+cases:
+# App nay khong co popup Add Widget / Check-In chen truoc nhu app
+# aiphotogenerator: dong het quang cao la popup rating len thang o home.
+# Man onboarding da di het tren may nay ("Welcome back!"), cac buoc onboarding
+# de `optional: true` de flow van chay duoc tren may sach.
+- event: rating_placement_viewed
+  label: popup rating tai home
+  expect_params:
+    placement_name: home
+  steps:
+  - kind: launch
+  - kind: allow
+    timeout: 12
+  # Splash ad: doi den khi ra duoc nut dong.
+  - kind: close_ad
+    timeout: 30
+  - kind: wait
+    seconds: 3
+  # Man Select Language chi hien khi may chua di het onboarding.
+  - kind: tap
+    resource_id: rootLanguageItem
+    index: 1
+    optional: true
+  - kind: tap
+    text: English (US)
+    optional: true
+  - kind: tap
+    resource_id: buttonLanguageNext
+    optional: true
+  - kind: wait
+    seconds: 3
+  - kind: tap
+    resource_id: btnNextOnboarding
+    optional: true
+  - kind: wait
+    seconds: 3
+  - kind: tap
+    resource_id: btnNextOnboarding
+    optional: true
+  - kind: wait
+    seconds: 3
+  # Man cau hoi: chon mot the roi bam "Start Now". Id nut o app nay la
+  # `btnNextOnboardingImage`, KHAC app aiphotogenerator (`btnNextQuestion`) -
+  # cung template VSL nhung khong chep id sang duoc.
+  - kind: tap
+    resource_id: borderContainer
+    index: 0
+    optional: true
+  - kind: tap
+    resource_id: btnNextOnboardingImage
+    optional: true
+  # Interstitial roi paywall - luc co luc khong.
+  - kind: close_ad
+    timeout: 25
+  - kind: close_ad
+    timeout: 20
+  - kind: wait_text
+    text: rate us
+    timeout: 30
+
+# Moi placement mot CUA SO rieng: gop hai placement vao mot case thi ca hai lan
+# ban roi vao cung cua so va bao "ban trung".
+- event: rating_placement_viewed
+  label: popup rating khi bam thoat
+  reset:
+    relaunch: false
+  expect_params:
+    placement_name: exit_click
+  steps:
+  # Dong popup rating cua home truoc, khong thi BACK chi dong popup do chu
+  # khong chay luong thoat app.
+  - kind: tap
+    desc: Close
+    optional: true
+  - kind: wait
+    seconds: 2
+  - kind: key
+    text: BACK
+  - kind: wait_text
+    text: rate us
+    timeout: 25
+
+# Nam case duoi chay tiep tren MOT lan mo popup: cham sao KHONG tat popup, chi
+# nut RATE moi tat vinh vien ("Không hiện pop-up rating khi user đã bấm rate"),
+# nen flow tuyet doi khong bam RATE.
+- event: rating_star_clicked
+  label: cham 1 sao khi bam thoat
+  reset:
+    relaunch: false
+  expect_params:
+    star_value: "1"
+    placement_name: exit_click
+  steps:
+  - kind: tap
+    desc: Star 1
+
+- event: rating_star_clicked
+  label: cham 2 sao khi bam thoat
+  reset:
+    relaunch: false
+  expect_params:
+    star_value: "2"
+    placement_name: exit_click
+  steps:
+  - kind: tap
+    desc: Star 2
+
+- event: rating_star_clicked
+  label: cham 3 sao khi bam thoat
+  reset:
+    relaunch: false
+  expect_params:
+    star_value: "3"
+    placement_name: exit_click
+  steps:
+  - kind: tap
+    desc: Star 3
+
+- event: rating_star_clicked
+  label: cham 4 sao khi bam thoat
+  reset:
+    relaunch: false
+  expect_params:
+    star_value: "4"
+    placement_name: exit_click
+  steps:
+  - kind: tap
+    desc: Star 4
+
+- event: rating_star_clicked
+  label: cham 5 sao khi bam thoat
+  reset:
+    relaunch: false
+  expect_params:
+    star_value: "5"
+    placement_name: exit_click
+  steps:
+  - kind: tap
+    desc: Star 5
+
+# Man Rating o app shortcut: nhan giu icon tren launcher moi toi duoc, khong co
+# nut nao trong app dan sang. Intent doc bang `dumpsys shortcut`.
+- event: rating_placement_viewed
+  label: man rating tu app shortcut
+  reset:
+    relaunch: false
+  expect_params:
+    placement_name: app_shortcut
+  steps:
+  - kind: intent
+    action: com.apero.rating.action.RATING
+    component: aisong.generator.creatsong.music/com.apero.rating.internal.features.activity.rating.VslRatingActivity
+  - kind: wait_text
+    text: rate us
+    timeout: 20
+
+- event: rating_star_clicked
+  label: cham 3 sao tu app shortcut
+  reset:
+    relaunch: false
+  expect_params:
+    star_value: "3"
+    placement_name: app_shortcut
+  steps:
+  - kind: tap
+    desc: Star 3
+
+# Placement `result`: CHI luong gen bang AI moi co. Luong "Remix this video"
+# (ghep anh roi Export) do tay 19/09 - khong ban event rating nao, ca o man
+# preview lan man Profile sau khi export.
+#
+# Man Create Song giu lai Title + Song Idea cua lan truoc, nen flow khong go
+# chu: go duoc nhung ban phim may dang la Telex tieng Viet, "TestMV" ra
+# "TétMV" (es -> é). Hai o trong thi `Generate Song` bi disable va buoc duoi
+# se lai hut - luc do case ra `Chua test` kem ly do, khong phai FAIL.
+- event: rating_placement_viewed
+  label: popup rating sau khi gen bai hat
+  reset:
+    relaunch: false
+  expect_params:
+    placement_name: result
+  steps:
+  - kind: tap
+    desc: Create
+  - kind: wait
+    seconds: 3
+  - kind: tap
+    text: Generate Song
+  # Gen mat ~30s ("This usually takes about 30 seconds"), cho rong tay.
+  - kind: wait_text
+    text: rate us
+    timeout: 90
+
+- event: rating_star_clicked
+  label: cham 3 sao sau khi gen bai hat
+  reset:
+    relaunch: false
+  expect_params:
+    star_value: "3"
+    placement_name: result
+  steps:
+  - kind: tap
+    desc: Star 3
+
