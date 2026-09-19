@@ -46,6 +46,16 @@ def run(spec: SpecSheet, windows: tuple[Window, ...], config: CheckConfig,
                                  app_seen_running=app_seen_running,
                                  session_events=session_events))
 
+    return tong_hop(results)
+
+
+def tong_hop(results: list[CheckResult]) -> tuple[list[CheckResult], Summary]:
+    """Sap xep roi dem lai tu dau.
+
+    Tach rieng vi con duong CLI them dong SAU khi `run` xong (case lai hut, xem
+    cli_case_notes.them_dong_lai_hut). Dem mot lan trong `run` thi nhung dong
+    them vao khong vao Summary, va con so tren dau report noi it hon thuc te.
+    """
     ordered = sort_for_report(results)
     summary = Summary()
     for item in ordered:

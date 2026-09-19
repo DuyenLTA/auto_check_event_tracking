@@ -68,3 +68,36 @@ def annotate(results: list[CheckResult], case_results: list[CaseResult], *,
             message = _ly_do(cases) or row.message
         ra.append(replace(row, message=message))
     return ra
+
+
+def them_dong_lai_hut(results: list[CheckResult],
+                      case_results: list[CaseResult]) -> list[CheckResult]:
+    """Them mot dong NOT_TESTED cho moi case KHONG chay xong.
+
+    `event_presence` chi biet "event nay khong con cua so nao", nen no chi de
+    lai mot dong khi CA event khong do duoc. Event co nhieu case ma chi vai case
+    lai hut thi cac case kia van sinh cua so -> nhanh do khong chay -> case hut
+    BIEN MAT khoi bang, khong dem vao `not_tested`.
+
+    Do duoc luot 14:59 tren Nexus AI 3.2.0: hai case placement `result` lai hut,
+    log ghi ro tung case, bao cao van in `not_tested: 0` va 27/27 khop - doc ra
+    nhu da do het bon vi tri trong khi `result` chua do gi.
+    """
+    # Event da co dong gop cua ca event thi thoi: `_ly_do` gop san ly do cua
+    # moi case hut vao dong do roi, them nua thanh ke hai lan.
+    da_co = {row.element for row in results
+             if row.verdict is Verdict.NOT_TESTED
+             and row.check == "event_presence"}
+    ra = list(results)
+    for item in case_results:
+        if item.ran or item.case.event in da_co:
+            continue
+        dau = "Tiền đề chưa đạt" if item.status == "blocked" else "Lái hụt"
+        nhan = (f"{item.case.event} ({item.case.label})" if item.case.label
+                else item.case.event)
+        ra.append(CheckResult(
+            element=nhan, check="event_presence", verdict=Verdict.NOT_TESTED,
+            expected="event được bắn ra",
+            message=f"{dau}: {item.reason}",
+        ))
+    return ra

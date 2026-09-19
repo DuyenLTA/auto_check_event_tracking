@@ -150,6 +150,9 @@ async def check(*, spec: SpecSheet, package: str, flow: Flow | None, adb,
         session_events=tuple(e for e in events if e.from_app))
     results = cli_case_notes.annotate(results, cases, flows=flows_path,
                                       co_flow=flow is not None)
+    # Dem LAI sau khi them: case lai hut phai vao ca bang lan con so `not_tested`.
+    results = cli_case_notes.them_dong_lai_hut(results, cases)
+    results, summary = event_check_runner.tong_hop(results)
 
     generated_at = datetime.now(VN).strftime("%d/%m/%Y %H:%M")
     html = build(spec, results, summary, package=package,
