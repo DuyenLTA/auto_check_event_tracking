@@ -529,3 +529,48 @@ def test_close_popup_don_lop_che_roi_bam_lai(recording):
     # Bam X popup (khong an vi paywall che) -> don paywall -> bam lai X popup.
     assert client.taps_at == [(960.0, 670.0), (100.0, 130.0), (960.0, 670.0)], \
         client.taps_at
+
+
+def test_tap_don_quang_cao_chan_duong_roi_bam_lai(recording):
+    """Quang cao chen len giua hai buoc bat ky. Bao hut ngay la mat ca case,
+    trong khi man dang can van nam ngay duoi lop quang cao do."""
+    from usv.event_flow_models import Step
+
+    ADS = ("<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>"
+           "<hierarchy rotation=\"0\"><node index=\"0\" text=\"\""
+           " resource-id=\"dismiss-button\" class=\"a.b.V\" package=\"com.x\""
+           " content-desc=\"\" clickable=\"true\" enabled=\"true\""
+           " visible-to-user=\"true\" bounds=\"[900,100][980,180]\" /></hierarchy>")
+
+    class Adb(FakeClient):
+        def __init__(self):
+            super().__init__()
+            self.taps_at = []
+
+        async def dump_ui(self, serial):
+            return ADS if not self.taps_at else DUMP
+
+        async def top_activity(self, serial):
+            return "com.x/com.google.android.gms.ads.AdActivity"
+
+        async def input_tap(self, serial, x, y):
+            self.taps_at.append((x, y))
+
+    client = Adb()
+    case = _case(steps=(Step(kind="tap", selector=Selector(resource_id="btnHome")),))
+    result = run(run_case(client, "S1", METRICS, "com.x", recording, case))
+    assert result.status == "ok", result.reason
+    # Bam nut dong quang cao truoc, roi moi bam dung nut can bam.
+    assert client.taps_at == [(940.0, 140.0), (200.0, 300.0)], client.taps_at
+
+
+def test_tap_van_bao_hut_khi_khong_co_quang_cao_nao(recording):
+    """Don quang cao khong duoc bien mot buoc hut thanh im lang: khong co gi de
+    don thi van phai bao `not_tested` kem ten step chet."""
+    from usv.event_flow_models import Step
+
+    client = FakeClient()
+    case = _case(steps=(Step(kind="tap", selector=Selector(resource_id="khong_co")),))
+    result = run(run_case(client, "S1", METRICS, "com.x", recording, case))
+    assert result.status == "not_tested"
+    assert "khong_co" in result.reason

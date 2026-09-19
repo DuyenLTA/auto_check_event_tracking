@@ -116,6 +116,26 @@ async def _dong_popup(client, serial: str, metrics, neo: str,
     raise AdbError(f"Bấm đóng {VONG_DONG_POPUP} lần mà popup {neo!r} vẫn còn.")
 
 
+async def _don_quang_cao(client, serial: str, metrics, cay: CayUI | None) -> bool:
+    """Dong quang cao dang chan duong. True neu co dong duoc gi.
+
+    Chi mau CHAC (hoac bat ky mau nao khi dang dung trong man quang cao): o man
+    app, nut "Close" mot chu la nut dong popup cua app - dong nham no la tu tay
+    tat cai man dang can do.
+    """
+    tren_man = await nodes(client, serial, metrics, cay)
+    nut = tim_nut_dong(tren_man, chi_chac=True,
+                       man_ads=await dang_trong_quang_cao(client, serial))
+    if nut is None:
+        return False
+    log.info("Don quang cao chan duong bang %s", nut.label)
+    await _bam_node(client, serial, nut)
+    if cay is not None:
+        cay.bo()
+    await asyncio.sleep(AD_SETTLE)
+    return True
+
+
 async def run_step(client, serial: str, metrics, package: str, step: Step,
                    cay: CayUI | None = None) -> None:
     """Chay mot step. That bai -> AdbError co message noi ro sai o dau."""
@@ -213,8 +233,19 @@ async def run_step(client, serial: str, metrics, package: str, step: Step,
         return
 
     if step.kind == "tap":
-        await tap(client, serial, await nodes(client, serial, metrics, cay),
-                  step.selector)
+        try:
+            await tap(client, serial, await nodes(client, serial, metrics, cay),
+                      step.selector)
+        except AdbError:
+            # Khong thay element: truoc khi bao hut, thu don quang cao chan
+            # duong roi bam lai MOT lan. App quang cao day thi lop chen co the
+            # len giua hai buoc bat ky - va o duoi quang cao, man dang can van
+            # o do. Viec nay thuoc ve moi buoc `tap`, khong phai thu de tung
+            # flow tu nho chen `close_ad` vao dung cho.
+            if not await _don_quang_cao(client, serial, metrics, cay):
+                raise
+            await tap(client, serial, await nodes(client, serial, metrics, cay),
+                      step.selector)
         if cay is not None:
             cay.bo()          # da bam -> man doi, cay vua doc thanh qua khu
         return
