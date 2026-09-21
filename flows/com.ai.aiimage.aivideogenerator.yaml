@@ -1,0 +1,50 @@
+# Sorapix: AI Hair Changer — 2 event cua SDK Widget.
+#
+# Popup Add Widget chi hien MOT LAN moi luot mo app, nen ca hai event dung chung
+# mot lan khoi dong: case duoi chay tiep tren man cua case tren (`relaunch: false`).
+package: com.ai.aiimage.aivideogenerator
+
+cases:
+
+- event: widget_view
+  label: popup Add Widget o home
+  steps:
+  - kind: launch
+  # Android 13+ hoi quyen thong bao ngay lan mo dau, dialog he thong nam de tren
+  # app nen khong bam Cho phep thi moi selector sau deu khong thay gi.
+  - kind: allow
+    timeout: 15
+  - kind: close_ad
+    timeout: 30
+  - kind: wait
+    seconds: 6
+  # Man "Which style fits your vision?" hien o moi lan mo app, phai chon mot the
+  # roi nut Next moi an. `optional` phong lan nao app bo qua man nay.
+  - kind: tap
+    resource_id: borderContainer
+    index: 0
+    optional: true
+  - kind: tap
+    resource_id: btnNextOnboardingImage
+    optional: true
+  # Interstitial/paywall chen giua: luc co luc khong.
+  - kind: close_ad
+    timeout: 20
+  - kind: wait_text
+    text: Add Widget
+    timeout: 25
+
+- event: widget_click
+  label: bam Add Widget Now
+  reset:
+    relaunch: false
+  steps:
+  - kind: wait_text
+    text: Add Widget Now
+    timeout: 10
+  # Nut khong co resource_id nen phai khoa theo chu - vo neu app doi ngon ngu.
+  - kind: tap
+    text: Add Widget Now
+    index: 0
+  - kind: wait
+    seconds: 4
