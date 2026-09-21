@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import sys
 from datetime import datetime, timedelta, timezone
+from dataclasses import replace
 from pathlib import Path
 
 from . import cli_case_notes, event_check_runner, logcat_stream
@@ -84,6 +85,21 @@ async def check(*, spec: SpecSheet, package: str, flow: Flow | None, adb,
         raise CliError("Spec chưa dùng được:\n  " + "\n  ".join(spec.errors))
     if flow is not None and not flow.ok:
         raise CliError("Flow chưa dùng được:\n  " + "\n  ".join(flow.errors))
+
+    # Mot app co MOT file flow, nhung file do gom case cua nhieu SDK (widget,
+    # daily checkin, rating...). Mot luot chi cham MOT spec, nen chi chay case
+    # co event nam trong spec do.
+    #
+    # Chay ca case cua SDK khac khong chi ton vai phut: case lai that tren may,
+    # bam nut that - dong popup, them widget, bam check-in - nen no doi luon
+    # trang thai ma spec dang cham can toi. Nhieu man chi hien MOT LAN moi
+    # ngay/moi session, mat la mat.
+    if flow is not None:
+        trong_spec = {event.name for event in spec.events}
+        giu = tuple(case for case in flow.cases if case.event in trong_spec)
+        if bo := len(flow.cases) - len(giu):
+            say(f"[flow] bỏ {bo} case không thuộc spec này")
+        flow = replace(flow, cases=giu)
 
     config = doc_config()
     serial = await pick_serial(adb, serial)
