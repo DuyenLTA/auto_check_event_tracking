@@ -12,6 +12,10 @@ Format chuẩn: [`example.yaml`](example.yaml). Parser: `src/usv/flow_yaml.py`.
 - Selector dùng **đúng một** trong `resource_id` | `text` | `desc`. Hai trường → lỗi.
   `index` = node thứ mấy trong số các node khớp, tính từ 0 (nhiều card dùng chung một `resource_id`).
 - Selector theo `text`/`desc` chạy được nhưng **vỡ khi app đổi ngôn ngữ** → report đánh dấu `fragile`.
+- **Chỉ viết case cho vị trí app thật sự có.** Vị trí không tồn tại mà vẫn viết case thì ra `FAIL`,
+  đọc như app thiếu event. Ví dụ `result` của SDK Rating là màn trả kết quả gen ảnh/video —
+  app học/tiện ích không có màn đó, bỏ case và ghi comment nói vì sao bỏ. Nhận biết lúc record:
+  màn home có nút Generate/Create hay ô nhập prompt không.
 - `reset` không có `pm clear` (xoá sạch login). Reset đi qua Remote Config + xoá vài file prefs.
 
 ## Step
