@@ -1,0 +1,241 @@
+# Linguza: AI English Tutor — 2 event cua SDK Rating, 4 vi tri.
+#
+# May test KHONG debuggable (`run-as` bi tu choi) nen `reset` khong xoa duoc
+# prefs: moi case chi dua vao trang thai tu nhien cua app. Popup rating van hien
+# lai o moi session vi luot do dung lai o buoc bam sao, KHONG bam RATE - bam
+# RATE la app ghi "da rate" va khong con vi tri nao hien nua.
+package: com.nxl.aienglishtutor.ailearnlanguage.aichatbot
+
+cases:
+
+# --- home -------------------------------------------------------------------
+# Rating o home chi hien tu session 2 tro di, va hien SAU popup Add Widget.
+# `launch` la force-stop + mo lai nen moi case deu la mot session moi; may da di
+# qua onboarding tu truoc nen man dau la "Welcome back".
+- event: rating_placement_viewed
+  label: home
+  expect_params:
+    placement_name: home
+  steps:
+  - kind: launch
+  - kind: allow
+    timeout: 15
+  - kind: close_ad
+    timeout: 30
+  - kind: wait
+    seconds: 8
+  # Man "Welcome back! What do you want to practice?" - the nao cung phai chon
+  # mot the roi nut Start Practicing moi hien. `optional` phong khi app bo qua
+  # man nay o mot lan mo nao do.
+  - kind: tap
+    resource_id: borderContainer
+    index: 0
+    optional: true
+  - kind: tap
+    resource_id: btnNextOnboardingImage
+    optional: true
+  # Paywall khong co node nao bam duoc trong cay UI (Compose, nut X khong co
+  # desc) - duong duy nhat dong no la phim BACK. Cho thay chu truoc roi moi bam
+  # BACK: bam BACK khi paywall chua len la thoat han app.
+  - kind: wait_text
+    text: Unlock Full Access
+    timeout: 25
+  - kind: key
+    text: KEYCODE_BACK
+  # Ba popup o home deu dat nut X la desc="Close" nen phai dong theo danh tinh.
+  - kind: close_popup
+    text: Add Widget
+    timeout: 12
+  - kind: close_popup
+    text: Today's Check-In
+    timeout: 6
+  - kind: wait
+    seconds: 8
+
+- event: rating_star_clicked
+  label: home
+  expect_params:
+    placement_name: home
+    star_value: "4"
+  steps:
+  - kind: launch
+  - kind: allow
+    timeout: 15
+  - kind: close_ad
+    timeout: 30
+  - kind: wait
+    seconds: 8
+  - kind: tap
+    resource_id: borderContainer
+    index: 0
+    optional: true
+  - kind: tap
+    resource_id: btnNextOnboardingImage
+    optional: true
+  - kind: wait_text
+    text: Unlock Full Access
+    timeout: 25
+  - kind: key
+    text: KEYCODE_BACK
+  - kind: close_popup
+    text: Add Widget
+    timeout: 12
+  - kind: close_popup
+    text: Today's Check-In
+    timeout: 6
+  # Chu nay co o ca hai trang thai cua popup (chua chon sao / da chon 5 sao),
+  # nen dung no de biet popup da len thay vi cho cung.
+  - kind: wait_text
+    text: "The best we can get :)"
+    timeout: 15
+  - kind: tap
+    desc: Star 4
+  - kind: wait
+    seconds: 4
+
+# --- exit_click -------------------------------------------------------------
+# Bam BACK o home = luong thoat app. Popup home phai duoc dong truoc, khong thi
+# BACK chi dong popup do chu khong kich hoat vi tri exit_click.
+- event: rating_placement_viewed
+  label: exit_click
+  expect_params:
+    placement_name: exit_click
+  steps:
+  - kind: launch
+  - kind: allow
+    timeout: 15
+  - kind: close_ad
+    timeout: 30
+  - kind: wait
+    seconds: 8
+  - kind: tap
+    resource_id: borderContainer
+    index: 0
+    optional: true
+  - kind: tap
+    resource_id: btnNextOnboardingImage
+    optional: true
+  - kind: wait_text
+    text: Unlock Full Access
+    timeout: 25
+  - kind: key
+    text: KEYCODE_BACK
+  - kind: close_popup
+    text: Add Widget
+    timeout: 12
+  - kind: close_popup
+    text: Today's Check-In
+    timeout: 6
+  - kind: close_popup
+    text: "The best we can get :)"
+    timeout: 15
+  - kind: wait
+    seconds: 2
+  - kind: key
+    text: KEYCODE_BACK
+  - kind: wait
+    seconds: 6
+
+- event: rating_star_clicked
+  label: exit_click
+  expect_params:
+    placement_name: exit_click
+    star_value: "5"
+  steps:
+  - kind: launch
+  - kind: allow
+    timeout: 15
+  - kind: close_ad
+    timeout: 30
+  - kind: wait
+    seconds: 8
+  - kind: tap
+    resource_id: borderContainer
+    index: 0
+    optional: true
+  - kind: tap
+    resource_id: btnNextOnboardingImage
+    optional: true
+  - kind: wait_text
+    text: Unlock Full Access
+    timeout: 25
+  - kind: key
+    text: KEYCODE_BACK
+  - kind: close_popup
+    text: Add Widget
+    timeout: 12
+  - kind: close_popup
+    text: Today's Check-In
+    timeout: 6
+  - kind: close_popup
+    text: "The best we can get :)"
+    timeout: 15
+  - kind: wait
+    seconds: 2
+  - kind: key
+    text: KEYCODE_BACK
+  - kind: wait_text
+    text: "The best we can get :)"
+    timeout: 12
+  - kind: tap
+    desc: Star 5
+  - kind: wait
+    seconds: 4
+
+# --- app_shortcut -----------------------------------------------------------
+# App shortcut (nhan giu icon -> "Rate") khong bam duoc bang cay UI cua app, va
+# SDK khong co nut nao trong app dan sang man nay - intent la duong duy nhat.
+# Ban intent NGAY khi app con o man "Welcome back": de app chay toi home thi
+# popup home ban rating_placement_viewed[home] truoc, lan ban dau tien trong cua
+# so se la home chu khong phai app_shortcut.
+- event: rating_placement_viewed
+  label: app_shortcut
+  expect_params:
+    placement_name: app_shortcut
+  steps:
+  - kind: launch
+  - kind: allow
+    timeout: 15
+  - kind: close_ad
+    timeout: 30
+  - kind: wait
+    seconds: 10
+  - kind: intent
+    action: com.apero.rating.action.RATING
+    component: com.nxl.aienglishtutor.ailearnlanguage.aichatbot/com.apero.rating.internal.features.activity.rating.VslRatingActivity
+  - kind: wait
+    seconds: 5
+
+- event: rating_star_clicked
+  label: app_shortcut
+  expect_params:
+    placement_name: app_shortcut
+    star_value: "3"
+  steps:
+  - kind: launch
+  - kind: allow
+    timeout: 15
+  - kind: close_ad
+    timeout: 30
+  - kind: wait
+    seconds: 10
+  - kind: intent
+    action: com.apero.rating.action.RATING
+    component: com.nxl.aienglishtutor.ailearnlanguage.aichatbot/com.apero.rating.internal.features.activity.rating.VslRatingActivity
+  - kind: wait_text
+    text: "The best we can get :)"
+    timeout: 15
+  - kind: tap
+    desc: Star 3
+  - kind: wait
+    seconds: 4
+
+# --- result: KHONG co o app nay ------------------------------------------------
+# Vi tri `result` cua SDK Rating la "man tra ket qua gen anh/video". Linguza la
+# app hoc tieng Anh, khong co chuc nang gen - man gan nhat la "Lesson Complete!"
+# sau quiz, va SDK khong goi showWithPlacement[result] o do (da lai thu, chi co
+# popup home ban ra). Khong viet case cho vi tri app khong co: chay ra FAIL doc
+# nhu app thieu event, trong khi that ra vi tri do khong ton tai.
+#
+# Du 4 vi tri chi dung voi app gen anh/video. Nhan biet luc record: man home co
+# nut Generate/Create hay o nhap prompt khong.
