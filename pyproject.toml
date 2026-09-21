@@ -17,6 +17,7 @@ usv-check = "usv.cli_main:main"
 usv-record = "usv.cli_record:main"
 usv-artifact = "usv.cli_artifact:main"
 usv-cases = "usv.spec_cases_cli:main"
+usv-spec = "usv.cli_spec_alias:main"
 
 [build-system]
 requires = ["setuptools>=68"]

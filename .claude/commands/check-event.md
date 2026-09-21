@@ -30,10 +30,23 @@ một ký tự thì nó lái app hàng xóm và chấm sai app mà không báo g
 Spec lấy theo thứ tự:
 
 - chuỗi `http…` trong `$ARGUMENTS` → `--spec "<link>"`
+- **tên chức năng** trong `$ARGUMENTS` (`rating`, `widget`, `daily checkin`,
+  `full screen intent`…) → `--spec "<tên>"`, truyền nguyên tên, đừng tự đi tra
+  link. Tool phân giải: tên đã lưu trong `specs.json` thì dùng luôn, chưa lưu
+  thì hỏi Confluence và chỉ nhận trang có dạng `SDK <tên> V x.y.z`
 - `--spec-tsv <file>` → truyền nguyên
-- không có gì → **dừng và hỏi link**. Đừng đoán: không chỗ nào trên đĩa ghi lại
-  link của lượt trước, và chấm với trang spec sai thì mọi event ra "không có
-  trong bảng" — trông như app sai trong khi chỉ là nhầm trang.
+- không có gì → **dừng và hỏi**. Đừng đoán: không chỗ nào trên đĩa ghi lại spec
+  của lượt trước, và chấm với trang spec sai thì mọi event ra "không có trong
+  bảng" — trông như app sai trong khi chỉ là nhầm trang.
+
+Tên khớp nhiều trang, hoặc không trang nào có số version, thì tool **dừng và in
+danh sách** — hỏi người dùng chọn, rồi chốt lại một lần cho lượt sau:
+
+```
+cd <repo> && .venv/bin/usv-spec --add "<tên>" "<link đã chọn>"
+```
+
+`usv-spec` không tham số thì in các tên đã lưu.
 
 Dùng `--spec` thì cần `CONFLUENCE_BASE_URL` + `CONFLUENCE_TOKEN` trong env.
 Thiếu thì tool tự nói thiếu gì, in nguyên văn cho người dùng.

@@ -1,5 +1,6 @@
 """Cua vao dong lenh cua luot cham.
 
+    usv-check --spec rating --package com.x        # ten chuc nang
     usv-check --spec <link Confluence> --package com.x
     usv-check --spec-tsv spec.tsv --package com.x --flows flows/com.x.yaml
 
@@ -40,7 +41,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="usv-check",
         description="Chấm event tracking: spec + máy thật -> report HTML.")
-    parser.add_argument("--spec", default="", help="link trang Confluence")
+    parser.add_argument("--spec", default="",
+                        help="link Confluence, hoặc tên chức năng "
+                             "(rating, widget, daily checkin)")
     parser.add_argument("--spec-tsv", default="", help="file TSV dán tay")
     parser.add_argument("--package", required=True)
     parser.add_argument("--flows", default="",
