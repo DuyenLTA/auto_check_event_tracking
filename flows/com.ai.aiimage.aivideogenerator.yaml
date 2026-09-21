@@ -1,10 +1,108 @@
-# Sorapix: AI Hair Changer — 2 event cua SDK Widget.
+# Sorapix: AI Hair Changer — event cua SDK Daily Checkin va SDK Widget.
 #
 # Popup Add Widget chi hien MOT LAN moi luot mo app, nen ca hai event dung chung
 # mot lan khoi dong: case duoi chay tiep tren man cua case tren (`relaunch: false`).
 package: com.ai.aiimage.aivideogenerator
 
 cases:
+
+# --- SDK Daily Checkin --------------------------------------------------------
+# Popup Daily Check-in hien SAU popup Add Widget, va chi MOT LAN MOI NGAY: bam
+# Check-in hay bam X deu lam no im tiep den het ngay. Vi vay hai case nay dat
+# TRUOC case widget - case chay theo dung thu tu trong file, de case widget
+# chay truoc thi no dong popup Add Widget roi popup checkin hien ra giua chung,
+# coi nhu mat luot cua hom nay ma chua do duoc gi.
+#
+# Het luot trong ngay (da bam Check-in hoac da dong popup) thi xoa sach data roi
+# chay lai:
+#
+#     adb shell pm clear com.ai.aiimage.aivideogenerator
+#
+# Xoa data dua app ve man Choose Language, nen ca hai case deu co san nhom step
+# ngon ngu + onboarding o dau, de `optional`.
+
+- event: daily_checkin_screen_view
+  label: popup Daily Check-in o home
+  steps:
+  - kind: launch
+  - kind: allow
+    timeout: 15
+  - kind: close_ad
+    timeout: 30
+  - kind: wait
+    seconds: 6
+  # Ca nhom duoi day `optional`: chi hien sau khi xoa data. May da di qua
+  # onboarding thi khong man nao hien, khong tim thay khong phai lai hut.
+  # Bam "English" chi MO RONG danh sach con - phai bam them bien the moi tinh
+  # la da chon, nen co hai buoc tap lien nhau.
+  - kind: tap
+    resource_id: rootLanguageItem
+    index: 1
+    optional: true
+  - kind: tap
+    text: English (US)
+    optional: true
+  - kind: tap
+    resource_id: imageButtonLanguageNext
+    optional: true
+  - kind: wait
+    seconds: 3
+  - kind: tap
+    resource_id: btnNextOnboarding
+    optional: true
+  - kind: wait
+    seconds: 3
+  - kind: tap
+    resource_id: btnNextOnboarding
+    optional: true
+  - kind: wait
+    seconds: 3
+  - kind: tap
+    resource_id: btnNextOnboarding
+    optional: true
+  - kind: wait
+    seconds: 3
+  - kind: tap
+    resource_id: btnNextOnboarding
+    optional: true
+  - kind: wait
+    seconds: 3
+  - kind: tap
+    resource_id: borderContainer
+    index: 0
+    optional: true
+  - kind: tap
+    resource_id: btnNextOnboardingImage
+    optional: true
+  - kind: close_ad
+    timeout: 20
+  # Popup Add Widget nam tren popup checkin. `close_popup` dong dung no theo
+  # danh tinh - ca hai popup deu dat nut X la desc="Close", bam mu la dong nham.
+  - kind: close_popup
+    text: Add Widget
+    timeout: 25
+  - kind: wait_text
+    text: Today's Check-In
+    timeout: 15
+
+# Chay tiep tren man cua case tren (`relaunch: false`): mo lai app la mat popup
+# cua ngay hom nay.
+- event: daily_checkin_button_clicked
+  label: bam Check-in
+  reset:
+    relaunch: false
+  steps:
+  - kind: wait_text
+    text: Check-in
+    timeout: 10
+  # Nut khong co resource_id nen phai khoa theo chu - vo neu app doi ngon ngu.
+  - kind: tap
+    text: Check-in
+    index: 0
+  - kind: wait
+    seconds: 4
+
+# --- SDK Widget ---------------------------------------------------------------
 
 - event: widget_view
   label: popup Add Widget o home
@@ -18,6 +116,42 @@ cases:
     timeout: 30
   - kind: wait
     seconds: 6
+  # Ca nhom duoi day `optional`: chi hien sau khi xoa data. May da di qua
+  # onboarding thi khong man nao hien, khong tim thay khong phai lai hut.
+  # Bam "English" chi MO RONG danh sach con - phai bam them bien the moi tinh
+  # la da chon, nen co hai buoc tap lien nhau.
+  - kind: tap
+    resource_id: rootLanguageItem
+    index: 1
+    optional: true
+  - kind: tap
+    text: English (US)
+    optional: true
+  - kind: tap
+    resource_id: imageButtonLanguageNext
+    optional: true
+  - kind: wait
+    seconds: 3
+  - kind: tap
+    resource_id: btnNextOnboarding
+    optional: true
+  - kind: wait
+    seconds: 3
+  - kind: tap
+    resource_id: btnNextOnboarding
+    optional: true
+  - kind: wait
+    seconds: 3
+  - kind: tap
+    resource_id: btnNextOnboarding
+    optional: true
+  - kind: wait
+    seconds: 3
+  - kind: tap
+    resource_id: btnNextOnboarding
+    optional: true
+  - kind: wait
+    seconds: 3
   # Man "Which style fits your vision?" hien o moi lan mo app, phai chon mot the
   # roi nut Next moi an. `optional` phong lan nao app bo qua man nay.
   - kind: tap
