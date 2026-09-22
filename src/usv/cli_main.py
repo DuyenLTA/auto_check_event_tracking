@@ -50,6 +50,9 @@ def build_parser() -> argparse.ArgumentParser:
                         help="file flow YAML (mặc định flows/<package>.yaml)")
     parser.add_argument("--out", default="out", help="thư mục ghi report")
     parser.add_argument("--serial", default="", help="chọn máy khi cắm nhiều máy")
+    parser.add_argument("--case", action="append", default=[],
+                        help="chỉ chạy case có nhãn/tên event khớp chuỗi này "
+                             "(lặp được). Case tiền đề được kéo theo.")
     return parser
 
 
@@ -78,7 +81,8 @@ def main(argv: list[str] | None = None) -> int:
         flow, flows_path = doc_flow(args.package, args.flows)
         payload = asyncio.run(cli_check.check(
             spec=spec, package=args.package, flow=flow, adb=make_client(),
-            out_dir=Path(args.out), serial=args.serial, flows_path=flows_path))
+            out_dir=Path(args.out), serial=args.serial, flows_path=flows_path,
+            chi_case=tuple(args.case)))
     except (CliError, cli_spec_load.SpecLoadError) as exc:
         cli_check.say(f"Lỗi: {exc}")
         return 1

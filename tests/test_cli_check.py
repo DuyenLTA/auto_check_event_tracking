@@ -434,3 +434,33 @@ def test_case_co_event_ngoai_spec_thi_khong_chay(adb, tmp_path):
     assert not any(row["element"].startswith(("widget", "daily"))
                    for row in payload["results"]), \
         "event ngoai spec khong duoc lot vao bang cham"
+
+
+def test_case_chon_bang_tu_khoa_keo_theo_case_tien_de():
+    """`--case` chay le mot phan flow, nhung khong duoc chay tren man sai.
+
+    Case dat `relaunch: false` chay tiep tren man cua case ngay truoc no, nen
+    chon mot minh no la lai tren man khong co that. Chon thi phai keo ca chuoi
+    ve toi case tu mo app.
+    """
+    from dataclasses import replace as _replace
+
+    from usv.event_flow_models import Reset
+
+    noi_tiep = Reset(relaunch=False)
+    cases = (
+        _case("rating_placement_viewed", "popup o home"),
+        _replace(_case("rating_star_clicked", "cham 3 sao o home"), reset=noi_tiep),
+        _replace(_case("rating_placement_viewed", "popup o man result"), reset=noi_tiep),
+    )
+
+    chon = cli_check.chon_case(cases, ("result",))
+    assert [c.name for c in chon] == ["popup o home", "cham 3 sao o home",
+                                      "popup o man result"]
+
+    # Case tu mo app thi khong keo theo gi ca.
+    assert [c.name for c in cli_check.chon_case(cases, ("popup o home",))] == ["popup o home"]
+    # Tu khoa khop nhieu case thi lay het, moi case van keo tien de cua no.
+    assert len(cli_check.chon_case(cases, ("o home",))) == 2
+    # Khong truyen gi thi giu nguyen ca flow.
+    assert cli_check.chon_case(cases, ()) == cases

@@ -78,8 +78,32 @@ async def ghi_chu_man_khoa(adb, serial: str, ket_qua) -> None:
     ket_qua.reason = f"{ket_qua.reason} — {MAN_KHOA}"
 
 
+def chon_case(cases: tuple, muon: tuple[str, ...]) -> tuple:
+    """Loc case theo tu khoa (khop trong label hoac ten event, khong phan biet hoa).
+
+    KEO THEO CASE TIEN DE: case dat `reset.relaunch: false` chay tiep tren man
+    cua case ngay truoc no, nen chon mot minh no la chay tren man sai. Moi lan
+    chon mot case nhu vay thi keo luon case truoc, lap cho toi case tu mo app.
+    """
+    if not muon:
+        return cases
+    kim = [m.strip().casefold() for m in muon if m.strip()]
+    giu = set()
+    for i, case in enumerate(cases):
+        nhan = f"{case.label} {case.event}".casefold()
+        if not any(k in nhan for k in kim):
+            continue
+        giu.add(i)
+        j = i
+        while j > 0 and not cases[j].reset.relaunch:
+            j -= 1
+            giu.add(j)
+    return tuple(case for i, case in enumerate(cases) if i in giu)
+
+
 async def check(*, spec: SpecSheet, package: str, flow: Flow | None, adb,
-                out_dir: Path, serial: str = "", flows_path: str = "") -> dict:
+                out_dir: Path, serial: str = "", flows_path: str = "",
+                chi_case: tuple[str, ...] = ()) -> dict:
     """Chay ca luot cham. Tra payload de in JSON."""
     if not spec.ok:
         raise CliError("Spec chưa dùng được:\n  " + "\n  ".join(spec.errors))
@@ -99,6 +123,21 @@ async def check(*, spec: SpecSheet, package: str, flow: Flow | None, adb,
         giu = tuple(case for case in flow.cases if case.event in trong_spec)
         if bo := len(flow.cases) - len(giu):
             say(f"[flow] bỏ {bo} case không thuộc spec này")
+        if chi_case:
+            chon = chon_case(giu, chi_case)
+            if not chon:
+                raise CliError(
+                    f"--case {', '.join(chi_case)} không khớp case nào. "
+                    "Case có trong flow: "
+                    + " | ".join(c.label for c in giu))
+            if them := len(chon) - sum(1 for c in chon
+                                       if any(k.strip().casefold()
+                                              in f"{c.label} {c.event}".casefold()
+                                              for k in chi_case)):
+                say(f"[flow] kéo thêm {them} case tiền đề "
+                    "(case sau chạy tiếp trên màn của case trước)")
+            say(f"[flow] chạy {len(chon)}/{len(giu)} case theo --case")
+            giu = chon
         flow = replace(flow, cases=giu)
 
     config = doc_config()
