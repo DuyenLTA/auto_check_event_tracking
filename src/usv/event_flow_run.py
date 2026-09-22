@@ -189,10 +189,11 @@ async def run_step(client, serial: str, metrics, package: str, step: Step,
         return
 
     if step.kind == "wait_text":
-        if not await wait_text(client, serial, metrics, step.text,
-                               step.timeout, cay):
+        cho = (step.text, *step.text_alt)
+        if not await wait_text(client, serial, metrics, cho, step.timeout, cay):
+            ten = " | ".join(repr(x) for x in cho)
             raise AdbError(
-                f"Chờ {step.text!r} xuất hiện trong {step.timeout:g}s mà không thấy.")
+                f"Chờ {ten} xuất hiện trong {step.timeout:g}s mà không thấy.")
         return
     if step.kind == "allow":
         # Dialog quyen do he thong ve, nam DE tren app - moi selector cua app

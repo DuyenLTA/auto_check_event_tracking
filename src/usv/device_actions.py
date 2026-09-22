@@ -19,6 +19,7 @@ import difflib
 from dataclasses import dataclass
 
 from .adb_parsers import AdbError
+from .tu_dien_man_he_thong import no_bien_the
 from .models import DeviceNode
 
 # So node gan giong in ra khi khong tim thay - du de nhan ra, khong lam nghen log.
@@ -40,6 +41,15 @@ class Selector:
     # Vo khi app doi cay view, nen chi dung khi ba truong kia dung het cach.
     cls: str = ""
     index: int = 0        # node thu may trong so cac node khop, tinh tu 0
+    # Bien the NGON NGU KHAC cua cung mot nut. Chuoi tren man he thong (picker
+    # anh, sheet thanh toan, dialog quyen) doi theo ngon ngu cua MAY, khong
+    # theo ngon ngu chon trong app - khoa cung mot thu tieng thi cam may khac
+    # locale la ca case chet. Do duoc: may de vi-VN, o anh mang desc "Ảnh được
+    # chụp lúc..." trong khi flow cho "Photo taken on".
+    #
+    # Khop BAT KY bien the nao. Chi khai khi chuoi that su do he thong dich;
+    # chu cua chinh app thi dung `resource_id` van hon.
+    alt: tuple[str, ...] = ()
 
     @property
     def kind(self) -> str:
@@ -54,28 +64,69 @@ class Selector:
         return self.resource_id or self.text or self.desc or self.cls
 
     @property
+    def needles(self) -> tuple[str, ...]:
+        """Chuoi chinh + bien the khai tay + bien the tu tu dien he thong.
+
+        Khop mot cai la du. Tu dien lo phan dich (`Xong` tim luon `Done`) nen
+        flow khong phai khai tay tung thu tieng - xem tu_dien_man_he_thong.
+        """
+        if self.kind == "resource_id":
+            return (self.needle, *self.alt)
+        # Chu NGUOI VIET khai truoc, tu dien chi bo sung cai con thieu: bao
+        # loi in ra dung chuoi trong flow thi tester do lai file nhanh hon.
+        ra = list(dict.fromkeys((self.needle, *self.alt)))
+        da_co = {x.casefold() for x in ra}
+        for chu in tuple(ra):
+            for bien_the in no_bien_the(chu):
+                if bien_the.casefold() not in da_co:
+                    ra.append(bien_the)
+                    da_co.add(bien_the.casefold())
+        return tuple(ra)
+
+    @property
     def fragile(self) -> bool:
         """Khop theo CHU thi vo khi doi ngon ngu. resource_id thi song."""
         return self.kind in {"text", "desc"}
 
     def label(self) -> str:
         suffix = f"[{self.index}]" if self.index else ""
-        return f"{self.kind}={self.needle!r}{suffix}"
+        # In ca bien the: bao loi chi ra mot chuoi trong khi flow tim ba chuoi
+        # thi nguoi doc di sua dung cai khong hong.
+        ten = " | ".join(repr(x) for x in self.needles)
+        return f"{self.kind}={ten}{suffix}"
+
+
+def _khop(gia_tri: str, needle: str) -> bool:
+    """So khop chu/desc. Needle tan cung bang `*` thi khop theo DAU CHUOI.
+
+    Can cho nhung node mang du lieu trong chinh cai ten: o anh trong Google
+    photo picker co desc "Photo taken on Sep 21, 2026 11:15 AM" - doi theo ngay
+    chup nen khong the go cung. Khong co dau `*` thi van khop chinh xac nhu cu:
+    mot selector go thieu chu phai hong ra mat chu khong duoc am tham bat nham
+    node khac.
+    """
+    gia_tri = gia_tri.strip().casefold()
+    needle = needle.strip().casefold()
+    if needle.endswith("*"):
+        return gia_tri.startswith(needle[:-1])
+    return gia_tri == needle
+
+
+def _khop_bat_ky(gia_tri: str, needles: tuple[str, ...]) -> bool:
+    return any(_khop(gia_tri, n) for n in needles)
 
 
 def _candidates(nodes: list[DeviceNode], selector: Selector) -> list[DeviceNode]:
-    needle = selector.needle
+    needles = selector.needles
     if selector.kind == "resource_id":
-        hits = [n for n in nodes if n.resource_id == needle]
+        hits = [n for n in nodes if n.resource_id in needles]
     elif selector.kind == "text":
-        folded = needle.casefold()
-        hits = [n for n in nodes if n.text.strip().casefold() == folded]
+        hits = [n for n in nodes if _khop_bat_ky(n.text, needles)]
     elif selector.kind == "cls":
-        folded = needle.casefold()
-        hits = [n for n in nodes if n.short_cls.casefold() == folded]
+        folded = {n.casefold() for n in needles}
+        hits = [n for n in nodes if n.short_cls.casefold() in folded]
     else:
-        folded = needle.casefold()
-        hits = [n for n in nodes if n.content_desc.strip().casefold() == folded]
+        hits = [n for n in nodes if _khop_bat_ky(n.content_desc, needles)]
     # Node an / chua layout xong ra bounds 0x0 - bam vao do la bam vao khong khi.
     return [n for n in hits if not n.bounds_px.empty]
 

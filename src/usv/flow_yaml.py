@@ -17,8 +17,8 @@ from pathlib import Path
 
 import yaml
 
-from .device_actions import Selector
 from .event_flow_models import Flow, FlowCase, Reset, Step
+from .flow_yaml_selector import SELECTOR_FIELDS, bien_the, doc_selector
 
 KINDS = frozenset({"launch", "tap", "swipe", "type", "key", "wait", "wait_text",
                    "intent", "close_popup",
@@ -27,29 +27,11 @@ KINDS = frozenset({"launch", "tap", "swipe", "type", "key", "wait", "wait_text",
 # truong `text` nhung do la chu de TIM / de GO, doc no thanh selector thi
 # `wait_text` bi danh dau fragile oan va Step.label() in ra sai viec.
 NEEDS_SELECTOR = frozenset({"tap", "swipe"})
-SELECTOR_FIELDS = ("resource_id", "text", "desc", "cls")
 DEFAULT_TIMEOUT = 10.0
 
 
 class FlowError(Exception):
     """Ca file khong doc duoc - khong phai mot dong sai."""
-
-
-def _selector(raw: dict, where: str) -> tuple[Selector | None, list[str]]:
-    """Dung MOT trong resource_id|text|desc. Hai truong -> khong biet uu tien
-    cai nao, va chon ngam thi tester tuong minh da khoa theo cai kia."""
-    used = [f for f in SELECTOR_FIELDS if str(raw.get(f) or "").strip()]
-    if not used:
-        return None, []
-    if len(used) > 1:
-        return None, [f"{where}: selector khai {len(used)} truong "
-                      f"({', '.join(used)}) — chỉ được dùng đúng một."]
-    field = used[0]
-    try:
-        index = int(raw.get("index") or 0)
-    except (TypeError, ValueError):
-        return None, [f"{where}: `index` phải là số, đang là {raw.get('index')!r}."]
-    return Selector(**{field: str(raw[field]).strip()}, index=index), []
 
 
 def _step(raw: object, where: str) -> tuple[Step | None, list[str]]:
@@ -63,7 +45,7 @@ def _step(raw: object, where: str) -> tuple[Step | None, list[str]]:
 
     selector = None
     if kind in NEEDS_SELECTOR:
-        selector, errors = _selector(raw, where)
+        selector, errors = doc_selector(raw, where)
         if errors:
             return None, errors
         if selector is None:
@@ -73,6 +55,7 @@ def _step(raw: object, where: str) -> tuple[Step | None, list[str]]:
     # Voi tap/swipe thi `text` la SELECTOR, khong phai chu de go. Chi nhung
     # kind that su can chu moi doc `text` lam du lieu.
     text = ""
+    text_alt: tuple[str, ...] = ()
     component = ""
     if kind == "swipe":
         text = str(raw.get("direction") or "up").strip()
@@ -85,9 +68,17 @@ def _step(raw: object, where: str) -> tuple[Step | None, list[str]]:
                           f"com.apero.rating.action.RATING)."]
         component = str(raw.get("component") or "").strip()
     elif kind in {"type", "key", "wait_text", "close_popup"}:
-        text = str(raw.get("text") or "").strip()
-        if not text:
+        cac_chuoi = bien_the(raw.get("text"))
+        if not cac_chuoi:
             return None, [f"{where}: `{kind}` cần `text`."]
+        # `type` go chu va `key` bam phim - hai viec nay chi co MOT gia tri
+        # dung. Nhan mot danh sach roi tu lay phan tu dau la am tham bo mat
+        # phan con lai.
+        if len(cac_chuoi) > 1 and kind in {"type", "key"}:
+            return None, [f"{where}: `{kind}` chỉ nhận một `text`, "
+                          f"đang khai {len(cac_chuoi)} giá trị."]
+        text, *phu = cac_chuoi
+        text_alt = tuple(phu)
 
     seconds = 0.0
     if kind == "wait":
@@ -108,8 +99,8 @@ def _step(raw: object, where: str) -> tuple[Step | None, list[str]]:
     except (TypeError, ValueError):
         return None, [f"{where}: `timeout` phải là số, đang là {raw.get('timeout')!r}."]
 
-    return Step(kind=kind, selector=selector, text=text, component=component,
-                seconds=seconds, timeout=timeout,
+    return Step(kind=kind, selector=selector, text=text, text_alt=text_alt,
+                component=component, seconds=seconds, timeout=timeout,
                 optional=bool(raw.get("optional", False))), []
 
 

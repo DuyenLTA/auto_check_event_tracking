@@ -26,6 +26,10 @@ class Step:
     component: str = ""             # intent: <package>/<Activity>, de trong thi de `am` tu chon
     seconds: float = 0.0            # wait
     timeout: float = 10.0           # wait_text
+    # wait_text/close_popup: bien the NGON NGU KHAC cua cung chuoi can tim.
+    # Xem Selector.alt - cung ly do, khac cho vi hai kind nay khong dung
+    # selector ma doc thang `text`.
+    text_alt: tuple[str, ...] = ()
     # Buoc co the KHONG xuat hien: quang cao xen ke, popup danh gia, tooltip.
     # Hut mot buoc nhu vay khong phai lai hut - case van chay tiep.
     optional: bool = False
@@ -40,7 +44,10 @@ class Step:
             return f"{self.kind} {self.selector.label()}"
         if self.kind == "wait":
             return f"wait {self.seconds:g}s"
-        return f"{self.kind} {self.text!r}" if self.text else self.kind
+        if not self.text:
+            return self.kind
+        ten = " | ".join(repr(x) for x in (self.text, *self.text_alt))
+        return f"{self.kind} {ten}"
 
 
 @dataclass(frozen=True, slots=True)

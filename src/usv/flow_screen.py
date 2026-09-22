@@ -11,6 +11,7 @@ import asyncio
 import logging
 import time
 
+from .tu_dien_man_he_thong import no_bien_the
 from .ad_close import tim_nut_dong
 from .adb_foreground_parse import la_man_quang_cao
 from .models import DeviceNode
@@ -61,10 +62,15 @@ async def bam_node(client, serial: str, node: DeviceNode) -> None:
                            (box.top + box.bottom) / 2)
 
 
-async def wait_text(client, serial: str, metrics, needle: str,
+async def wait_text(client, serial: str, metrics, needle,
                      timeout: float, cay: CayUI | None = None, *,
                      don_man_chan: bool = True) -> bool:
     """Cho mot chuoi xuat hien tren man. Het gio -> False, nguoi goi tu xu.
+
+    `needle` la mot chuoi, hoac nhieu BIEN THE NGON NGU cua cung mot thu -
+    thay cai nao cung tinh la thay. Chuoi tren man he thong doi theo locale
+    cua MAY: do duoc tren may vi-VN, picker anh hien "Ảnh được chụp lúc..."
+    trong khi flow cho "Photo taken on" va ngoi het 30 giay.
 
     Man chan duong (quang cao, paywall) co the len SAU khi cac buoc `close_ad`
     da het han cho, va luc do vong cho nay chi biet ngoi nhin no het gio roi
@@ -80,7 +86,12 @@ async def wait_text(client, serial: str, metrics, needle: str,
     lon han cho, khong gia han thi vua don xong da het gio. Chan bang
     MAN_CHAN_TOI_DA de mot chuoi quang cao vo tan khong giu vong nay song mai.
     """
-    folded = needle.casefold()
+    bien_the = (needle,) if isinstance(needle, str) else tuple(needle)
+    # No them cac thu tieng khac cua cung chuoi do: `wait_text: Xong` tren may
+    # en-US van thay "Done". Chu khong co trong tu dien thi giu nguyen.
+    bien_the = tuple(dict.fromkeys(
+        x for chu in bien_the for x in no_bien_the(chu)))
+    folded = [x.casefold() for x in bien_the if x]
     # Dem bang DONG HO THAT, khong tru dan theo POLL: mot vong lap ton
     # (dump 2.2s + POLL) nhung chi tru POLL, nen `timeout: 25` tung chay
     # ~390 giay that - do dung mot luot cham 611s.
@@ -91,14 +102,16 @@ async def wait_text(client, serial: str, metrics, needle: str,
             cay.bo()          # cho thi phai doc lai that, khong dung cay cu
         tren_man = await nodes(client, serial, metrics, cay)
         for node in tren_man:
-            if folded in node.text.casefold() or folded in node.content_desc.casefold():
+            chu = node.text.casefold()
+            mo_ta = node.content_desc.casefold()
+            if any(f in chu or f in mo_ta for f in folded):
                 return True
         if don_man_chan and da_don < MAN_CHAN_TOI_DA:
             nut = tim_nut_dong(
                 tren_man, chi_chac=True,
                 man_ads=await dang_trong_quang_cao(client, serial))
             if nut is not None:
-                log.info("Cho %r: don man chan bang %s", needle, nut.label)
+                log.info("Cho %s: don man chan bang %s", bien_the, nut.label)
                 await bam_node(client, serial, nut)
                 da_don += 1
                 het_gio = time.monotonic() + max(0.0, timeout)
