@@ -88,8 +88,16 @@ cases:
     text: Check-In
     timeout: 15
   # KHONG bam gi them - popup rating phai tu bat len thi moi dung `home`.
+  #
+  # Neo vao "The best we can get" chu KHONG vao "rate us": popup doi chu sau
+  # khi da cham sao ("Please rate us to enhance your experience" -> "We are
+  # thrilled to hear that you love our app", nut "RATE" -> "Rate on Google
+  # Play"), ma trang thai do con giu sang ca cac case sau. Neo vao "rate us"
+  # thi tu case thu hai tro di khong con khop - do duoc 21/09 tren Pixel 7:
+  # popup dung nguyen tren man home, `close_popup` khong dong duoc no, cac
+  # buoc sau bam mu va case `result` chet o cho cho picker.
   - kind: wait_text
-    text: rate us
+    text: "The best we can get"
     timeout: 30
 
 - event: rating_star_clicked
@@ -121,7 +129,7 @@ cases:
   - kind: key
     text: BACK
   - kind: wait_text
-    text: rate us
+    text: "The best we can get"
     timeout: 25
 
 - event: rating_star_clicked
@@ -193,7 +201,7 @@ cases:
     action: com.apero.rating.action.RATING
     component: ai.photogenerator.aivideo.aivideogenerator.aiart/com.apero.rating.internal.features.activity.rating.VslRatingActivity
   - kind: wait_text
-    text: rate us
+    text: "The best we can get"
     timeout: 20
 
 - event: rating_star_clicked
@@ -234,7 +242,7 @@ cases:
   - kind: wait
     seconds: 3
   - kind: close_popup
-    text: rate us
+    text: "The best we can get"
     timeout: 8
   # Chua co sub thi mua NGAY o day, dung doi popup mua sub hien sau khi bam
   # style. Chu `PREMIUM` canh ten app tren home CHI hien khi chua co sub - do
@@ -261,8 +269,12 @@ cases:
   # Sheet thanh toan cua Google Play mo cham hon paywall trong app.
   - kind: wait
     seconds: 6
+  # Nut xac nhan tren sheet thanh toan cua Google Play: chu nay theo locale HE
+  # THONG, nen khai ca hai thu tieng. Do duoc luot 18:40 tren may vi-VN: sheet
+  # hien "Đăng ký", flow cho "Subscribe", buoc `optional` im lang bo qua roi
+  # ca case chet o `wait_text 'rate us'` cuoi cung - cach cho hong 14 buoc.
   - kind: tap
-    text: "Đăng ký"
+    text: ["Subscribe", "Đăng ký"]
     optional: true
   - kind: wait
     seconds: 6
@@ -280,22 +292,31 @@ cases:
   # Picker la app KHAC (com.google.android.photopicker) nen no mo cham, co luot
   # qua 4s van chua thay. Cho mu la bam khi con dang o man app, roi picker moi
   # truot len - man hinh nhin thi dung ma chang co anh nao duoc chon, den buoc
-  # `Xong` moi vo (do duoc luot 16:19). Neo vao o tim kiem cua picker.
+  # `Xong` moi vo (do duoc luot 16:19). Neo vao luoi anh cua picker.
+  #
+  # Neo vao CHINH o anh dau luoi, khong neo vao o tim kiem: o tim kiem doi ten
+  # theo app anh dang cai ("Search Google Photos"), con o anh thi luc nao cung
+  # co. Cung khong dem theo ten lop nua - dem View thu 19 la vo ngay khi picker
+  # doi bo cuc.
+  #
+  # Desc o anh mang ca ngay chup ("Photo taken on Sep 21, 2026 11:15 AM") nen
+  # khoa bang tien to `*`. Desc nay theo NGON NGU HE THONG cua may, khong phai
+  # ngon ngu chon trong app: may doi sang tieng Viet thi sua thanh
+  # "Ảnh được chụp lúc*".
   - kind: wait_text
-    text: Tìm kiếm
+    text: ["Photo taken on", "Ảnh được chụp lúc"]
     timeout: 30
   - kind: wait
     seconds: 2
-  # O anh la node Compose tron - khong id, khong chu, khong content-desc (desc
-  # "Ảnh được chụp lúc ..." nam o node con va doi theo ngay chup nen khong neo
-  # duoc). Chi con duong dem theo ten lop: o anh dau luoi la View thu 19.
   - kind: tap
-    cls: View
-    index: 19
+    desc: ["Photo taken on*", "Ảnh được chụp lúc*"]
+    index: 0
   - kind: wait
     seconds: 2
+  # Nut xac nhan chi hien SAU khi da chon anh - truoc do khong co no tren man.
+  # Cung theo locale HE THONG nen khai ca hai thu tieng.
   - kind: tap
-    text: Xong
+    text: ["Done", "Xong"]
   # Luoi an toan khi goi sub thu nghiem het han giua luot (chu ky nen con 5
   # phut): popup mua sub quay lai chan truoc khi gen. Mua lai bang the thu
   # nghiem cua tai khoan license tester - con han thi ca bon buoc nay deu khong
@@ -319,15 +340,19 @@ cases:
     optional: true
   - kind: wait
     seconds: 6
+  # Nut xac nhan tren sheet thanh toan cua Google Play: chu nay theo locale HE
+  # THONG, nen khai ca hai thu tieng. Do duoc luot 18:40 tren may vi-VN: sheet
+  # hien "Đăng ký", flow cho "Subscribe", buoc `optional` im lang bo qua roi
+  # ca case chet o `wait_text 'rate us'` cuoi cung - cach cho hong 14 buoc.
   - kind: tap
-    text: "Đăng ký"
+    text: ["Subscribe", "Đăng ký"]
     optional: true
   - kind: wait
     seconds: 6
   - kind: close_ad
     timeout: 20
   - kind: wait_text
-    text: rate us
+    text: "The best we can get"
     timeout: 120
 
 - event: rating_star_clicked
