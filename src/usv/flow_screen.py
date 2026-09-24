@@ -13,7 +13,8 @@ import time
 
 from .tu_dien_man_he_thong import no_bien_the
 from .ad_close import tim_nut_dong
-from .adb_foreground_parse import la_man_quang_cao
+from .adb_parsers import AdbError
+from .adb_foreground_parse import la_man_paywall, la_man_quang_cao
 from .models import DeviceNode
 from .ui_cache import CayUI
 from .ui_dump import parse_dump
@@ -31,6 +32,10 @@ MAN_CHAN_TOI_DA = 3
 # Cho animation dong chay xong roi hay doc lai cay UI: doc ngay la doc duoc
 # lop dang bay ra, va lan sau lai thay "con nut dong" o day.
 DONG_SETTLE = 1.0
+# Nut X cua paywall hien TRE vai giay - co khi da nam trong cay UI nhung bam
+# chua an. Dang o paywall thi cho it nhat chung nay, du `close_ad` khai
+# timeout ngan hon: paywall khong tu bien mat, di tiep la ca case ket.
+PAYWALL_CHO_X = 15.0
 
 
 async def nodes(client, serial: str, metrics, cay: CayUI | None = None
@@ -43,16 +48,20 @@ async def nodes(client, serial: str, metrics, cay: CayUI | None = None
     return nodes
 
 
-async def dang_trong_quang_cao(client, serial: str) -> bool:
-    """Man dang hien co phai man cua SDK quang cao khong. Loi -> coi nhu khong.
+async def man_chan(client, serial: str) -> dict[str, bool]:
+    """Man dang hien la quang cao hay paywall, doc tu TEN ACTIVITY.
 
-    Doc `dumpsys activity activities` chu khong doc focus: man quang cao chay
-    TRONG process app nen package van la package app.
+    Tra ve dung kwargs cua `tim_nut_dong` (`man_ads`, `man_paywall`). Doc
+    `dumpsys activity activities` chu khong doc focus: man quang cao va paywall
+    chay TRONG process app nen package van la package app. Ten activity khong
+    doi theo ngon ngu, con chu tren man thi co. Loi -> coi nhu man app.
     """
     try:
-        return la_man_quang_cao(await client.top_activity(serial))
+        activity = await client.top_activity(serial)
     except Exception:            # noqa: BLE001 - khong doc duoc thi cu coi la man app
-        return False
+        activity = None
+    return {"man_ads": la_man_quang_cao(activity),
+            "man_paywall": la_man_paywall(activity)}
 
 
 async def bam_node(client, serial: str, node: DeviceNode) -> None:
@@ -97,6 +106,7 @@ async def wait_text(client, serial: str, metrics, needle,
     # ~390 giay that - do dung mot luot cham 611s.
     het_gio = time.monotonic() + max(0.0, timeout)
     da_don = 0
+    da_gia_han_paywall = False
     while True:
         if cay is not None:
             cay.bo()          # cho thi phai doc lai that, khong dung cay cu
@@ -107,20 +117,72 @@ async def wait_text(client, serial: str, metrics, needle,
             if any(f in chu or f in mo_ta for f in folded):
                 return True
         if don_man_chan and da_don < MAN_CHAN_TOI_DA:
-            nut = tim_nut_dong(
-                tren_man, chi_chac=True,
-                man_ads=await dang_trong_quang_cao(client, serial))
+            man = await man_chan(client, serial)
+            nut = tim_nut_dong(tren_man, chi_chac=True, **man)
             if nut is not None:
                 log.info("Cho %s: don man chan bang %s", bien_the, nut.label)
                 await bam_node(client, serial, nut)
-                da_don += 1
-                het_gio = time.monotonic() + max(0.0, timeout)
+                # Paywall: X hien tre, bam som thi khong an va van dung o
+                # paywall. Khong tinh vao MAN_CHAN_TOI_DA (khong thi ba cu bam
+                # hut da het suat), va chi gia han MOT lan de khong cho mai.
+                if man["man_paywall"]:
+                    if not da_gia_han_paywall:
+                        da_gia_han_paywall = True
+                        het_gio = max(het_gio, time.monotonic() + PAYWALL_CHO_X)
+                else:
+                    da_don += 1
+                    het_gio = time.monotonic() + max(0.0, timeout)
                 if cay is not None:
                     cay.bo()
                 await asyncio.sleep(DONG_SETTLE)
                 continue
         if time.monotonic() >= het_gio:
             return False
+        await asyncio.sleep(POLL)
+
+
+async def dong_man_chan(client, serial: str, metrics, cay: CayUI | None,
+                        timeout: float) -> DeviceNode | None:
+    """Cho roi dong quang cao / paywall dang chan duong. Tra nut da bam, hoac
+    None neu het `timeout` ma man van sach - khong co gi chan la binh thuong.
+
+    Xet lai TEN ACTIVITY moi vong, khong chot tu dau: paywall hay len sau
+    interstitial, luc buoc nay bat dau man con la quang cao hoac man app.
+
+    Rieng paywall: cho X toi thieu PAYWALL_CHO_X, bam xong phai THOAT khoi
+    activity paywall moi tinh la dong - X hien tre, bam som la khong an. Het
+    gio ma van ket o paywall thi bao loi ngay tai day, thay vi de buoc sau
+    ngoi cho sau lung paywall roi bao "khong thay chu".
+    """
+    het_gio = time.monotonic() + max(0.0, timeout)
+    da_gia_han = False
+    da_bam: DeviceNode | None = None
+    while True:
+        man = await man_chan(client, serial)
+        if man["man_paywall"] and not da_gia_han:
+            da_gia_han = True
+            het_gio = max(het_gio, time.monotonic() + PAYWALL_CHO_X)
+        if da_bam is not None and not man["man_paywall"]:
+            return da_bam                   # bam X xong da ra khoi paywall
+        if cay is not None:
+            cay.bo()
+        nut = tim_nut_dong(await nodes(client, serial, metrics, cay), **man)
+        if nut is not None:
+            await bam_node(client, serial, nut)
+            log.info("Da dong %s bang %s",
+                     "paywall" if man["man_paywall"] else "quang cao", nut.label)
+            if cay is not None:
+                cay.bo()
+            await asyncio.sleep(DONG_SETTLE)
+            if not man["man_paywall"]:
+                return nut
+            da_bam = nut                    # vong sau kiem da thoat chua
+        if time.monotonic() >= het_gio:
+            if man["man_paywall"]:
+                ly_do = ("bấm nút X mà vẫn chưa thoát" if da_bam is not None
+                         else "không tìm ra nút X")
+                raise AdbError(f"Kẹt ở paywall: chờ {PAYWALL_CHO_X:g}s, {ly_do}.")
+            return None
         await asyncio.sleep(POLL)
 
 

@@ -22,7 +22,7 @@ import sys
 from pathlib import Path
 
 from .ad_close import tim_nut_dong
-from .adb_foreground_parse import la_man_quang_cao
+from .flow_screen import man_chan
 from .quyen_he_thong import tim_nut_cho_phep
 from .adb_parsers import AdbError
 from .cli_device import CliError, make_client, pick_serial
@@ -101,8 +101,9 @@ async def lam(args) -> tuple[int, list[dict]]:
     if args.lenh == "close-ad":
         # Trong man quang cao thi "Close" mot chu chac chan la nut dong quang
         # cao; o man app thi chinh no cung la nut dong popup cua app.
-        man_ads = la_man_quang_cao(await adb.top_activity(serial))
-        node = tim_nut_dong(await _nodes(adb, serial), man_ads=man_ads)
+        # Paywall nhan qua ten activity, X tim theo hinh: moi thu tieng.
+        node = tim_nut_dong(await _nodes(adb, serial),
+                            **await man_chan(adb, serial))
         if node is None:
             say("Không thấy nút đóng quảng cáo nào — màn đang sạch.")
         else:

@@ -193,3 +193,18 @@ def test_phan_biet_man_quang_cao_voi_man_app():
     assert la_man_quang_cao(parse_top_activity(DUMPSYS_ADS))
     assert not la_man_quang_cao(parse_top_activity(DUMPSYS_APP))
     assert not la_man_quang_cao(None)
+
+
+def test_nhan_ra_paywall_qua_ten_activity_khong_qua_chu():
+    """Chu tren paywall doi theo ngon ngu app, ten activity thi khong."""
+    from usv.adb_foreground_parse import la_man_paywall
+
+    assert la_man_paywall("com.x/com.visionlab.billing.ui.VslBillingActivity")
+    assert la_man_paywall("com.x/.ui.PaywallActivity")
+    assert not la_man_paywall("com.x/.ui.feature.main.MainActivity")
+    # Xet ten lop, khong xet duong package.
+    assert not la_man_paywall("com.x/.premium.home.HomeActivity")
+    # Sheet mua hang cua Play: bam X o do la huy giao dich.
+    assert not la_man_paywall(
+        "com.android.vending/com.google.android.finsky.billing.PurchaseActivity")
+    assert not la_man_paywall(None)

@@ -31,7 +31,8 @@ from .event_window import mark_label
 from .logcat_stream import Recording, mark
 from .models import DeviceNode
 from .flow_screen import (bam_node as _bam_node, cho_nut,
-                          dang_trong_quang_cao, nodes, wait_text)
+                          dong_man_chan, man_chan, nodes,
+                          wait_text)
 from .quyen_he_thong import tim_nut_cho_phep
 from .ui_cache import CayUI
 
@@ -95,9 +96,8 @@ async def _dong_popup(client, serial: str, metrics, neo: str,
         # Bam roi ma van con -> co lop che. Don no truoc, dung bam lai vo ich.
         nut = None if da_bam else tim_nut_dong_popup(tren_man, neo)
         if nut is None:
-            nut = tim_nut_dong(
-                tren_man, chi_chac=True,
-                man_ads=await dang_trong_quang_cao(client, serial))
+            nut = tim_nut_dong(tren_man, chi_chac=True,
+                               **await man_chan(client, serial))
             da_bam = False              # don xong thi thu lai nut cua popup
             if nut is None:
                 raise AdbError(
@@ -125,7 +125,7 @@ async def _don_quang_cao(client, serial: str, metrics, cay: CayUI | None) -> boo
     """
     tren_man = await nodes(client, serial, metrics, cay)
     nut = tim_nut_dong(tren_man, chi_chac=True,
-                       man_ads=await dang_trong_quang_cao(client, serial))
+                       **await man_chan(client, serial))
     if nut is None:
         return False
     log.info("Don quang cao chan duong bang %s", nut.label)
@@ -219,18 +219,9 @@ async def run_step(client, serial: str, metrics, package: str, step: Step,
         # dat nut dong trong WebView khong co resource_id nao, nen luat "phai
         # co to tien la khung ads" khong bat duoc; do duoc khi di do placement
         # `result`, phai xem ba quang cao thuong moi gen duoc anh.
-        man_ads = await dang_trong_quang_cao(client, serial)
-        # Ngoai man quang cao thi goi y NGUYEN BAN `tim_nut_dong` - de cho
-        # duong tim nut khong doi gi so voi truoc, va de test thay the duoc no.
-        tim = (lambda ds: tim_nut_dong(ds, man_ads=True)) if man_ads \
-            else tim_nut_dong
-        node = await cho_nut(client, serial, metrics, cay, step.timeout, tim)
-        if node is not None:
-            await _bam_node(client, serial, node)
-            log.info("Da dong quang cao bang %s", node.label)
-            if cay is not None:
-                cay.bo()
-            await asyncio.sleep(AD_SETTLE)
+        # Paywall nhan ra qua ten activity, X tim theo hinh - chay moi thu
+        # tieng. Xem `dong_man_chan`.
+        await dong_man_chan(client, serial, metrics, cay, step.timeout)
         return
 
     if step.kind == "tap":
