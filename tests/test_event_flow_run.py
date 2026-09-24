@@ -635,3 +635,68 @@ def test_wait_text_don_paywall_tieng_la_roi_thay_chu(monkeypatch):
     thay = run(flow_screen.wait_text(client, "S1", METRICS, "Home", 0.2))
     assert thay is True
     assert client.taps == 2
+
+
+class _InterstitialAdb(FakeClient):
+    """Interstitial AdMob: cay UI khong co nut dong nao (do that). `back_an_tu`
+    = lan BACK thu may moi thoat; None = BACK khong an."""
+
+    def __init__(self, back_an_tu):
+        super().__init__()
+        self.back_an_tu = back_an_tu
+        self.backs = 0
+
+    def _con_ads(self):
+        return self.back_an_tu is None or self.backs < self.back_an_tu
+
+    async def top_activity(self, serial):
+        if self._con_ads():
+            return "com.x/com.google.android.gms.ads.AdActivity"
+        return "com.x/.ui.MainActivity"
+
+    async def input_keyevent(self, serial, name):
+        await super().input_keyevent(serial, name)
+        if name == "KEYCODE_BACK":
+            self.backs += 1
+
+    async def dump_ui(self, serial):
+        # DUMP chi co nut Home cua app - khong co nut dong quang cao nao.
+        return DUMP
+
+
+def _nhanh_ads(monkeypatch, cho=0.3):
+    from usv import flow_screen
+    _nhanh(monkeypatch)
+    monkeypatch.setattr(flow_screen, "QUANG_CAO_CHO", cho)
+
+
+def test_close_ad_interstitial_khong_nut_dong_thi_bam_back(recording,
+                                                           monkeypatch):
+    """BACK som trong luc dem nguoc khong an: bam lai toi khi ra khoi
+    AdActivity, du `close_ad` khai timeout 0."""
+    _nhanh_ads(monkeypatch, cho=5)
+    client = _InterstitialAdb(back_an_tu=2)
+    case = _case(steps=(Step(kind="close_ad", timeout=0),))
+    result = run(run_case(client, "S1", METRICS, "com.x", recording, case))
+    assert result.status == "ok", result.reason
+    assert client.backs == 2
+    assert client.taps == 0
+
+
+def test_close_ad_ket_interstitial_thi_bao_ro_tai_cho(recording, monkeypatch):
+    _nhanh_ads(monkeypatch)
+    client = _InterstitialAdb(back_an_tu=None)
+    case = _case(steps=(Step(kind="close_ad", timeout=0),))
+    result = run(run_case(client, "S1", METRICS, "com.x", recording, case))
+    assert result.status == "not_tested"
+    assert "Kẹt ở quảng cáo" in result.reason
+
+
+def test_close_ad_man_app_khong_bao_gio_bam_back(recording, monkeypatch):
+    """O man app BACK la lui man / thoat app - tuyet doi khong bam."""
+    _nhanh_ads(monkeypatch)
+    client = FakeClient()
+    case = _case(steps=(Step(kind="close_ad", timeout=0.2),))
+    result = run(run_case(client, "S1", METRICS, "com.x", recording, case))
+    assert result.status == "ok", result.reason
+    assert "key:KEYCODE_BACK" not in client.log

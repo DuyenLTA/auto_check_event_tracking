@@ -36,6 +36,9 @@ DONG_SETTLE = 1.0
 # chua an. Dang o paywall thi cho it nhat chung nay, du `close_ad` khai
 # timeout ngan hon: paywall khong tu bien mat, di tiep la ca case ket.
 PAYWALL_CHO_X = 15.0
+# Interstitial dem nguoc xong moi cho dong (BACK som cung khong an), va khong
+# tu bien mat - cho lau hon paywall.
+QUANG_CAO_CHO = 30.0
 
 
 async def nodes(client, serial: str, metrics, cay: CayUI | None = None
@@ -149,40 +152,60 @@ async def dong_man_chan(client, serial: str, metrics, cay: CayUI | None,
     Xet lai TEN ACTIVITY moi vong, khong chot tu dau: paywall hay len sau
     interstitial, luc buoc nay bat dau man con la quang cao hoac man app.
 
-    Rieng paywall: cho X toi thieu PAYWALL_CHO_X, bam xong phai THOAT khoi
-    activity paywall moi tinh la dong - X hien tre, bam som la khong an. Het
-    gio ma van ket o paywall thi bao loi ngay tai day, thay vi de buoc sau
-    ngoi cho sau lung paywall roi bao "khong thay chu".
+    Dang o man quang cao / paywall thi bam dong xong phai THOAT khoi activity
+    do moi tinh la dong, va cho toi thieu PAYWALL_CHO_X / QUANG_CAO_CHO du `timeout` ngan hon:
+    man do khong tu bien mat. Het gio ma van ket thi bao loi ngay tai day,
+    thay vi de buoc sau ngoi cho sau lung no roi bao "khong thay chu".
+
+    Man quang cao ma khong thay nut dong nao thi bam BACK. Do that: interstitial
+    AdMob sau splash de ~50s, cay UI khong co nut dong nao bam duoc (nut X ve
+    ngoai cay accessibility, chi con icon AdChoices), BACK thi thoat ngay. Chi
+    bam BACK khi activity dang o truoc DUNG la cua SDK quang cao - o man app no
+    se lui man hoac thoat app.
     """
-    het_gio = time.monotonic() + max(0.0, timeout)
-    da_gia_han = False
+    bat_dau = time.monotonic()
+    het_gio = bat_dau + max(0.0, timeout)
+    da_gia_han: set[str] = set()
+    dang_dong: str | None = None        # loai man vua bam dong, cho xac nhan thoat
     da_bam: DeviceNode | None = None
     while True:
         man = await man_chan(client, serial)
-        if man["man_paywall"] and not da_gia_han:
-            da_gia_han = True
-            het_gio = max(het_gio, time.monotonic() + PAYWALL_CHO_X)
-        if da_bam is not None and not man["man_paywall"]:
-            return da_bam                   # bam X xong da ra khoi paywall
+        loai = ("paywall" if man["man_paywall"]
+                else "quảng cáo" if man["man_ads"] else None)
+        if dang_dong is not None and loai != dang_dong:
+            return da_bam                   # da ra khoi man vua dong
+        if loai is not None and loai not in da_gia_han:
+            da_gia_han.add(loai)
+            cho = PAYWALL_CHO_X if loai == "paywall" else QUANG_CAO_CHO
+            het_gio = max(het_gio, time.monotonic() + cho)
         if cay is not None:
             cay.bo()
         nut = tim_nut_dong(await nodes(client, serial, metrics, cay), **man)
         if nut is not None:
             await bam_node(client, serial, nut)
-            log.info("Da dong %s bang %s",
-                     "paywall" if man["man_paywall"] else "quang cao", nut.label)
+            log.info("Da dong %s bang %s", loai or "quang cao", nut.label)
             if cay is not None:
                 cay.bo()
             await asyncio.sleep(DONG_SETTLE)
-            if not man["man_paywall"]:
-                return nut
-            da_bam = nut                    # vong sau kiem da thoat chua
+            if loai is None:
+                return nut                  # nut chac tren man app, vd Skip Ad o splash
+            dang_dong, da_bam = loai, nut
+        elif loai == "quảng cáo":
+            await client.input_keyevent(serial, "KEYCODE_BACK")
+            log.info("Man quang cao khong co nut dong trong cay UI - bam BACK")
+            if cay is not None:
+                cay.bo()
+            await asyncio.sleep(DONG_SETTLE)
+            dang_dong = loai
         if time.monotonic() >= het_gio:
-            if man["man_paywall"]:
-                ly_do = ("bấm nút X mà vẫn chưa thoát" if da_bam is not None
-                         else "không tìm ra nút X")
-                raise AdbError(f"Kẹt ở paywall: chờ {PAYWALL_CHO_X:g}s, {ly_do}.")
-            return None
+            if loai is None:
+                return None
+            if dang_dong == loai:
+                ly_do = "bấm đóng mà vẫn chưa thoát"
+            else:
+                ly_do = "không tìm ra nút X"
+            raise AdbError(f"Kẹt ở {loai}: chờ {time.monotonic() - bat_dau:.0f}s, "
+                           f"{ly_do}.")
         await asyncio.sleep(POLL)
 
 
