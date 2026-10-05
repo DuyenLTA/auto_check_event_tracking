@@ -30,6 +30,8 @@ TOI_DA_AD = 12
 CHO_AD_HIEN = 15.0
 # Rewarded dai ~30s, nut dong hien tre; cho rong tay roi moi bao loi.
 CHO_AD_XONG = 75.0
+# Lan kiem nut dau tien: nut Watch Ads hien tre hon sheet (cho rewarded tai).
+CHO_NUT_DAU = 15.0
 # Ad ket khong dong duoc bang nut: so lan bam BACK truoc khi bao loi.
 BACK_TOI_DA = 3
 # Kiem nut con khong: sheet hien lai sau khi dong ad mat 1-2s.
@@ -120,17 +122,35 @@ async def _dem(client, serial, metrics, cay: CayUI,
 
 
 async def xem_ads(client, serial: str, metrics, nut: tuple[str, ...],
-                  cay: CayUI, de_lai_cuoi: bool = False) -> str:
+                  cay: CayUI, de_lai_cuoi: bool = False, truoc_dong_cuoi=None) -> str:
     """Xem ad toi khi nut `nut` bien mat. Tra mo ta duong da di (ghi notes).
 
     `de_lai_cuoi`: bam ad CUOI roi tra ve ngay khi no hien, KHONG dong - buoc
     sau ngat mang trong luc ad dang chay de ep gen_fail no_network.
+
+    `truoc_dong_cuoi`: goi NGAY TRUOC cu dong ad cuoi (hoac sau khi mua sub) -
+    moc cu kich hoat cua gen_start.
     """
     da_xem = 0
-    for _ in range(TOI_DA_AD):
+    for vong in range(TOI_DA_AD):
         cay.bo()
-        if not await wait_text(client, serial, metrics, nut, CHO_NUT, cay,
+        # Lan dau cho lau hon: sheet hien truoc, nut Watch Ads chi hien khi
+        # rewarded ad tai xong (do that 05/10: sheet chi co nut Premium).
+        if not await wait_text(client, serial, metrics, nut,
+                               CHO_NUT_DAU if vong == 0 else CHO_NUT, cay,
                                don_man_chan=False):
+            premium = await wait_text(
+                client, serial, metrics,
+                tuple(x.rstrip("*") for x in NUT_PREMIUM.needles), 1.0, cay,
+                don_man_chan=False)
+            if premium and de_lai_cuoi:
+                raise AdbError("Sheet mở khoá không có nút Watch Ads (ad chưa tải) - "
+                               "không giữ được ad cuối để ngắt mạng.")
+            if premium:
+                await mua_sub(client, serial, metrics, cay)
+                if truoc_dong_cuoi is not None:
+                    await truoc_dong_cuoi()
+                return f"xem {da_xem} ad, sheet hết nút Watch Ads - đã mua sub test"
             if de_lai_cuoi:
                 raise AdbError(f"Nút {nut[0]!r} biến mất trước ad cuối "
                                f"(đã xem {da_xem}) - không còn ad để giữ lại.")
@@ -144,11 +164,14 @@ async def xem_ads(client, serial: str, metrics, nut: tuple[str, ...],
             if de_lai_cuoi:
                 raise AdbError("Ad cuối không về - không ép được gen_fail lúc đang xem ad.")
             await mua_sub(client, serial, metrics, cay)
+            if truoc_dong_cuoi is not None:
+                await truoc_dong_cuoi()
             return f"xem {da_xem} ad rồi ad không về - đã mua sub test"
         if de_lai_cuoi and cuoi:
             return f"xem {da_xem} ad, ad cuối ({dem[1]}/{dem[1]}) để chạy, chưa đóng"
         try:
-            await dong_man_chan(client, serial, metrics, cay, CHO_AD_XONG)
+            await dong_man_chan(client, serial, metrics, cay, CHO_AD_XONG,
+                                truoc_bam=truoc_dong_cuoi if cuoi else None)
         except AdbError:
             # Vai rewarded ad bam X ma khong thoat (do that 05/10, ket 75s) -
             # BACK thuong thoat duoc. So ad that van doc lai tu nut o vong sau.

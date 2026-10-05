@@ -23,7 +23,7 @@ from .density import ScreenMetrics
 from .event_flow_run import expectations, run_flow
 from .event_session import lay_mau_app
 from .event_spec_models import SpecSheet
-from .event_window import cut, with_expectations
+from .event_window import cut, with_after_events, with_delays, with_expectations
 from .fa_event_parse import parse_log
 from .report_event_html import build
 
@@ -229,6 +229,13 @@ async def check(*, spec: SpecSheet, package: str, flow: Flow | None, adb,
     # cham mot man chua bao gio lai toi.
     windows = with_expectations(cli_case_notes.drop_windows(windows, cases),
                                 expectations(cases))
+    windows = with_delays(windows, {c.case.label: c.case.max_delay_ms for c in cases
+                                    if c.case.max_delay_ms is not None})
+    windows = with_after_events(windows, {c.case.label: c.case.after_event
+                                          for c in cases if c.case.after_event})
+    if khong_moc := [w.note for w in windows if w.tap_ms is None]:
+        say(f"[thời điểm] {len(khong_moc)} case không có mốc cú bấm, chỉ chấm có/không "
+            f"bắn: {' | '.join(khong_moc[:5])}{' …' if len(khong_moc) > 5 else ''}")
     results, summary = event_check_runner.run(
         spec, windows, config,
         fa_silent=recording.fa_silent, stream_died=recording.stream_died,

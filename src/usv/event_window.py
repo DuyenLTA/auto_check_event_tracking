@@ -19,6 +19,10 @@ from .fa_event_parse import Marker, ObservedEvent, parse_log
 
 # Nhan moc: "<ten event spec> | <van xuoi cot Triggered>".
 _SEP = " | "
+# Moc CU BAM kich hoat: chen ngay truoc lenh input cua buoc kich hoat trong
+# case. Khong cat cua so - chi danh dau thoi diem ben trong cua so de cham
+# event ban DUNG LUC bam hay khong (xem checks/event_timing).
+TAP_PREFIX = "@bấm "
 # Event cach bien duoi nguong nay -> ghi chu "sat bien". 250ms la SO DOAN, chua
 # do tren phien that; giu nho de it gan co oan, va bao ra chu khong tu xu ly.
 EDGE_MS = 250.0
@@ -64,6 +68,11 @@ class Window:
     # con mot case lai app toi DUNG MOT trong bon cho do nen no biet lan nay
     # PHAI ra gia tri nao. Cham theo case thi chat hon cham theo spec.
     expect_params: dict[str, str] = field(default_factory=dict)
+    # Moc cu bam kich hoat (TAP_PREFIX) dau tien trong cua so, va ten buoc.
+    tap_ms: float | None = None
+    tap_step: str = ""
+    # Nguong tre toi da case khai rieng (flow `max_delay_ms`); None = mac dinh.
+    max_delay_ms: float | None = None
 
     def named(self, name: str) -> tuple[ObservedEvent, ...]:
         return tuple(e for e in self.events if e.name == name and e.from_app)
@@ -109,8 +118,45 @@ def _edge_names(events: list[ObservedEvent], start: float | None,
     return tuple(dict.fromkeys(out))
 
 
+def with_delays(windows: tuple[Window, ...],
+                delays: dict[str, float]) -> tuple[Window, ...]:
+    """Gan nguong tre rieng cua case vao cua so, tra cuu theo `note`."""
+    return tuple(replace(w, max_delay_ms=delays[w.note]) if w.note in delays else w
+                 for w in windows)
+
+
+AFTER_PREFIX = "sau event "
+
+
+def with_after_events(windows: tuple[Window, ...],
+                      after: dict[str, str]) -> tuple[Window, ...]:
+    """Case khai `after_event`: moc thoi diem = lan ban GAN NHAT cua event do
+    TRUOC lan ban dau cua event duoc cham ("ban ngay sau X"). Vd limit_reached_
+    view: gen_gate dau tien (unlock_sheet) khong phai moc, gen_gate ngay truoc
+    no (limit_reached) moi la moc. Khong co X nao truoc -> moc = luc mo cua
+    so, event se bi bao tre: app ban ma khong co X dan truoc."""
+    out = []
+    for w in windows:
+        ten = after.get(w.note)
+        if not ten:
+            out.append(w)
+            continue
+        dich = next((to_ms(e.timestamp) for e in w.app_events
+                     if e.name == w.spec_event), None)
+        moc = None
+        for e in w.app_events:
+            stamp = to_ms(e.timestamp)
+            if e.name == ten and stamp is not None and (dich is None or stamp <= dich):
+                moc = stamp
+        out.append(replace(w, tap_ms=moc if moc is not None else w.start_ms,
+                           tap_step=AFTER_PREFIX + ten))
+    return tuple(out)
+
+
 def cut(events: list[ObservedEvent], markers: list[Marker]) -> tuple[Window, ...]:
     """Cat theo moc. Event truoc moc dau tien bi bo - chua bat dau buoc nao."""
+    taps = [m for m in markers if m.label.startswith(TAP_PREFIX)]
+    markers = [m for m in markers if not m.label.startswith(TAP_PREFIX)]
     if not markers:
         return ()
 
@@ -134,9 +180,21 @@ def cut(events: list[ObservedEvent], markers: list[Marker]) -> tuple[Window, ...
                 continue
             inside.append(event)
         spec_event, note = split_label(marker.label)
+        tap_ms, tap_step = None, ""
+        # Moc DAU TIEN trong cua so: cu bam dau tien la cu kich hoat; moc lap
+        # lai (vd don quang cao roi bam lai) den sau.
+        for tap in taps:
+            stamp = to_ms(tap.timestamp)
+            if stamp is None or start is None or stamp < start:
+                continue
+            if end is not None and stamp >= end:
+                continue
+            tap_ms, tap_step = stamp, tap.label[len(TAP_PREFIX):]
+            break
         windows.append(Window(
             spec_event=spec_event, note=note, events=tuple(inside),
             start_ms=start, end_ms=end, near_edge=_edge_names(inside, start, end),
+            tap_ms=tap_ms, tap_step=tap_step,
         ))
     return tuple(windows)
 

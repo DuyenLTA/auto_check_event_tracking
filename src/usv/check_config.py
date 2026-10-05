@@ -17,7 +17,7 @@ from .resources import config_dir
 
 CONFIG_NAME = "event-check-rules.yaml"
 
-KNOWN_CHECKS = frozenset({"event_presence", "event_params"})
+KNOWN_CHECKS = frozenset({"event_presence", "event_params", "event_timing"})
 KNOWN_SEVERITY = frozenset({"error", "warning"})
 
 

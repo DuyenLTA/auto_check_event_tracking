@@ -14,13 +14,14 @@ from __future__ import annotations
 from .check_config import CheckConfig
 from .check_models import CheckResult, Summary
 from .check_sort import sort_for_report
-from .checks import event_params, event_presence
+from .checks import event_params, event_presence, event_timing
 from .event_spec_models import SpecSheet
 from .event_window import Window
 
 _REGISTRY = {
     "event_presence": event_presence.run,
     "event_params": event_params.run,
+    "event_timing": event_timing.run,
 }
 
 

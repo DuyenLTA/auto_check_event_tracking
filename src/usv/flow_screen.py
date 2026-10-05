@@ -145,7 +145,7 @@ async def wait_text(client, serial: str, metrics, needle,
 
 
 async def dong_man_chan(client, serial: str, metrics, cay: CayUI | None,
-                        timeout: float) -> DeviceNode | None:
+                        timeout: float, truoc_bam=None) -> DeviceNode | None:
     """Cho roi dong quang cao / paywall dang chan duong. Tra nut da bam, hoac
     None neu het `timeout` ma man van sach - khong co gi chan la binh thuong.
 
@@ -182,6 +182,8 @@ async def dong_man_chan(client, serial: str, metrics, cay: CayUI | None,
             cay.bo()
         nut = tim_nut_dong(await nodes(client, serial, metrics, cay), **man)
         if nut is not None:
+            if truoc_bam is not None:
+                await truoc_bam()       # moc cu dong (vd dong ad cuoi -> gen_start)
             await bam_node(client, serial, nut)
             log.info("Da dong %s bang %s", loai or "quang cao", nut.label)
             if cay is not None:
@@ -191,6 +193,8 @@ async def dong_man_chan(client, serial: str, metrics, cay: CayUI | None,
                 return nut                  # nut chac tren man app, vd Skip Ad o splash
             dang_dong, da_bam = loai, nut
         elif loai == "quảng cáo":
+            if truoc_bam is not None:
+                await truoc_bam()
             await client.input_keyevent(serial, "KEYCODE_BACK")
             log.info("Man quang cao khong co nut dong trong cay UI - bam BACK")
             if cay is not None:

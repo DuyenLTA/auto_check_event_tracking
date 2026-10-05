@@ -115,7 +115,8 @@ def _step(raw: object, where: str) -> tuple[Step | None, list[str]]:
     return Step(kind=kind, selector=selector, text=text, text_alt=text_alt,
                 component=component, seconds=seconds, timeout=timeout,
                 optional=bool(raw.get("optional", False)),
-                leave_last=bool(raw.get("leave_last", False))), []
+                leave_last=bool(raw.get("leave_last", False)),
+                trigger=bool(raw.get("trigger", False))), []
 
 
 def _reset(raw: object, where: str) -> tuple[Reset, list[str]]:
@@ -162,13 +163,23 @@ def _case(raw: object, order: int) -> tuple[FlowCase | None, list[str]]:
         errors.append(f"{where}: `expect_params` phải là mapping param: giá trị.")
         expect = {}
 
+    max_delay = raw.get("max_delay_ms")
+    if max_delay is not None:
+        try:
+            max_delay = float(max_delay)
+        except (TypeError, ValueError):
+            errors.append(f"{where}: `max_delay_ms` phải là số, đang là {max_delay!r}.")
+    if sum(1 for s in steps if s.trigger) > 1:
+        errors.append(f"{where}: chỉ một bước được khai `trigger: true`.")
+
     if errors:
         # Case hong thi BO han: chay mot case parse dang do thi verdict cham ra
         # khong con nghia gi.
         return None, errors
     return FlowCase(event=event, name=str(raw.get("label") or "").strip(),
                     expect_params={str(k): str(v) for k, v in expect.items()},
-                    steps=tuple(steps), reset=reset), []
+                    steps=tuple(steps), reset=reset, max_delay_ms=max_delay,
+                    after_event=str(raw.get("after_event") or "").strip()), []
 
 
 def parse(raw: dict) -> Flow:

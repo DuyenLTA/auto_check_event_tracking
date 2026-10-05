@@ -93,7 +93,9 @@ def test_case_chay_duoc_thi_chen_moc_va_chay_het_step(recording):
     assert result.status == "ok"
     assert result.steps_done == 1
     assert client.taps == 1
-    assert client.marks == [mark_label("rating_placement_viewed", "rating tai home")]
+    # Moc case truoc, roi moc cu bam ngay truoc lenh tap cua buoc kich hoat.
+    assert client.marks == [mark_label("rating_placement_viewed", "rating tai home"),
+                            "@bấm tap resource_id='btnHome'"]
 
 
 def test_moc_mang_NHAN_CASE_de_phan_biet_nhieu_case_cung_event(recording):
@@ -103,7 +105,7 @@ def test_moc_mang_NHAN_CASE_de_phan_biet_nhieu_case_cung_event(recording):
         run(run_case(client, "S1", METRICS, "com.x", recording,
                      _case(name=f"rating tai {place}",
                            expect_params={"placement_name": place})))
-    assert client.marks == [
+    assert [m for m in client.marks if not m.startswith("@bấm ")] == [
         mark_label("rating_placement_viewed", "rating tai home"),
         mark_label("rating_placement_viewed", "rating tai result"),
     ]

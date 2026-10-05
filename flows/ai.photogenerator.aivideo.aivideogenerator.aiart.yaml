@@ -157,6 +157,13 @@ cases:
     resource_id: btnNextOnboardingImage
     index: 0
     optional: true
+  # home_view ban luc man Home HIEN RA - moc la luc tool THAY header Home. Dat
+  # TRUOC cac buoc close_ad: wait_text tu don quang cao/paywall trong luc cho,
+  # con dat sau thi moc tre them ca timeout cua close_ad (do that 05/10: 14s).
+  - kind: wait_text
+    text: Nexus AI
+    timeout: 60
+    trigger: true
   # Het sub: interstitial (X ve ngoai cay UI - close_ad bam BACK) roi paywall
   # RevenueCat bat ngay sau. Hai buoc close_ad: buoc dau thoat interstitial la
   # tra ve, paywall len sau phai co buoc thu hai don. Co sub thi ca hai trong.
@@ -522,6 +529,8 @@ cases:
     seconds: 3
 - event: result_view
   label: Result luồng template sau Try again
+  # result_view ban khi man Result hien, ngay sau gen_success cung gen_id.
+  after_event: gen_success
   reset:
     relaunch: false
   expect_params:
@@ -1200,8 +1209,10 @@ cases:
   reset:
     relaunch: false
   steps:
+  # BACK sau la don dep; cu kich hoat la Cancel.
   - text: Cancel
     kind: tap
+    trigger: true
   - kind: wait
     seconds: 2
   - *id002
@@ -1314,8 +1325,10 @@ cases:
     leave_last: true
   - kind: wait
     seconds: 32
+  # gen_fail ban khi app biet mat mang - moc cu bam dat o buoc ngat mang.
   - kind: network
     state: 'off'
+    trigger: true
   - *id004
   - kind: wait_text
     text: Something Went Wrong
@@ -1410,6 +1423,9 @@ cases:
     seconds: 2
 - event: limit_reached_view
   label: Generate nhạc khi đã hết hạn mức ngày
+  # Spec: hien thong bao het luot ngay sau khi app kiem luot (gen_gate
+  # gate_result=limit_reached) - moc la gen_gate gan nhat truoc no.
+  after_event: gen_gate
   # Het luot gen nhac trong ngay (sub: limit_sub_generate_song_per_day; free:
   # tran ads + paywall RevenueCat tat) thi app bao het luot thay vi gen.
   # Tien de: may da het luot nhac SUB hom nay (gen tay toi tran) - neu chua

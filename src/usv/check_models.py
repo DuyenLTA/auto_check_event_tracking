@@ -28,6 +28,7 @@ class Verdict(StrEnum):
     FAIL_TYPE = "FAIL_TYPE"              # spec Number ma app ban chu
     FAIL_DUPLICATE = "FAIL_DUPLICATE"    # mot buoc ma event ban nhieu lan
     FAIL_PARAM_EXTRA = "FAIL_PARAM_EXTRA"  # app gui param spec khong khai
+    FAIL_TIMING = "FAIL_TIMING"          # ban truoc cu bam kich hoat, hoac tre qua nguong
     NOT_VERIFIABLE = "NOT_VERIFIABLE"    # logcat khong phan biet duoc String/Number
     NOT_TESTED = "NOT_TESTED"            # chua danh dau buoc nao - KHONG phai fail
     EXTRA = "EXTRA"                      # app co, spec khong khai
@@ -45,6 +46,7 @@ VERDICT_LABEL = {
     Verdict.FAIL_TYPE: "Sai kiểu",
     Verdict.FAIL_DUPLICATE: "Bắn trùng",
     Verdict.FAIL_PARAM_EXTRA: "Thừa param",
+    Verdict.FAIL_TIMING: "Sai thời điểm",
     Verdict.NOT_TESTED: "Chưa test",
 }
 
@@ -57,7 +59,7 @@ def verdict_label(verdict: "Verdict") -> str:
 # Nhom verdict -> mau, dung chung cho web UI va report HTML.
 FAIL_VERDICTS = frozenset({
     Verdict.FAIL_MISSING, Verdict.FAIL_VALUE, Verdict.FAIL_TYPE,
-    Verdict.FAIL_DUPLICATE, Verdict.FAIL_PARAM_EXTRA,
+    Verdict.FAIL_DUPLICATE, Verdict.FAIL_PARAM_EXTRA, Verdict.FAIL_TIMING,
 })
 
 VERDICT_ICON = {
