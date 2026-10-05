@@ -33,6 +33,8 @@ class Step:
     # Buoc co the KHONG xuat hien: quang cao xen ke, popup danh gia, tooltip.
     # Hut mot buoc nhu vay khong phai lai hut - case van chay tiep.
     optional: bool = False
+    # watch_ads: bam ad cuoi roi de no chay, khong dong (ep gen_fail giua ad).
+    leave_last: bool = False
 
     def label(self) -> str:
         if self.optional:

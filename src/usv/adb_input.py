@@ -67,6 +67,14 @@ class InputMixin:
                 + ", ".join(sorted(KEYEVENTS)))
         await self._run("-s", serial, "shell", "input", "keyevent", key)
 
+    async def set_network(self, serial: str, on: bool) -> None:
+        """Bat/tat ca Wi-Fi lan data di dong. Cho ca test "mat mang luc dang
+        gen" (spec AIP922 GEN-04). Tat mot cai thi may van con cai kia."""
+        check_serial(serial)
+        state = "enable" if on else "disable"
+        for radio in ("wifi", "data"):
+            await self._run("-s", serial, "shell", "svc", radio, state)
+
     async def input_text(self, serial: str, text: str) -> None:
         """Go chu. `input text` khong nhan khoang trang nen doi thanh %s."""
         check_serial(serial)

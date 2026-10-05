@@ -108,6 +108,7 @@ def _build(
         bounds_px=bounds_px,
         bounds_dp=metrics.bounds_to_dp(bounds_px),
         clickable=attr.get("clickable") == "true",
+        long_clickable=attr.get("long-clickable") == "true",
         visible=declared_visible and not bounds_px.empty,
         parent_id=parent_id,
         index_in_parent=index,

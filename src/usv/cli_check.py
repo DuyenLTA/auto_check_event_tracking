@@ -14,7 +14,7 @@ from datetime import datetime, timedelta, timezone
 from dataclasses import replace
 from pathlib import Path
 
-from . import cli_case_notes, event_check_runner, logcat_stream
+from . import cli_case_notes, cli_check_merge, event_check_runner, logcat_stream
 from .adb_parsers import AdbError
 from .cli_device import CliError, pick_serial
 from .flow_yaml import Flow
@@ -24,10 +24,8 @@ from .event_flow_run import expectations, run_flow
 from .event_session import lay_mau_app
 from .event_spec_models import SpecSheet
 from .event_window import cut, with_expectations
-from .flow_screenshots import Album
 from .fa_event_parse import parse_log
 from .report_event_html import build
-from .report_event_shots import build_shots
 
 VN = timezone(timedelta(hours=7))
 
@@ -103,8 +101,17 @@ def chon_case(cases: tuple, muon: tuple[str, ...]) -> tuple:
 
 async def check(*, spec: SpecSheet, package: str, flow: Flow | None, adb,
                 out_dir: Path, serial: str = "", flows_path: str = "",
-                chi_case: tuple[str, ...] = ()) -> dict:
-    """Chay ca luot cham. Tra payload de in JSON."""
+                chi_case: tuple[str, ...] = (),
+                base: cli_check_merge.Base | None = None) -> dict:
+    """Chay ca luot cham. Tra payload de in JSON.
+
+    `base`: stdout JSON cua luot day du truoc - chi dung voi `chi_case`. Ket qua
+    luot le duoc gop vao do (xem cli_check_merge), report ra du moi event.
+    """
+    if base is not None and not chi_case:
+        raise CliError("--base chỉ dùng kèm --case: gộp lượt chạy lẻ vào lượt đầy đủ.")
+    nhan_chon: set[str] = set()
+    tat_ca_case = flow.cases if flow is not None else ()
     if not spec.ok:
         raise CliError("Spec chưa dùng được:\n  " + "\n  ".join(spec.errors))
     if flow is not None and not flow.ok:
@@ -138,6 +145,9 @@ async def check(*, spec: SpecSheet, package: str, flow: Flow | None, adb,
                     "(case sau chạy tiếp trên màn của case trước)")
             say(f"[flow] chạy {len(chon)}/{len(giu)} case theo --case")
             giu = chon
+            nhan_chon = {c.label for c in chon
+                         if any(k.strip().casefold() in f"{c.label} {c.event}".casefold()
+                                for k in chi_case)}
         flow = replace(flow, cases=giu)
 
     config = doc_config()
@@ -169,7 +179,6 @@ async def check(*, spec: SpecSheet, package: str, flow: Flow | None, adb,
     app_version = f"{ten_ban} ({ma_ban})" if ten_ban else ""
     if app_version:
         say(f"[app] {package} {app_version}")
-    album = Album(adb, serial)
     await danh_thuc(adb, serial)
 
     cases = []
@@ -181,28 +190,50 @@ async def check(*, spec: SpecSheet, package: str, flow: Flow | None, adb,
                 say(f"[case {order}/{len(flow.cases)}] {case.label}")
                 cases.extend(await run_flow(adb, serial, metrics, package,
                                             recording, Flow(package=package,
-                                                            cases=(case,)),
-                                            album=album))
+                                                            cases=(case,))))
                 trang_thai = cases[-1]
                 if not trang_thai.ran:
                     await ghi_chu_man_khoa(adb, serial, trang_thai)
                     say(f"    -> {trang_thai.status}: {trang_thai.reason}")
     finally:
         await logcat_stream.stop(recording)
+        # Case co buoc tat mang ma chet giua chung thi may bi bo lai khong co
+        # mang - moi luot sau deu hong ma khong ai biet vi sao. Luon bat lai.
+        if flow is not None and any(step.kind == "network" for case in flow.cases
+                                    for step in case.steps):
+            try:
+                await adb.set_network(serial, True)
+            except AdbError as exc:
+                say(f"[mạng] không bật lại được Wi-Fi/data: {exc}")
     await lay_mau_app(adb, recording)
 
-    events, markers = parse_log(recording.text())
+    log_text = recording.text()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    stem = f"report-{package}-{datetime.now(VN):%y%m%d-%H%M%S}"
+    # Log phien cua RIENG luot nay - lam nguon cho `--base` cua lan chay le sau.
+    log_file = (out_dir / f"{stem}.log").resolve()
+    log_file.write_text(log_text, encoding="utf-8")
+    events, markers = parse_log(log_text)
+    windows = cut(events, markers)
+    session = list(events)
+    nguon = (cli_check_merge.Nguon(log=str(log_file), text="",
+                                   nhan=frozenset(c.case.label for c in cases)),)
+    if base is not None:
+        cases, windows, session, so_moi, nguon = cli_check_merge.gop(
+            base, cli_check_merge.case_base(base, tat_ca_case), cases, events,
+            windows, nhan_chon, tat_ca_case, str(log_file))
+        say(f"[gộp] {so_moi} case lấy kết quả lượt này, {len(cases) - so_moi} "
+            "case giữ kết quả lượt base")
     # Case lai hut VAN chen moc (moc chen truoc khi chay step), nen van sinh
     # cua so. Giu lai thi event ban/khong ban trong cua so do bi cham that -
     # cham mot man chua bao gio lai toi.
-    windows = with_expectations(
-        cli_case_notes.drop_windows(cut(events, markers), cases),
-        expectations(cases))
+    windows = with_expectations(cli_case_notes.drop_windows(windows, cases),
+                                expectations(cases))
     results, summary = event_check_runner.run(
         spec, windows, config,
         fa_silent=recording.fa_silent, stream_died=recording.stream_died,
         app_seen_running=recording.app_seen,
-        session_events=tuple(e for e in events if e.from_app))
+        session_events=tuple(e for e in session if e.from_app))
     results = cli_case_notes.annotate(results, cases, flows=flows_path,
                                       co_flow=flow is not None)
     # Dem LAI sau khi them: case lai hut phai vao ca bang lan con so `not_tested`.
@@ -217,9 +248,8 @@ async def check(*, spec: SpecSheet, package: str, flow: Flow | None, adb,
                  checked_package=recording.checked_package or package,
                  near_edge=tuple(dict.fromkeys(n for w in windows
                                                for n in w.near_edge)),
-                 app_version=app_version, shots=build_shots(album.shots, album.bo_bot))
-    out_dir.mkdir(parents=True, exist_ok=True)
-    report = out_dir / f"report-{package}-{datetime.now(VN):%y%m%d-%H%M%S}.html"
+                 app_version=app_version)
+    report = out_dir / f"{stem}.html"
     report.write_text(html, encoding="utf-8")
     say(f"[report] {report}")
 
@@ -235,5 +265,6 @@ async def check(*, spec: SpecSheet, package: str, flow: Flow | None, adb,
         "event_count": len(events),
         "fa_silent": recording.fa_silent, "stream_died": recording.stream_died,
         "cases": [c.payload() for c in cases],
+        "sources": cli_check_merge.sources(nguon),
         "results": [r.payload() for r in results],
     }

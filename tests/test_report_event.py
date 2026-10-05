@@ -95,20 +95,21 @@ def test_chua_test_va_app_co_them_hien_thanh_chip_rieng():
     assert "chưa test" in page
 
 
-def test_du_bon_class_trang_thai_khi_co_du_verdict():
+def test_chi_co_hai_nhom_khop_va_sai():
+    """Tester chot: report chi co pass/fail, khong co nhom chua test."""
     spec = parse_paste(SPEC_TSV)
     results = [
         CheckResult(element="a.p", check="event_params", verdict=Verdict.PASS),
         CheckResult(element="b.p", check="event_params", verdict=Verdict.FAIL_VALUE),
-        CheckResult(element="c.p", check="event_params", verdict=Verdict.NOT_VERIFIABLE),
         CheckResult(element="d", check="event_presence", verdict=Verdict.NOT_TESTED),
     ]
     summary = Summary()
     for item in results:
         summary.add(item)
     page = report_event_html.build(spec, results, summary)
-    for cls in ("status pass", "status fail", "status pending", "status muted"):
-        assert cls in page, f"thieu class {cls}"
+    assert "status pass" in page and "status fail" in page
+    assert "data-f='muted'" not in page and "data-f='pending'" not in page
+    assert "Chưa test — cần lái thêm" not in page
 
 
 def test_dong_fail_duoc_danh_dau_row_fail():
@@ -180,18 +181,17 @@ def test_section_chia_theo_screen_name():
     assert "Home" in HTML
 
 
-def test_section_toan_chua_test_noi_chua_test_chu_khong_phai_0_tren_0():
-    """'0/0 khớp' la vo nghia voi nguoi doc."""
+def test_event_chua_do_ra_bang_luot_chua_xong_khong_vao_danh_sach():
     spec = parse_paste(
         "Screen Name\tEvent_Name\tParams\tValue Type\tValue\n"
         "Result\trating_dismissed\tplacement_name\tString\thome\n")
     results = [CheckResult(element="rating_dismissed", check="event_presence",
-                           verdict=Verdict.NOT_TESTED)]
+                           verdict=Verdict.NOT_TESTED, message="lái hụt")]
     summary = Summary()
     summary.add(results[0])
     page = report_event_html.build(spec, results, summary)
-    assert "0/0 khớp" not in page
-    assert "chưa test (1)" in page
+    assert "Lượt chưa xong" in page and "không publish" in page
+    assert "id='ev-rating-dismissed'" not in page
 
 
 def test_callout_stream_dut_xuat_hien():
@@ -279,3 +279,48 @@ def test_diem_tren_dau_khong_doc_nham_thanh_ca_spec_da_xanh():
     assert "1 chưa test" in html
     assert "mục đã kiểm" in html
     assert "/ 1 khớp" not in html, "con so tran de doc nham thanh ca spec da xanh"
+
+
+def _page_of(ket_qua):
+    from usv.check_models import Summary
+    summary = Summary()
+    for r in ket_qua:
+        summary.add(r)
+    return report_event_html.build(parse_paste(SPEC_TSV), ket_qua, summary)
+
+
+def test_event_sai_nam_nhom_dau_va_mo_san_event_khop_gap_lai():
+    """Dong sai duy nhat khong duoc chim giua 200 dong khop."""
+    page = _page_of([
+        CheckResult(element="ok_event", check="event_presence", verdict=Verdict.PASS),
+        CheckResult(element="bad_event", check="event_presence",
+                    verdict=Verdict.FAIL_MISSING, message="không bắn"),
+    ])
+    assert page.index("bad_event") < page.index("ok_event")
+    assert "id='ev-bad-event' data-st='fail' data-q='bad_event' open>" in page
+    assert "id='ev-ok-event' data-st='pass' data-q='ok_event'>" in page
+    assert "Sai — cần báo dev" in page
+
+
+def test_event_con_param_chua_test_khong_xep_vao_khop():
+    """Khop mot phan + chua test mot phan = PASS hut, khong duoc vao nhom Khop."""
+    from usv.report_event_list_html import group_events
+    g = group_events([
+        CheckResult(element="e", check="event_presence", verdict=Verdict.PASS),
+        CheckResult(element="e.p", check="event_params", verdict=Verdict.NOT_TESTED),
+    ])[0]
+    assert g.bucket == "unfinished"
+
+
+def test_khoi_can_xu_ly_liet_ke_event_sai_kem_ly_do():
+    page = _page_of([CheckResult(element="bad_event.p", check="event_params",
+                                 verdict=Verdict.FAIL_VALUE, actual="x",
+                                 delta="'x' không có trong danh sách")])
+    todo = page.split("todo-card", 1)[1].split("</section>", 1)[0]
+    assert "bad_event" in todo and "p: Sai giá trị" in todo
+
+
+def test_khong_sai_gi_thi_noi_thang_khong_co_gi_can_xu_ly():
+    page = _page_of([CheckResult(element="a", check="event_presence",
+                                 verdict=Verdict.PASS)])
+    assert "Không có gì cần xử lý" in page

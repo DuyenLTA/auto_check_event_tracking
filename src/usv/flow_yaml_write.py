@@ -31,6 +31,8 @@ def step_to_dict(step: Step) -> dict:
         ra["index"] = step.selector.index
     if step.kind == "swipe":
         ra["direction"] = step.text or "up"
+    elif step.kind == "network":
+        ra["state"] = step.text
     elif step.kind in TEXT_KINDS:
         ra["text"] = step.text
     if step.kind == "wait":

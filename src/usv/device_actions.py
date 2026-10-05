@@ -50,6 +50,8 @@ class Selector:
     # Khop BAT KY bien the nao. Chi khai khi chuoi that su do he thong dich;
     # chu cua chinh app thi dung `resource_id` van hon.
     alt: tuple[str, ...] = ()
+    # Chi tinh node long-clickable="true" (xem DeviceNode.long_clickable).
+    long_clickable: bool = False
 
     @property
     def kind(self) -> str:
@@ -90,6 +92,8 @@ class Selector:
 
     def label(self) -> str:
         suffix = f"[{self.index}]" if self.index else ""
+        if self.long_clickable:
+            suffix += " (long-clickable)"
         # In ca bien the: bao loi chi ra mot chuoi trong khi flow tim ba chuoi
         # thi nguoi doc di sua dung cai khong hong.
         ten = " | ".join(repr(x) for x in self.needles)
@@ -127,6 +131,8 @@ def _candidates(nodes: list[DeviceNode], selector: Selector) -> list[DeviceNode]
         hits = [n for n in nodes if n.short_cls.casefold() in folded]
     else:
         hits = [n for n in nodes if _khop_bat_ky(n.content_desc, needles)]
+    if selector.long_clickable:
+        hits = [n for n in hits if n.long_clickable]
     # Node an / chua layout xong ra bounds 0x0 - bam vao do la bam vao khong khi.
     return [n for n in hits if not n.bounds_px.empty]
 
@@ -167,6 +173,24 @@ async def tap(client, serial: str, nodes: list[DeviceNode],
     box = node.bounds_px
     await client.input_tap(serial, (box.left + box.right) / 2,
                            (box.top + box.bottom) / 2)
+    return node
+
+
+# Nhan giu: Compose can ~500ms khong nhuc nhich moi tinh long-click; giu
+# 1200ms cho chac ma van ngan hon gioi han 5000ms cua input_swipe.
+LONG_PRESS_MS = 1200
+
+
+async def long_press(client, serial: str, nodes: list[DeviceNode],
+                     selector: Selector) -> DeviceNode:
+    """Nhan giu vao TAM node - `input swipe` cung mot diem trong LONG_PRESS_MS.
+
+    Can cho man chi vao che do chon bang long-click (History: "X selected").
+    """
+    node = find(nodes, selector)
+    box = node.bounds_px
+    cx, cy = (box.left + box.right) / 2, (box.top + box.bottom) / 2
+    await client.input_swipe(serial, cx, cy, cx, cy, LONG_PRESS_MS)
     return node
 
 

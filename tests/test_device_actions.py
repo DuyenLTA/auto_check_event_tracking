@@ -12,7 +12,7 @@ import asyncio
 import pytest
 
 from usv.adb_parsers import AdbError
-from usv.device_actions import Selector, find, swipe, tap
+from usv.device_actions import LONG_PRESS_MS, Selector, find, long_press, swipe, tap
 from usv.ui_dump import parse_dump
 
 
@@ -20,12 +20,14 @@ class FakeClient:
     def __init__(self) -> None:
         self.taps: list[tuple[float, float]] = []
         self.swipes: list[tuple[float, float, float, float]] = []
+        self.durations: list[int] = []
 
     async def input_tap(self, serial, x, y):
         self.taps.append((x, y))
 
     async def input_swipe(self, serial, x1, y1, x2, y2, duration_ms=300):
         self.swipes.append((x1, y1, x2, y2))
+        self.durations.append(duration_ms)
 
 
 @pytest.fixture
@@ -81,6 +83,16 @@ def test_bam_vao_TAM_node_khong_phai_goc(nodes):
     node = asyncio.run(tap(client, "S1", nodes, Selector(text="Japandi Style")))
     box = node.bounds_px
     assert client.taps == [((box.left + box.right) / 2, (box.top + box.bottom) / 2)]
+
+
+def test_nhan_giu_dung_yen_tai_TAM_node(nodes):
+    """Long-click: ngon tay khong nhuc nhich, giu du lau de Compose nhan ra."""
+    client = FakeClient()
+    node = asyncio.run(long_press(client, "S1", nodes, Selector(text="Japandi Style")))
+    box = node.bounds_px
+    cx, cy = (box.left + box.right) / 2, (box.top + box.bottom) / 2
+    assert client.swipes == [(cx, cy, cx, cy)]
+    assert client.durations == [LONG_PRESS_MS]
 
 
 def test_quet_nam_TRONG_node(nodes):

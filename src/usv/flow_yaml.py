@@ -20,13 +20,13 @@ import yaml
 from .event_flow_models import Flow, FlowCase, Reset, Step
 from .flow_yaml_selector import SELECTOR_FIELDS, bien_the, doc_selector
 
-KINDS = frozenset({"launch", "tap", "swipe", "type", "key", "wait", "wait_text",
-                   "intent", "close_popup",
-                   "close_ad", "allow"})
+KINDS = frozenset({"launch", "tap", "long_press", "swipe", "type", "key", "wait", "wait_text",
+                   "intent", "close_popup", "network",
+                   "close_ad", "allow", "watch_ads", "buy_sub"})
 # Chi tap/swipe moi lam viec tren mot node. `wait_text` va `type` cung co
 # truong `text` nhung do la chu de TIM / de GO, doc no thanh selector thi
 # `wait_text` bi danh dau fragile oan va Step.label() in ra sai viec.
-NEEDS_SELECTOR = frozenset({"tap", "swipe"})
+NEEDS_SELECTOR = frozenset({"tap", "long_press", "swipe"})
 DEFAULT_TIMEOUT = 10.0
 
 
@@ -59,6 +59,14 @@ def _step(raw: object, where: str) -> tuple[Step | None, list[str]]:
     component = ""
     if kind == "swipe":
         text = str(raw.get("direction") or "up").strip()
+    elif kind == "network":
+        # `state: off|on` - tat/bat Wi-Fi + data. Tool tu bat lai cuoi luot.
+        # YAML 1.1 doc `off`/`on` tran thanh boolean - nhan ca hai dang.
+        state = raw.get("state")
+        text = {True: "on", False: "off"}.get(state, str(state or "").strip().lower()) \
+            if isinstance(state, bool) or state else ""
+        if text not in {"on", "off"}:
+            return None, [f"{where}: `network` cần `state: on` hoặc `state: off`."]
     elif kind == "intent":
         # `action` chu khong phai `text`: doc lai flow mot thang sau, "action"
         # noi ngay day la intent cua he thong, con "text" thi doc nhu chu de go.
@@ -67,6 +75,11 @@ def _step(raw: object, where: str) -> tuple[Step | None, list[str]]:
             return None, [f"{where}: `intent` cần `action` (vd "
                           f"com.apero.rating.action.RATING)."]
         component = str(raw.get("component") or "").strip()
+    elif kind == "watch_ads":
+        # `text`: chu dau nut xem ad (vd "Watch Ads"), mac dinh nhu AIP922.
+        cac_chuoi = bien_the(raw.get("text")) or ["Watch Ads"]
+        text, *phu = cac_chuoi
+        text_alt = tuple(phu)
     elif kind in {"type", "key", "wait_text", "close_popup"}:
         cac_chuoi = bien_the(raw.get("text"))
         if not cac_chuoi:
@@ -101,7 +114,8 @@ def _step(raw: object, where: str) -> tuple[Step | None, list[str]]:
 
     return Step(kind=kind, selector=selector, text=text, text_alt=text_alt,
                 component=component, seconds=seconds, timeout=timeout,
-                optional=bool(raw.get("optional", False))), []
+                optional=bool(raw.get("optional", False)),
+                leave_last=bool(raw.get("leave_last", False))), []
 
 
 def _reset(raw: object, where: str) -> tuple[Reset, list[str]]:

@@ -1,367 +1,1505 @@
 package: ai.photogenerator.aivideo.aivideogenerator.aiart
-
-# Do tay tren Pixel 7 (ban 3.2.0), tai khoan Play la license tester nen goi sub
-# mua bang "the thu nghiem, luon phe duyet" - het ads, va man result khong con
-# cong "Watch Ads (0/3)" chan truoc khi gen.
-#
-# `placement_name` phan biet theo CACH popup bat len, khong theo man dang hien:
-# popup tu bat luc vao app tu session 2 tro di la `home`, bam BACK o home moi la
-# `exit_click`. Hai popup nay trong y het nhau va cung nam tren man home - do gop
-# mot luot la bat nham popup roi ket luan sai app. Vi the case `home` chi CHO
-# popup tu bat, khong bam gi; case `exit_click` dong popup `home` di truoc roi
-# moi bam BACK.
-#
-# Cac buoc `close_ad` de timeout ngan: co sub thi khong con quang cao nao, de dai
-# la ngoi cho het gio o moi buoc. Van giu lai vi sub thu nghiem het han sau vai
-# phut, luc do ads quay lai.
-
 cases:
-- event: rating_placement_viewed
-  label: popup rating tu bat o home
+- event: rating_star_clicked
+  label: cham 3 sao tren popup tu bat o home
   expect_params:
+    star_value: '3'
     placement_name: home
+  reset:
+    relaunch: false
+  steps:
+  - kind: tap
+    desc: Star 3
+    index: 0
+- event: rating_placement_viewed
+  label: popup rating khi bam thoat
+  expect_params:
+    placement_name: exit_click
+  reset:
+    relaunch: false
+  steps:
+  - kind: tap
+    desc: Close
+    index: 0
+  - kind: wait
+    seconds: 3.0
+  - kind: key
+    text: BACK
+  - kind: wait_text
+    text: The best we can get
+    timeout: 25.0
+- event: rating_star_clicked
+  label: cham 1 sao khi bam thoat
+  expect_params:
+    star_value: '1'
+    placement_name: exit_click
+  reset:
+    relaunch: false
+  steps:
+  - kind: tap
+    desc: Star 1
+    index: 0
+- event: rating_star_clicked
+  label: cham 2 sao khi bam thoat
+  expect_params:
+    star_value: '2'
+    placement_name: exit_click
+  reset:
+    relaunch: false
+  steps:
+  - kind: tap
+    desc: Star 2
+    index: 0
+- event: rating_star_clicked
+  label: cham 3 sao khi bam thoat
+  expect_params:
+    star_value: '3'
+    placement_name: exit_click
+  reset:
+    relaunch: false
+  steps:
+  - kind: tap
+    desc: Star 3
+    index: 0
+- event: rating_star_clicked
+  label: cham 4 sao khi bam thoat
+  expect_params:
+    star_value: '4'
+    placement_name: exit_click
+  reset:
+    relaunch: false
+  steps:
+  - kind: tap
+    desc: Star 4
+    index: 0
+- event: rating_star_clicked
+  label: cham 5 sao khi bam thoat
+  expect_params:
+    star_value: '5'
+    placement_name: exit_click
+  reset:
+    relaunch: false
+  steps:
+  - kind: tap
+    desc: Star 5
+    index: 0
+- event: rating_star_clicked
+  label: cham 3 sao tu app shortcut
+  expect_params:
+    star_value: '3'
+    placement_name: app_shortcut
+  reset:
+    relaunch: false
+  steps:
+  - kind: tap
+    desc: Star 3
+    index: 0
+- event: rating_star_clicked
+  label: cham 3 sao o man result
+  expect_params:
+    star_value: '3'
+    placement_name: result
+  reset:
+    relaunch: false
+  steps:
+  - kind: tap
+    desc: Star 3
+    index: 0
+- event: home_view
+  label: mở app vào Home sau onboarding
   steps:
   - kind: launch
-  # Quyen thong bao hoi lai sau moi lan force-stop.
   - kind: allow
-    timeout: 15
   - kind: close_ad
-    timeout: 10
-  - kind: wait
-    seconds: 3
-  # Khoi onboarding: may sach thi di het Language -> Onboarding -> Question,
-  # may da dung roi thi vao thang home. Ca khoi de `optional` de chay duoc ca hai.
-  # Bam "English" chi BUNG danh sach con, phai bam tiep "English (US)" moi chon.
   - kind: tap
     resource_id: rootLanguageItem
     index: 1
     optional: true
   - kind: tap
     text: English (US)
+    index: 0
     optional: true
   - kind: tap
     resource_id: imageButtonLanguageNext
+    index: 0
     optional: true
   - kind: wait
-    seconds: 3
-  # Onboarding bon trang, dem `dot` trong `indicatorPageOnboarding`: 4 dot.
+    seconds: 3.0
   - kind: tap
     resource_id: btnNextOnboarding
+    index: 0
     optional: true
   - kind: wait
-    seconds: 2
+    seconds: 2.0
   - kind: tap
     resource_id: btnNextOnboarding
+    index: 0
     optional: true
   - kind: wait
-    seconds: 2
+    seconds: 2.0
   - kind: tap
     resource_id: btnNextOnboarding
+    index: 0
     optional: true
   - kind: wait
-    seconds: 2
+    seconds: 2.0
   - kind: tap
     resource_id: btnNextOnboarding
+    index: 0
     optional: true
   - kind: wait
-    seconds: 2
-  # Man "Which style fits your vision?": nut Next ten khac han onboarding.
+    seconds: 2.0
   - kind: tap
     resource_id: borderContainer
     index: 0
     optional: true
   - kind: tap
     resource_id: btnNextOnboardingImage
+    index: 0
     optional: true
+  # Het sub: interstitial (X ve ngoai cay UI - close_ad bam BACK) roi paywall
+  # RevenueCat bat ngay sau. Hai buoc close_ad: buoc dau thoat interstitial la
+  # tra ve, paywall len sau phai co buoc thu hai don. Co sub thi ca hai trong.
   - kind: close_ad
     timeout: 10
-  # Paywall RevenueCat dung Compose - khong node nao co resource_id nen phai neo
-  # vao chu. Co sub thi paywall khong hien, buoc nay bi bo qua.
-  - kind: tap
-    text: Continue with ads
-    optional: true
+  - kind: close_ad
+    timeout: 6
   - kind: wait
-    seconds: 4
-  # Popup "Today's Check-In" o home. Dong theo DANH TINH chu khong bam theo nhip
-  # dem: nut X cua no cung la desc="Close" y het nut X cua popup rating.
+    seconds: 3.0
+  # Hai popup o home cung dat nut X desc="Close": dong theo DANH TINH, khong
+  # bam "Close" theo thu tu - Check-In 1 lan/ngay, rating tu bat tu session 2.
   - kind: close_popup
     text: Check-In
-    timeout: 15
-  # KHONG bam gi them - popup rating phai tu bat len thi moi dung `home`.
-  #
-  # Neo vao "The best we can get" chu KHONG vao "rate us": popup doi chu sau
-  # khi da cham sao ("Please rate us to enhance your experience" -> "We are
-  # thrilled to hear that you love our app", nut "RATE" -> "Rate on Google
-  # Play"), ma trang thai do con giu sang ca cac case sau. Neo vao "rate us"
-  # thi tu case thu hai tro di khong con khop - do duoc 21/09 tren Pixel 7:
-  # popup dung nguyen tren man home, `close_popup` khong dong duoc no, cac
-  # buoc sau bam mu va case `result` chet o cho cho picker.
-  - kind: wait_text
-    text: "The best we can get"
-    timeout: 30
-
-- event: rating_star_clicked
-  label: cham 3 sao tren popup tu bat o home
-  reset:
-    relaunch: false
-  expect_params:
-    star_value: "3"
-    placement_name: home
-  steps:
-  - kind: tap
-    desc: Star 3
-
-# Cham sao KHONG tat popup, chi nut RATE moi tat vinh vien ("khong hien pop-up
-# rating khi user da bam rate") - nen flow tuyet doi KHONG bam RATE.
-- event: rating_placement_viewed
-  label: popup rating khi bam thoat
-  reset:
-    relaunch: false
-  expect_params:
-    placement_name: exit_click
-  steps:
-  # Dong popup `home` truoc, khong thi BACK chi dong popup do chu khong chay
-  # luong thoat app - va event do duoc se van la `home`.
-  - kind: tap
-    desc: Close
-  - kind: wait
-    seconds: 3
-  - kind: key
-    text: BACK
-  - kind: wait_text
-    text: "The best we can get"
-    timeout: 25
-
-- event: rating_star_clicked
-  label: cham 1 sao khi bam thoat
-  reset:
-    relaunch: false
-  expect_params:
-    star_value: "1"
-    placement_name: exit_click
-  steps:
-  - kind: tap
-    desc: Star 1
-
-- event: rating_star_clicked
-  label: cham 2 sao khi bam thoat
-  reset:
-    relaunch: false
-  expect_params:
-    star_value: "2"
-    placement_name: exit_click
-  steps:
-  - kind: tap
-    desc: Star 2
-
-- event: rating_star_clicked
-  label: cham 3 sao khi bam thoat
-  reset:
-    relaunch: false
-  expect_params:
-    star_value: "3"
-    placement_name: exit_click
-  steps:
-  - kind: tap
-    desc: Star 3
-
-- event: rating_star_clicked
-  label: cham 4 sao khi bam thoat
-  reset:
-    relaunch: false
-  expect_params:
-    star_value: "4"
-    placement_name: exit_click
-  steps:
-  - kind: tap
-    desc: Star 4
-
-- event: rating_star_clicked
-  label: cham 5 sao khi bam thoat
-  reset:
-    relaunch: false
-  expect_params:
-    star_value: "5"
-    placement_name: exit_click
-  steps:
-  - kind: tap
-    desc: Star 5
-
-# Man rating cua app shortcut: nhan giu icon tren launcher moi toi duoc, trong
-# app khong co nut nao dan sang. Goi thang intent ma shortcut khai (doc bang
-# `dumpsys shortcut`), vi `cmd shortcut` tren may chi co `reset-throttling`.
-- event: rating_placement_viewed
-  label: man rating tu app shortcut
-  reset:
-    relaunch: false
-  expect_params:
-    placement_name: app_shortcut
-  steps:
-  - kind: intent
-    action: com.apero.rating.action.RATING
-    component: ai.photogenerator.aivideo.aivideogenerator.aiart/com.apero.rating.internal.features.activity.rating.VslRatingActivity
-  - kind: wait_text
-    text: "The best we can get"
-    timeout: 20
-
-- event: rating_star_clicked
-  label: cham 3 sao tu app shortcut
-  reset:
-    relaunch: false
-  expect_params:
-    star_value: "3"
-    placement_name: app_shortcut
-  steps:
-  - kind: tap
-    desc: Star 3
-
-# Placement `result`: phai gen xong mot anh that. Duong ngan nhat do duoc tren
-# may: bam MOT the style o home -> chon anh co san -> gen thang, khong qua man
-# nhap prompt. Gen xong ~15s la popup rating bat len ngay tren man Result.
-#
-# KHONG di duong "Text to Image Generate" o dau home nua: ba the do nam trong
-# carousel TU TROI, the sap khuat con ho 20px o mep phai van la node hop le nen
-# `tap` bam vao tam no - tuc la bam trung the ke ben. Do duoc luot 15:59: dinh
-# vao Text to Image ma mo ra man "Image to Video", ca case chet theo.
-#
-# Case nay chay TIEP tren session cua cac case tren (`relaunch: false`), KHONG
-# mo lai app. Mo lai la sang session moi, popup `home` tu bat len va ban
-# `rating_placement_viewed` NGAY TRONG cua so cua case nay - tool cham vao lan
-# ban dau tien nen doc ra `home`, va bao luon "ban 2 lan". Do duoc luot 14:58:
-# mot lan `home` luc 14:58:11 roi moi toi lan `result` that luc 14:59:35.
-- event: rating_placement_viewed
-  label: popup rating o man result sau khi gen anh
-  reset:
-    relaunch: false
-  expect_params:
-    placement_name: result
-  steps:
-  # Thoat man rating cua app_shortcut de ve lai home cua session dang chay.
-  - kind: key
-    text: BACK
-  - kind: wait
-    seconds: 3
-  - kind: close_popup
-    text: "The best we can get"
     timeout: 8
-  # Chua co sub thi mua NGAY o day, dung doi popup mua sub hien sau khi bam
-  # style. Chu `PREMIUM` canh ten app tren home CHI hien khi chua co sub - do
-  # duoc: truoc khi mua home in `Nexus AI` + `PREMIUM`, mua xong chi con
-  # `Nexus AI`. Nen no vua la nut mo paywall vua la co bao "chua co sub": dang
-  # co sub thi khong tim thay chu do, ca cum duoi bi bo qua, khong mua lai.
-  #
-  # Mua o DAY chu khong o case dau: goi sub thu nghiem co chu ky nen 5 phut,
-  # ma case nay chay o phut thu ~4 cua luot - mua tu dau thi den luc gen da het
-  # han (do duoc luot 15:33).
-  - kind: tap
-    text: PREMIUM
-    optional: true
+  - kind: close_popup
+    text: The best we can get
+    timeout: 8
   - kind: wait
-    seconds: 5
+    seconds: 2.0
+- event: ai_images_click
+  label: từ Home
+  reset:
+    relaunch: false
+  expect_params:
+    screen_name: home
+  steps:
   - kind: tap
-    text: Weekly
-    optional: true
-  - kind: wait
-    seconds: 2
-  - kind: tap
-    text: Subscribe Now
-    optional: true
-  # Sheet thanh toan cua Google Play mo cham hon paywall trong app.
-  - kind: wait
-    seconds: 6
-  # Nut xac nhan tren sheet thanh toan cua Google Play: chu nay theo locale HE
-  # THONG, nen khai ca hai thu tieng. Do duoc luot 18:40 tren may vi-VN: sheet
-  # hien "Đăng ký", flow cho "Subscribe", buoc `optional` im lang bo qua roi
-  # ca case chet o `wait_text 'rate us'` cuoi cung - cach cho hong 14 buoc.
-  - kind: tap
-    text: ["Subscribe", "Đăng ký"]
-    optional: true
-  - kind: wait
-    seconds: 6
-  # Chac chan da ve home truoc khi tim the style. Khong neo o day thi lo cum
-  # mua di lac sang man khac, cac buoc duoi bam mu roi case chet tan cuoi ma
-  # khong noi duoc chet vi cai gi.
-  - kind: wait_text
-    text: Visual Creation
-    timeout: 20
-  # Ten the style do remote config day xuong nen co the doi. Doi thi buoc nay
-  # bao thang "Khong thay element text='Retro 80s'" kem goi y ten dang co tren
-  # man - sua lai ten o day la xong.
-  - kind: tap
-    text: Retro 80s
-  # Picker la app KHAC (com.google.android.photopicker) nen no mo cham, co luot
-  # qua 4s van chua thay. Cho mu la bam khi con dang o man app, roi picker moi
-  # truot len - man hinh nhin thi dung ma chang co anh nao duoc chon, den buoc
-  # `Xong` moi vo (do duoc luot 16:19). Neo vao luoi anh cua picker.
-  #
-  # Neo vao CHINH o anh dau luoi, khong neo vao o tim kiem: o tim kiem doi ten
-  # theo app anh dang cai ("Search Google Photos"), con o anh thi luc nao cung
-  # co. Cung khong dem theo ten lop nua - dem View thu 19 la vo ngay khi picker
-  # doi bo cuc.
-  #
-  # Desc o anh mang ca ngay chup ("Photo taken on Sep 21, 2026 11:15 AM") nen
-  # khoa bang tien to `*`. Desc nay theo NGON NGU HE THONG cua may, khong phai
-  # ngon ngu chon trong app: may doi sang tieng Viet thi sua thanh
-  # "Ảnh được chụp lúc*".
-  - kind: wait_text
-    text: ["Photo taken on", "Ảnh được chụp lúc"]
-    timeout: 30
-  - kind: wait
-    seconds: 2
-  - kind: tap
-    desc: ["Photo taken on*", "Ảnh được chụp lúc*"]
+    desc: AI Images
     index: 0
   - kind: wait
-    seconds: 2
-  # Nut xac nhan chi hien SAU khi da chon anh - truoc do khong co no tren man.
-  # Cung theo locale HE THONG nen khai ca hai thu tieng.
-  - kind: tap
-    text: ["Done", "Xong"]
-  # Luoi an toan khi goi sub thu nghiem het han giua luot (chu ky nen con 5
-  # phut): popup mua sub quay lai chan truoc khi gen. Mua lai bang the thu
-  # nghiem cua tai khoan license tester - con han thi ca bon buoc nay deu khong
-  # tim thay nut nen tu bo qua. Cho 10s truoc da: popup hien SAU vai giay, khong
-  # cho thi cum buoc mua bo qua sach roi case chet o `wait_text` cuoi (do duoc
-  # luot 15:33, sub het han giua chung).
-  - kind: wait
-    seconds: 10
-  - kind: tap
-    text: Unlock With Premium
-    optional: true
-  - kind: wait
-    seconds: 6
-  - kind: tap
-    text: Weekly
-    optional: true
-  - kind: wait
-    seconds: 2
-  - kind: tap
-    text: Subscribe Now
-    optional: true
-  - kind: wait
-    seconds: 6
-  # Nut xac nhan tren sheet thanh toan cua Google Play: chu nay theo locale HE
-  # THONG, nen khai ca hai thu tieng. Do duoc luot 18:40 tren may vi-VN: sheet
-  # hien "Đăng ký", flow cho "Subscribe", buoc `optional` im lang bo qua roi
-  # ca case chet o `wait_text 'rate us'` cuoi cung - cach cho hong 14 buoc.
-  - kind: tap
-    text: ["Subscribe", "Đăng ký"]
-    optional: true
-  - kind: wait
-    seconds: 6
-  - kind: close_ad
-    timeout: 20
-  - kind: wait_text
-    text: "The best we can get"
-    timeout: 120
-
-- event: rating_star_clicked
-  label: cham 3 sao o man result
+    seconds: 3.0
+- event: ai_videos_click
+  label: từ AI Images
   reset:
     relaunch: false
   expect_params:
-    star_value: "3"
-    placement_name: result
+    screen_name: ai_images
   steps:
   - kind: tap
-    desc: Star 3
+    desc: AI Videos
+    index: 0
+  - kind: wait
+    seconds: 3.0
+- event: history_click
+  label: từ AI Videos
+  reset:
+    relaunch: false
+  expect_params:
+    screen_name: ai_videos
+  steps:
+  - kind: tap
+    desc: History
+    index: 0
+  - kind: wait
+    seconds: 3.0
+- event: edit_video_tab_click
+  label: từ History
+  reset:
+    relaunch: false
+  expect_params:
+    screen_name: history
+  steps:
+  - kind: tap
+    desc: Edit Video
+    index: 0
+  - kind: wait
+    seconds: 3.0
+- event: home_click
+  label: từ Edit Video
+  reset:
+    relaunch: false
+  expect_params:
+    screen_name: edit_video_tab
+  steps:
+  - kind: tap
+    desc: Home
+    index: 0
+  - kind: wait
+    seconds: 3.0
+- event: ai_images_view
+  label: bấm tab từ Home
+  reset:
+    relaunch: false
+  steps:
+  - kind: tap
+    desc: AI Images
+    index: 0
+  - kind: wait
+    seconds: 3.0
+- event: ai_videos_view
+  label: bấm tab từ AI Images
+  reset:
+    relaunch: false
+  steps:
+  - kind: tap
+    desc: AI Videos
+    index: 0
+  - kind: wait
+    seconds: 3.0
+- event: history_view
+  label: bấm tab từ AI Videos
+  reset:
+    relaunch: false
+  steps:
+  - kind: tap
+    desc: History
+    index: 0
+  - kind: wait
+    seconds: 3.0
+- event: edit_video_tab_view
+  label: bấm tab từ History
+  reset:
+    relaunch: false
+  steps:
+  - kind: tap
+    desc: Edit Video
+    index: 0
+  - kind: wait
+    seconds: 3.0
+
+
+
+
+
+
+
+
+
+
+
+
+# --- Case 3.5.0 do tay 01/10/2026 tren Pixel 7 (tai khoan het sub: moi lan gen xem 3 ads) ---
+- event: setting_click
+  label: icon Setting ở Home
+  expect_params:
+    screen_name: home
+  steps:
+  - &id010
+    kind: launch
+  - &id011
+    kind: allow
+  - &id012
+    kind: close_ad
+  - &id013
+    kind: tap
+    resource_id: rootLanguageItem
+    index: 1
+    optional: true
+  - &id014
+    kind: tap
+    text: English (US)
+    index: 0
+    optional: true
+  - &id015
+    kind: tap
+    resource_id: imageButtonLanguageNext
+    index: 0
+    optional: true
+  - &id016
+    kind: wait
+    seconds: 3.0
+  - &id017
+    kind: tap
+    resource_id: btnNextOnboarding
+    index: 0
+    optional: true
+  - &id018
+    kind: wait
+    seconds: 2.0
+  - &id019
+    kind: tap
+    resource_id: btnNextOnboarding
+    index: 0
+    optional: true
+  - &id020
+    kind: wait
+    seconds: 2.0
+  - &id021
+    kind: tap
+    resource_id: btnNextOnboarding
+    index: 0
+    optional: true
+  - &id022
+    kind: wait
+    seconds: 2.0
+  - &id023
+    kind: tap
+    resource_id: btnNextOnboarding
+    index: 0
+    optional: true
+  - &id024
+    kind: wait
+    seconds: 2.0
+  - &id025
+    kind: tap
+    resource_id: borderContainer
+    index: 0
+    optional: true
+  - &id026
+    kind: tap
+    resource_id: btnNextOnboardingImage
+    index: 0
+    optional: true
+  - &id027
+    kind: close_ad
+    timeout: 10
+  - &id028
+    kind: close_ad
+    timeout: 6
+  - &id029
+    kind: wait
+    seconds: 3.0
+  - &id030
+    kind: close_popup
+    text: Check-In
+    timeout: 8
+  - &id031
+    kind: close_popup
+    text: The best we can get
+    timeout: 8
+  - &id032
+    kind: wait
+    seconds: 2.0
+  - &id001
+    cls: Button
+    index: 0
+    kind: tap
+  - kind: wait
+    seconds: 2
+- event: setting_item_click
+  label: mục Languages
+  reset:
+    relaunch: false
+  expect_params:
+    item_name: language
+  steps:
+  - text: Languages
+    kind: tap
+  - kind: wait
+    seconds: 2
+- event: setting_view
+  label: quay lại Setting từ Languages
+  reset:
+    relaunch: false
+  steps:
+  - &id002
+    kind: key
+    text: BACK
+  - kind: wait
+    seconds: 2
+- event: back_click
+  label: Back header ở Setting
+  reset:
+    relaunch: false
+  expect_params:
+    screen_name: setting
+  steps:
+  - *id001
+  - kind: wait
+    seconds: 2
+- event: style_more_click
+  label: mũi tên category đầu ở Home
+  reset:
+    relaunch: false
+  expect_params:
+    screen_name: home
+  steps:
+  - desc: More
+    index: 0
+    kind: tap
+  - kind: wait
+    seconds: 3
+- event: style_detail_view
+  label: mở lại màn toàn bộ style
+  reset:
+    relaunch: false
+  steps:
+  - *id001
+  - kind: wait
+    seconds: 2
+  - desc: More
+    index: 0
+    kind: tap
+  - kind: wait
+    seconds: 3
+- event: style_click
+  label: style Retro 80s ở màn toàn bộ style
+  reset:
+    relaunch: false
+  # Retro 80s dung thu 2 trong category (05/10: "Outubro Rosa" dung dau) - doi
+  # thu tu style trong JSON thi sua position theo man that.
+  expect_params:
+    screen_name: style_detail
+    feature: i2i_style
+    content_source: category_list
+    position: '2'
+  steps:
+  - text: Retro 80s
+    kind: tap
+  - kind: wait
+    seconds: 3
+- event: picker_cancel
+  label: thoát picker không chọn
+  reset:
+    relaunch: false
+  expect_params:
+    feature: i2i_style
+  steps:
+  - *id002
+  - kind: wait
+    seconds: 2
+- event: picker_open
+  label: style template i2i
+  reset:
+    relaunch: false
+  expect_params:
+    feature: i2i_style
+  steps:
+  - text: Retro 80s
+    kind: tap
+  - kind: wait
+    seconds: 3
+- event: picker_done
+  label: chọn 1 ảnh luồng template
+  reset:
+    relaunch: false
+  expect_params:
+    feature: i2i_style
+    media_count: '1'
+  steps:
+  - desc:
+    - Ảnh được chụp lúc*
+    - Photo taken on*
+    index: 0
+    kind: tap
+  - kind: wait
+    seconds: 1
+  - &id034
+    text:
+    - Xong
+    - Done
+    optional: true
+    kind: tap
+  - kind: wait
+    seconds: 3
+- event: watch_ads_click
+  label: Watch Ads lần đầu luồng template
+  reset:
+    relaunch: false
+  expect_params:
+    feature: i2i_style
+    ads_watched: '0'
+  steps:
+  - &id003
+    text: Watch Ads*
+    kind: tap
+  - kind: wait
+    seconds: 32
+  - &id004
+    kind: close_ad
+    timeout: 15
+  - kind: wait
+    seconds: 3
+- event: result_view
+  label: Result luồng template sau Try again
+  reset:
+    relaunch: false
+  expect_params:
+    feature: i2i_style
+  steps:
+  # So ad do Remote Config quyet (3/5...): xem toi khi nut bien mat, ad khong ve thi mua sub test.
+  - kind: watch_ads
+  - &id007
+    kind: wait_text
+    text:
+    - Re-generate
+    - Back to Home
+    - The best we can get
+    - Something Went Wrong
+    timeout: 120
+  - &id008
+    text: Try again
+    optional: true
+    kind: tap
+  - *id007
+  - *id008
+  - &id033
+    kind: wait_text
+    text:
+    - Re-generate
+    - Back to Home
+    - The best we can get
+    timeout: 120
+- event: before_after_use
+  label: kéo thanh Before/After
+  reset:
+    relaunch: false
+  expect_params:
+    feature: i2i_style
+  steps:
+  - &id009
+    kind: close_popup
+    text: The best we can get
+    timeout: 10
+  - kind: swipe
+    desc: Drag to compare*
+    direction: left
+- event: category_chip_click
+  label: chip thứ 2 ở Try another style
+  reset:
+    relaunch: false
+  expect_params:
+    position: '2'
+  steps:
+  - text: Caricature Trend
+    kind: tap
+  - kind: wait
+    seconds: 3
+- event: report_click
+  label: icon Report ở Result
+  reset:
+    relaunch: false
+  expect_params:
+    screen_name: result
+  steps:
+  - *id009
+  - desc: Report
+    kind: tap
+  - kind: wait
+    seconds: 2
+- event: report_submit
+  label: gửi report Low quality
+  reset:
+    relaunch: false
+  expect_params:
+    screen_name: result
+    report_reason: low_quality
+  steps:
+  - text: Low quality
+    kind: tap
+  - kind: wait
+    seconds: 1
+  - text: Send Report
+    kind: tap
+  # report_submit ban khi server tra "gui thanh cong", tre vai giay sau cu bam.
+  - kind: wait
+    seconds: 10
+- event: download
+  label: Download ở Result
+  reset:
+    relaunch: false
+  expect_params:
+    screen_name: result
+    media_type: image
+    feature: i2i_style
+    save_result: success
+  steps:
+  - text: Download
+    kind: tap
+  - kind: wait
+    seconds: 5
+- event: back_to_home_click
+  label: Back to Home ở Result
+  reset:
+    relaunch: false
+  expect_params:
+    screen_name: result
+  steps:
+  - text: Back to Home
+    kind: tap
+  - kind: wait
+    seconds: 3
+- event: feature_card_click
+  label: thẻ Text to Image ở AI Images
+  expect_params:
+    screen_name: ai_images
+    feature: t2i
+  steps:
+  - *id010
+  - *id011
+  - *id012
+  - *id013
+  - *id014
+  - *id015
+  - *id016
+  - *id017
+  - *id018
+  - *id019
+  - *id020
+  - *id021
+  - *id022
+  - *id023
+  - *id024
+  - *id025
+  - *id026
+  - *id027
+  - *id028
+  - *id029
+  - *id030
+  - *id031
+  - *id032
+  - desc: AI Images
+    kind: tap
+  - kind: wait
+    seconds: 3
+  - text: Text to Image Generate
+    kind: tap
+  - kind: wait
+    seconds: 3
+- event: studio_view
+  label: mở Studio T2I lần đầu
+  reset:
+    relaunch: false
+  expect_params:
+    screen_name: studio_t2i
+    entry: new
+  steps:
+  # The Text to Image o case truoc co the chen interstitial: Studio chua mo,
+  # studio_view chua ban - dong ad truoc khi bam Back.
+  - kind: close_ad
+    timeout: 10
+  - *id001
+  - kind: wait
+    seconds: 2
+  - text: Text to Image Generate
+    kind: tap
+  - kind: wait
+    seconds: 3
+- event: style_click
+  label: style ở Studio T2I
+  reset:
+    relaunch: false
+  expect_params:
+    screen_name: studio_t2i
+    feature: t2i
+    content_source: studio_style_list
+  steps:
+  - desc: Oil Painting Classic
+    kind: tap
+  - kind: wait
+    seconds: 1
+- event: gen_gate
+  label: bấm Generate ở Studio T2I khi hết lượt free
+  reset:
+    relaunch: false
+  expect_params:
+    feature: t2i
+    trigger: new
+    gate_result: unlock_sheet
+    prompt_length: '10'
+  steps:
+  - cls: EditText
+    kind: tap
+  - kind: type
+    text: a cute cat
+  - text: What do you want to create?
+    kind: tap
+  - kind: wait
+    seconds: 1
+  - text: Generate
+    kind: tap
+  - kind: wait
+    seconds: 3
+- event: unlock_sheet_close
+  label: bấm ra ngoài sheet
+  reset:
+    relaunch: false
+  expect_params:
+    feature: t2i
+    ads_watched: '0'
+  steps:
+  - text: What do you want to create?
+    kind: tap
+  - kind: wait
+    seconds: 2
+- event: go_pro_click
+  label: Unlock With Premium ở sheet
+  reset:
+    relaunch: false
+  expect_params:
+    feature: t2i
+  steps:
+  - text: Generate
+    kind: tap
+  - kind: wait
+    seconds: 3
+  - text: Unlock With Premium
+    kind: tap
+  - kind: wait
+    seconds: 3
+- event: unlock_sheet_view
+  label: sheet hiện ở lần Generate mới
+  reset:
+    relaunch: false
+  expect_params:
+    feature: t2i
+    ads_watched: '0'
+  steps:
+  - *id004
+  - text: What do you want to create?
+    kind: tap
+  - kind: wait
+    seconds: 2
+  - text: Generate
+    kind: tap
+  - kind: wait
+    seconds: 3
+- event: gen_start
+  label: xem đủ ads thì app tự gen
+  reset:
+    relaunch: false
+  expect_params:
+    feature: t2i
+    trigger: new
+    attempt: '1'
+    quota_type: ads
+  steps:
+  # So ad do Remote Config quyet (3/5...): xem toi khi nut bien mat, ad khong ve thi mua sub test.
+  - kind: watch_ads
+  # gen_start ban luc dong ad cuoi; cho no vao cua so nay. gen_success (~7s
+  # sau) phai roi sang case sau.
+  - kind: wait
+    seconds: 2
+- event: gen_success
+  label: gen T2I xong
+  reset:
+    relaunch: false
+  expect_params:
+    feature: t2i
+    quota_type: ads
+  steps:
+  - *id007
+  - *id008
+  - *id007
+  - *id008
+  - *id033
+- event: regenerate_click
+  label: Re-generate ở Result T2I
+  reset:
+    relaunch: false
+  expect_params:
+    feature: t2i
+  steps:
+  - *id009
+  - text: Re-generate
+    kind: tap
+  - kind: wait
+    seconds: 2
+- event: back_click
+  label: Back header ở Studio T2I
+  reset:
+    relaunch: false
+  expect_params:
+    screen_name: studio_t2i
+  steps:
+  - *id001
+  - kind: wait
+    seconds: 2
+- event: setting_click
+  label: icon Settings ở tab Edit Video
+  expect_params:
+    screen_name: edit_video_tab
+  steps:
+  - *id010
+  - *id011
+  - *id012
+  - *id013
+  - *id014
+  - *id015
+  - *id016
+  - *id017
+  - *id018
+  - *id019
+  - *id020
+  - *id021
+  - *id022
+  - *id023
+  - *id024
+  - *id025
+  - *id026
+  - *id027
+  - *id028
+  - *id029
+  - *id030
+  - *id031
+  - *id032
+  - desc: Edit Video
+    kind: tap
+  - kind: wait
+    seconds: 3
+  - desc: Settings
+    kind: tap
+  - kind: wait
+    seconds: 2
+- event: create_project_click
+  label: Create New Project
+  reset:
+    relaunch: false
+  steps:
+  - *id002
+  - kind: wait
+    seconds: 2
+  - text: Create New Project
+    kind: tap
+  - kind: wait
+    seconds: 3
+- event: picker_done
+  label: chọn video luồng Edit Video
+  reset:
+    relaunch: false
+  expect_params:
+    feature: video_edit
+  steps:
+  - &id035
+    desc:
+    - Video được quay lúc*
+    - Video taken on*
+    index: 0
+    kind: tap
+  - kind: wait
+    seconds: 1
+  - *id034
+  - kind: wait
+    seconds: 4
+- event: leave_confirm
+  label: Leave ở Slideshow
+  reset:
+    relaunch: false
+  expect_params:
+    screen_name: slideshow
+  steps:
+  - *id002
+  - kind: wait
+    seconds: 2
+  - text: Leave
+    kind: tap
+  - kind: wait
+    seconds: 2
+- event: slideshow_view
+  label: mở lại Slideshow
+  reset:
+    relaunch: false
+  steps:
+  - text: Create New Project
+    kind: tap
+  - kind: wait
+    seconds: 3
+  - *id035
+  - kind: wait
+    seconds: 1
+  - *id034
+  - kind: wait
+    seconds: 4
+- event: slideshow_confirm_click
+  label: Confirm ở Slideshow
+  reset:
+    relaunch: false
+  steps:
+  - text: Confirm
+    kind: tap
+  - kind: wait
+    seconds: 4
+- event: leave_confirm
+  label: Leave ở Edit Video
+  reset:
+    relaunch: false
+  expect_params:
+    screen_name: edit_video
+  steps:
+  - *id002
+  - kind: wait
+    seconds: 2
+  - text: Leave
+    kind: tap
+  - kind: wait
+    seconds: 2
+- event: edit_video_view
+  label: vào lại Edit Video
+  reset:
+    relaunch: false
+  steps:
+  - text: Confirm
+    kind: tap
+  - kind: wait
+    seconds: 4
+- event: edit_tab_click
+  label: tab Music
+  reset:
+    relaunch: false
+  expect_params:
+    tab: music
+  steps:
+  - desc: Music
+    kind: tap
+  - kind: wait
+    seconds: 2
+- event: music_select
+  label: chọn bài mặc định
+  reset:
+    relaunch: false
+  expect_params:
+    music_type: default
+  steps:
+  - text: Mood Mode
+    kind: tap
+  - kind: wait
+    seconds: 2
+- event: song_generate_open
+  label: ô Generate đầu list nhạc
+  reset:
+    relaunch: false
+  steps:
+  - text: Generate
+    kind: tap
+  - kind: wait
+    seconds: 2
+- event: song_popup_close
+  label: đóng popup Generate Music
+  reset:
+    relaunch: false
+  expect_params:
+    prompt_length: '0'
+  steps:
+  - desc: Close sheet
+    kind: tap
+  - kind: wait
+    seconds: 2
+- event: video_result_view
+  label: Result video
+  reset:
+    relaunch: false
+  expect_params:
+    music_type: default
+  steps:
+  - text: Export
+    kind: tap
+  - kind: wait_text
+    text:
+    - Back to Home
+    - The best we can get
+    timeout: 90
+- event: report_click
+  label: icon Report ở Result video
+  reset:
+    relaunch: false
+  expect_params:
+    screen_name: video_result
+  steps:
+  - *id009
+  - kind: wait
+    seconds: 2
+  - desc: Report
+    kind: tap
+  - kind: wait
+    seconds: 2
+- event: download
+  label: Download ở Result video
+  reset:
+    relaunch: false
+  expect_params:
+    screen_name: video_result
+    media_type: video
+    feature: video_edit
+  steps:
+  - desc: Close sheet
+    kind: tap
+  - kind: wait
+    seconds: 2
+  - text: Download
+    kind: tap
+  - kind: wait
+    seconds: 5
+- event: back_to_home_click
+  label: Back to Home ở Result video
+  reset:
+    relaunch: false
+  expect_params:
+    screen_name: video_result
+  steps:
+  - text: Back to Home
+    kind: tap
+  - kind: wait
+    seconds: 3
+- event: export_click
+  label: Export ở project thứ hai
+  reset:
+    relaunch: false
+  expect_params:
+    has_text: '0'
+  steps:
+  - text: Create New Project
+    kind: tap
+  - kind: wait
+    seconds: 3
+  - *id035
+  - kind: wait
+    seconds: 1
+  - *id034
+  - kind: wait
+    seconds: 4
+  - text: Confirm
+    kind: tap
+  - kind: wait
+    seconds: 4
+  # Bam Export khi man Edit Video chua tai xong thi khong an (05/10: khong ban
+  # export_click) - doi nut hien roi cho them nhip.
+  - kind: wait_text
+    text: Export
+    timeout: 15
+  - kind: wait
+    seconds: 3
+  - text: Export
+    kind: tap
+  - kind: wait
+    seconds: 3
+- event: upload_click
+  label: vùng upload ở Studio I2I
+  expect_params:
+    screen_name: studio_i2i
+  steps:
+  - *id010
+  - *id011
+  - *id012
+  - *id013
+  - *id014
+  - *id015
+  - *id016
+  - *id017
+  - *id018
+  - *id019
+  - *id020
+  - *id021
+  - *id022
+  - *id023
+  - *id024
+  - *id025
+  - *id026
+  - *id027
+  - *id028
+  - *id029
+  - *id030
+  - *id031
+  - *id032
+  - desc: AI Images
+    kind: tap
+  - kind: wait
+    seconds: 3
+  - text: Image to Image Generate
+    kind: tap
+  - kind: wait
+    seconds: 3
+  - text: Tap To Upload
+    kind: tap
+  - kind: wait
+    seconds: 3
+- event: history_filter_click
+  label: chip Images
+  reset:
+    relaunch: false
+  expect_params:
+    filter: image
+  steps:
+  - *id002
+  - kind: wait
+    seconds: 2
+  - *id001
+  - kind: wait
+    seconds: 2
+  - desc: History
+    kind: tap
+  - kind: wait
+    seconds: 3
+  - text: Images
+    kind: tap
+  - kind: wait
+    seconds: 2
+- event: history_item_click
+  label: item đầu tiên
+  reset:
+    relaunch: false
+  expect_params:
+    position: '1'
+  steps:
+  - text: All
+    kind: tap
+  - kind: wait
+    seconds: 2
+  - cls: View
+    index: 11
+    kind: tap
+  - kind: wait
+    seconds: 3
+- event: download
+  label: Download ở chi tiết History
+  reset:
+    relaunch: false
+  expect_params:
+    screen_name: history_detail
+    save_result: success
+  steps:
+  - text: Download
+    kind: tap
+  - kind: wait
+    seconds: 5
+- event: history_select_start
+  label: nhấn giữ item đầu
+  reset:
+    relaunch: false
+  steps:
+  - *id002
+  - kind: wait
+    seconds: 2
+  - kind: long_press
+    cls: View
+    index: 11
+  - kind: wait
+    seconds: 2
+- event: history_select_all_click
+  label: Select all ở header
+  reset:
+    relaunch: false
+  expect_params:
+    scope: all
+  steps:
+  - text: Select all
+    index: 0
+    kind: tap
+  - kind: wait
+    seconds: 2
+- event: history_delete_click
+  label: Delete (n)
+  reset:
+    relaunch: false
+  steps:
+  - text: Delete*
+    kind: tap
+  - kind: wait
+    seconds: 2
+- event: history_delete_cancel
+  label: Cancel ở sheet xoá
+  reset:
+    relaunch: false
+  steps:
+  - text: Cancel
+    kind: tap
+  - kind: wait
+    seconds: 2
+  - *id002
+  - kind: wait
+    seconds: 2
+- event: history_select_close
+  label: X thoát chế độ chọn
+  reset:
+    relaunch: false
+  steps:
+  - kind: long_press
+    cls: View
+    index: 11
+  - kind: wait
+    seconds: 2
+  - cls: View
+    index: 4
+    kind: tap
+  - kind: wait
+    seconds: 2
+- event: history_delete_confirm
+  label: xoá toàn bộ item test
+  reset:
+    relaunch: false
+  steps:
+  - kind: long_press
+    cls: View
+    index: 11
+  - kind: wait
+    seconds: 2
+  - text: Select all
+    index: 0
+    kind: tap
+  - kind: wait
+    seconds: 1
+  - text: Delete*
+    kind: tap
+  - kind: wait
+    seconds: 2
+  - text: Delete
+    kind: tap
+  - kind: wait
+    seconds: 3
+- event: history_empty_create_click
+  label: Create your first image khi trống
+  reset:
+    relaunch: false
+  steps:
+  - text: Create your fir*
+    kind: tap
+  - kind: wait
+    seconds: 3
+# gen_fail can KHONG co sub (ngat mang giua ad cuoi): chay truoc cac case
+# nhac - case nhac mua sub test.
+- event: gen_fail
+  label: mất mạng lúc đang gen T2I
+  expect_params:
+    feature: t2i
+    error_type: no_network
+    is_forced_fail: '0'
+  steps:
+  - *id010
+  - *id011
+  - *id012
+  - *id013
+  - *id014
+  - *id015
+  - *id016
+  - *id017
+  - *id018
+  - *id019
+  - *id020
+  - *id021
+  - *id022
+  - *id023
+  - *id024
+  - *id025
+  - *id026
+  - *id027
+  - *id028
+  - *id029
+  - *id030
+  - *id031
+  - *id032
+  - desc: AI Images
+    kind: tap
+  - kind: wait
+    seconds: 3
+  - text: Text to Image Generate
+    kind: tap
+  - kind: wait
+    seconds: 3
+  - desc: Oil Painting Classic
+    kind: tap
+  - kind: wait
+    seconds: 1
+  - cls: EditText
+    kind: tap
+  - kind: type
+    text: a cute cat
+  - text: What do you want to create?
+    kind: tap
+  - kind: wait
+    seconds: 1
+  - text: Generate
+    kind: tap
+  - kind: wait
+    seconds: 3
+  - kind: watch_ads
+    leave_last: true
+  - kind: wait
+    seconds: 32
+  - kind: network
+    state: 'off'
+  - *id004
+  - kind: wait_text
+    text: Something Went Wrong
+    timeout: 120
+  - kind: network
+    state: 'on'
+- event: go_back_click
+  label: Go back ở màn lỗi mất mạng
+  reset:
+    relaunch: false
+  expect_params:
+    feature: t2i
+    error_type: no_network
+  steps:
+  - text: Go back
+    kind: tap
+  - kind: wait
+    seconds: 3
+
+- event: song_delete
+  label: xoá bài vừa gen
+  steps:
+  - *id010
+  - *id011
+  - *id012
+  - *id013
+  - *id014
+  - *id015
+  - *id016
+  - *id017
+  - *id018
+  - *id019
+  - *id020
+  - *id021
+  - *id022
+  - *id023
+  - *id024
+  - *id025
+  - *id026
+  - *id027
+  - *id028
+  - *id029
+  - *id030
+  - *id031
+  - *id032
+  - desc: Edit Video
+    kind: tap
+  - kind: wait
+    seconds: 3
+  - text: Create New Project
+    kind: tap
+  - kind: wait
+    seconds: 3
+  - *id035
+  - kind: wait
+    seconds: 1
+  - *id034
+  - kind: wait
+    seconds: 4
+  - text: Confirm
+    kind: tap
+  - kind: wait
+    seconds: 4
+  - desc: Music
+    kind: tap
+  - kind: wait
+    seconds: 2
+  # Xoa bai user gen SAN CO, khong gen moi: gen nhac can sub va het luot ngay
+  # rat nhanh - phan mua sub + bam lai nam o case limit_reached_view ngay sau.
+  # Tien de: list nhac co it nhat mot bai user gen (chi bai do long-clickable).
+  # Het luot thi app khong gen: paywall / sheet Generate Music co the con che
+  # list nhac - don truoc khi nhan giu, khong thi long_press khong thay bai nao.
+  - kind: close_ad
+    timeout: 5
+  - kind: tap
+    desc: Close sheet
+    optional: true
+  - kind: wait
+    seconds: 1
+  - kind: long_press
+    cls: View
+    long_clickable: true
+  - kind: wait
+    seconds: 2
+  - text: Delete
+    kind: tap
+  - kind: wait
+    seconds: 2
+  - text: Delete
+    kind: tap
+  - kind: wait
+    seconds: 2
+- event: limit_reached_view
+  label: Generate nhạc khi đã hết hạn mức ngày
+  # Het luot gen nhac trong ngay (sub: limit_sub_generate_song_per_day; free:
+  # tran ads + paywall RevenueCat tat) thi app bao het luot thay vi gen.
+  # Tien de: may da het luot nhac SUB hom nay (gen tay toi tran) - neu chua
+  # het thi app gen bai moi thay vi bao het luot.
+  steps:
+  - *id010
+  - *id011
+  - *id012
+  - *id013
+  - *id014
+  - *id015
+  - *id016
+  - *id017
+  - *id018
+  - *id019
+  - *id020
+  - *id021
+  - *id022
+  - *id023
+  - *id024
+  - *id025
+  - *id026
+  - *id027
+  - *id028
+  - *id029
+  - *id030
+  - *id031
+  - *id032
+  - desc: Edit Video
+    kind: tap
+  - kind: wait
+    seconds: 3
+  - text: Create New Project
+    kind: tap
+  - kind: wait
+    seconds: 3
+  - *id035
+  - kind: wait
+    seconds: 1
+  - *id034
+  - kind: wait
+    seconds: 4
+  - text: Confirm
+    kind: tap
+  - kind: wait
+    seconds: 4
+  - desc: Music
+    kind: tap
+  - kind: wait
+    seconds: 2
+  - text: Generate
+    kind: tap
+    optional: true
+  - kind: wait
+    seconds: 2
+  - cls: EditText
+    index: 1
+    kind: tap
+    optional: true
+  - kind: type
+    text: calm piano
+  - kind: key
+    text: BACK
+  - kind: swipe
+    cls: EditText
+    index: 1
+    direction: up
+    optional: true
+  - kind: wait
+    seconds: 1
+  - text: Generate
+    kind: tap
+    optional: true
+  # Het luot khi KHONG co sub thi app hien sheet ads (gate unlock_sheet), khong
+  # bao het luot - limit_reached_view (sub_daily_limit) can sub. Sheet hien thi
+  # mua sub test; mua xong app kiem lai luot va bao het luot. Co sub roi thi bo qua.
+  - kind: buy_sub
+  - kind: wait
+    seconds: 3
+  # Mua xong app KHONG tu gen lai; buy_sub dong sheet mo khoa bang BACK, tra
+  # ve popup Generate Music con nguyen chu - bam Generate lai.
+  - kind: swipe
+    cls: EditText
+    index: 1
+    direction: up
+    optional: true
+  - kind: wait
+    seconds: 1
+  - text: Generate
+    kind: tap
+    optional: true
+  - kind: wait
+    seconds: 10

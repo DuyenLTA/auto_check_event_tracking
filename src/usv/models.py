@@ -89,6 +89,10 @@ class DeviceNode:
     parent_id: str | None
     index_in_parent: int
     depth: int
+    # Compose khong khai rieng long-click; chi node co `combinedClickable` ra
+    # long-clickable="true". Do tren app AIP922: bai nhac user gen co, bai co
+    # san thi khong - loc theo co nay la cach duy nhat chi dung bai xoa duoc.
+    long_clickable: bool = False
 
     @property
     def short_cls(self) -> str:

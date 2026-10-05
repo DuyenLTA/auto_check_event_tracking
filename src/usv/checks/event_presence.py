@@ -93,7 +93,7 @@ def run(spec: SpecSheet, windows: tuple[Window, ...], config,
                                  "Firebase, chứ không phải app thiếu event."),
                     ))
                     continue
-                ngoai = _ngoai_cua_so(event.name, session_events)
+                ngoai = _ngoai_cua_so(event.name, session_events, window.expect_params)
                 if ngoai:
                     out.append(CheckResult(
                         element=label, check="event_presence",
@@ -162,7 +162,7 @@ def _gio(events) -> str:
     return ", ".join(stamps)
 
 
-def _ngoai_cua_so(name: str, session_events) -> str:
+def _ngoai_cua_so(name: str, session_events, expect: dict | None = None) -> str:
     """Gio ma event ban trong CA PHIEN, khi cua so cua no khong chua lan nao.
 
     Vi sao khong bao FAIL: moc do TESTER bam, con event do APP ban - tool khong
@@ -171,10 +171,25 @@ def _ngoai_cua_so(name: str, session_events) -> str:
     moc dau -> bao "thieu event" cho mot event app ban dung. Cham khong danh dau
     thi cung app do PASS. Mot ket qua doi theo THU TU BAM NUT thi khong dung
     duoc, nen o day tra "chua ket luan" chu khong tra fail.
+
+    Lan ban mang param TRAI voi gia tri case doi hoi thi khong tinh: do la
+    event cung ten cua luong KHAC, khong the la "lan ban lech moc" cua case
+    nay. Do that 01/10 tren AIP922: case `picker_done` feature=video_edit bi
+    treo "chua ket luan" chi vi `picker_done` feature=i2i_style o nhom khac.
     """
+    want = expect or {}
     hits = [e for e in session_events
-            if e.name == name and getattr(e, "from_app", True)]
+            if e.name == name and getattr(e, "from_app", True)
+            and not _trai_ky_vong(e, want)]
     return f"{len(hits)} lần: {_gio(hits)}" if hits else ""
+
+
+def _trai_ky_vong(event, want: dict) -> bool:
+    """Event co param nao mang gia tri KHAC gia tri case doi hoi khong.
+    Thieu param thi khong tinh la trai - chuyen thieu do check params noi."""
+    params = getattr(event, "params", {}) or {}
+    return any(key in params and params[key] != value
+               for key, value in want.items())
 
 
 def _label(name: str, window: Window, total: int) -> str:

@@ -344,23 +344,25 @@ def test_chay_duoc_tren_console_cp1252(tmp_path):
     assert done.returncode == 0, done.stdout + done.stderr
     assert "--serial" in done.stdout
 
-def test_report_co_anh_va_ban_app_dang_cai(adb, tmp_path):
+def test_report_co_ban_app_va_khong_co_anh(adb, tmp_path):
     """Doi chat voi dev ma khong noi duoc da check ban nao thi moi ket luan
-    deu tra lai duoc bang 'ban do cu roi'."""
+    deu tra lai duoc bang 'ban do cu roi'. Tester bo muc anh chup 05/10/2026."""
     payload = _run(adb, SPEC_TSV, _flow(_case("rating_placement_viewed")), tmp_path)
     assert payload["app_version"] == "2.4.1 (125)"
     html = Path(payload["report"]).read_text(encoding="utf-8")
     assert "2.4.1 (125)" in html
-    assert "data:image/png;base64," in html
+    assert "data:image/png;base64," not in html
 
-def test_case_lai_hut_van_co_anh_ngay_cho_bi_ket(adb, tmp_path):
-    """Anh o dung cho lai hut la thu duy nhat noi duoc vi sao khong bam trung."""
+
+def test_case_lai_hut_ra_bang_luot_chua_xong(adb, tmp_path):
+    """Lai hut khong duoc lan vao danh sach: report chi co Khop/Sai."""
     hong = FlowCase(event="rating_placement_viewed", name="tai home",
                     steps=(Step(kind="tap",
                                 selector=Selector(resource_id="khong_co_nut_nay")),))
     payload = _run(adb, SPEC_TSV, _flow(hong), tmp_path)
     html = Path(payload["report"]).read_text(encoding="utf-8")
-    assert "lúc lái hụt" in html
+    assert "Lượt chưa xong" in html
+    assert payload["not_tested"] >= 1
 
 def test_khong_chup_duoc_thi_report_van_ra(adb, tmp_path, monkeypatch):
     async def hong(serial):

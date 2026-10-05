@@ -47,4 +47,5 @@ def doc_selector(raw: dict, where: str) -> tuple[Selector | None, list[str]]:
     except (TypeError, ValueError):
         return None, [f"{where}: `index` phải là số, đang là {raw.get('index')!r}."]
     chinh, *phu = bien_the(raw[field])
-    return Selector(**{field: chinh}, alt=tuple(phu), index=index), []
+    return Selector(**{field: chinh}, alt=tuple(phu), index=index,
+                    long_clickable=bool(raw.get("long_clickable", False))), []

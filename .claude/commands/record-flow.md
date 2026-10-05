@@ -50,8 +50,15 @@ usv-record ... wait-text "Add Widget" --timeout 25
 **Luôn `dump` trước khi bấm và sau khi bấm.** Bấm mù rồi đoán là cách chắc nhất
 để ghi ra một flow chạy đúng một lần.
 
-Bước dùng được: `dump · show · launch · tap · swipe · back · type · wait ·
-wait-text · close-ad · allow · save · drop`.
+Bước dùng được: `dump · show · launch · tap · long-press · swipe · back · type ·
+wait · wait-text · close-ad · allow · save · drop`.
+
+`long-press` nhấn giữ 1,2 s tại tâm node — cho màn chỉ vào chế độ chọn bằng
+long-click (History "X selected"). Ghi ra YAML là `kind: long_press`.
+Item chỉ một số mới nhấn giữ được (bài nhạc user gen thì có, bài sẵn thì
+không) mà tên lại thay đổi mỗi lượt: thêm `long_clickable: true` vào selector
+(vd `cls: View` + `long_clickable: true`) để chỉ đếm node có
+`long-clickable="true"` trong dump, thay vì đếm `index` mò.
 
 `dump` và `show` **không ghi bước** (`show` in các bước đã gom ra JSON). Mọi lệnh
 còn lại ghi một bước vào phiên đang mở (`out/record-<pkg>.json`).

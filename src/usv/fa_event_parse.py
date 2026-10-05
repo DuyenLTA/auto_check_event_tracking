@@ -25,9 +25,10 @@ Ba diem da do, dung doan lai:
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from .event_system_params import strip_system
+from .fa_upload_types import annotate
 
 # `Logging event: origin=app,name=X,params=Bundle[{...}]` (FA-SVC)
 # hoac `Logging event (FE): X, Bundle[{...}]` (tag FA o mot so version SDK)
@@ -57,6 +58,9 @@ class ObservedEvent:
     raw_params: dict[str, str]      # con nguyen, de chan doan
     timestamp: str = ""
     truncated: bool = False
+    # Kieu that tung param ('string'/'int'/'double') doc tu payload upload -
+    # rong neu batch chua kip gui trong phien ghi. Xem fa_upload_types.
+    param_types: dict[str, str] = field(default_factory=dict)
 
     @property
     def from_app(self) -> bool:
@@ -155,4 +159,4 @@ def parse_log(text: str) -> tuple[list[ObservedEvent], list[Marker]]:
                 continue
             seen.add(key)
             events.append(item)
-    return events, markers
+    return annotate(events, text), markers

@@ -259,3 +259,20 @@ def test_bao_loi_in_ca_hai_bien_the():
     from usv.device_actions import Selector
     nhan = Selector(desc="Photo taken on*", alt=("Ảnh được chụp lúc*",)).label()
     assert "Photo taken on*" in nhan and "Ảnh được chụp lúc*" in nhan
+
+
+def test_network_doc_state_on_off():
+    import yaml
+    # `state: off` tran -> YAML doc thanh False; "ON" co ngoac -> chuoi.
+    flow = parse(yaml.safe_load("package: com.x\ncases:\n- event: gen_fail\n  steps:\n"
+                                "  - kind: network\n    state: off\n"
+                                "  - kind: network\n    state: 'ON'\n"))
+    assert flow.ok, flow.errors
+    assert [s.text for s in flow.cases[0].steps] == ["off", "on"]
+
+
+def test_network_thieu_state_la_loi():
+    flow = parse({"package": "com.x", "cases": [
+        {"event": "gen_fail", "steps": [{"kind": "network"}]}]})
+    assert not flow.ok
+    assert "state" in flow.errors[0]

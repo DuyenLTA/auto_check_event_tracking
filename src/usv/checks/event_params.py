@@ -29,6 +29,7 @@ from ..check_models import CheckResult, Verdict
 from ..event_spec_models import SpecEvent, SpecParam, SpecSheet
 from ..event_system_params import global_params
 from ..event_window import Window
+from ..fa_upload_types import KIND_STRING
 
 _NUMBER = re.compile(r"-?\d+(?:\.\d+)?$")
 
@@ -76,15 +77,18 @@ def run(spec: SpecSheet, windows: tuple[Window, ...], config,
                 ))
                 continue
             out.extend(_check_params(event, observed.params, catch_extra,
-                                     globals_seen, window.expect_params))
+                                     globals_seen, window.expect_params,
+                                     observed.param_types))
     return out
 
 
 def _check_params(event: SpecEvent, got: dict[str, str], catch_extra: bool,
                   globals_seen: frozenset[str],
-                  expect: dict[str, str] | None = None) -> list[CheckResult]:
+                  expect: dict[str, str] | None = None,
+                  types: dict[str, str] | None = None) -> list[CheckResult]:
     out: list[CheckResult] = []
     wanted = expect or {}
+    kinds = types or {}
     for param in event.params:
         label = f"{event.name}.{param.name}"
         if param.name not in got:
@@ -125,6 +129,22 @@ def _check_params(event: SpecEvent, got: dict[str, str], catch_extra: bool,
                 element=label, check="event_params", verdict=Verdict.FAIL_TYPE,
                 expected=f"kiểu {param.value_type}", actual=value,
                 message=f"Spec khai {param.value_type} mà app gửi {value!r}.",
+            ))
+            continue
+
+        # Payload upload noi ro kieu server nhan: dung no truoc khi chiu
+        # NOT_VERIFIABLE. Chi co khi batch kip gui trong phien ghi.
+        kind = kinds.get(param.name)
+        if kind is not None and _looks_numeric(value) and (
+                param.wants_string or param.wants_number):
+            sai = (kind == KIND_STRING) != bool(param.wants_string)
+            out.append(CheckResult(
+                element=label, check="event_params",
+                verdict=Verdict.FAIL_TYPE if sai else Verdict.PASS,
+                expected=f"kiểu {param.value_type}", actual=value,
+                message=(f"Payload upload Firebase ghi {kind}_value = {value!r}"
+                         + (f" — spec khai {param.value_type}." if sai
+                            else ", đúng kiểu spec.")),
             ))
             continue
 

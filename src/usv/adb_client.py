@@ -24,6 +24,8 @@ from .adb_parsers import (
 log = logging.getLogger(__name__)
 
 CMD_TIMEOUT = 8.0
+DUMP_IDLE_RETRY = 4
+DUMP_IDLE_WAIT = 2.0
 # uiautomator dump tren may cham co the mat vai giay - cho lau hon lenh thuong.
 DUMP_TIMEOUT = 30.0
 # Screenshot 1080x2280 PNG ~ 1MB; de rong cho may cham.
@@ -180,9 +182,16 @@ class AdbClient(LogcatMixin, InputMixin, AppDataMixin):
         """
         check_serial(serial)
         remote = "/sdcard/usv-dump.xml"
-        out, err, _ = await self._run(
-            "-s", serial, "shell", "uiautomator", "dump", remote, timeout=DUMP_TIMEOUT
-        )
+        # "could not get idle state": man dang chay animation lien tuc (rewarded
+        # ad, thanh Before/After tu chay o Result template) - vai giay sau la
+        # dump duoc. Do that 05/10: mot lan loi nay lam hut ca chuoi case Result.
+        for lan in range(DUMP_IDLE_RETRY):
+            out, err, _ = await self._run(
+                "-s", serial, "shell", "uiautomator", "dump", remote, timeout=DUMP_TIMEOUT
+            )
+            if "idle state" not in (out + err).lower() or lan == DUMP_IDLE_RETRY - 1:
+                break
+            await asyncio.sleep(DUMP_IDLE_WAIT)
         if "dumped to" not in out.lower() and "dumped to" not in err.lower():
             raise AdbError(
                 "uiautomator dump không thành công.\n"
