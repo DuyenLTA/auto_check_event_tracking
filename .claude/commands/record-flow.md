@@ -115,6 +115,26 @@ usv-record ... save --event widget_view --label "tại result" --expect placemen
 - `--rc k=v` / `--clear-prefs <file>` chỉ khi trang spec nói rõ vị trí đó bị remote
   key chặn. Đừng với tay tới nó khi một thao tác trên màn đã đủ.
 
+**Mốc thời điểm** (tool chấm event bắn đúng lúc cú bấm): mặc định mốc là thao
+tác bắt buộc cuối cùng của case. Sửa tay trong `flows/<package>.yaml` khi không
+đúng — đối chiếu cột Triggered của spec:
+
+```yaml
+- event: history_delete_cancel
+  steps:
+  - text: Cancel
+    kind: tap
+    trigger: true        # cú kích hoạt; BACK sau đó chỉ là dọn dẹp
+- event: result_view
+  after_event: gen_success   # mốc = gen_success gần nhất trước result_view
+- event: report_submit
+  max_delay_ms: 10000        # spec: bắn khi server trả "gửi thành công"
+```
+
+`trigger: true` dùng được cho `tap`/`long_press`/`swipe`/`key`/`launch`/`intent`/
+`network`/`watch_ads`/`buy_sub`, và `wait_text` (mốc = lúc tool thấy màn — đặt
+trước các bước `close_ad`). Mỗi case chỉ một bước `trigger: true`.
+
 `save` đọc lại case bằng **chính parser của `check`**, sai gì báo ngay tại đây chứ
 không để đến lượt chạy thật mới vỡ. Ghi xong: case nối vào `flows/<package>.yaml`
 (giữ bản `.bak`), phiên đang mở bị xoá để không dính sang case sau.

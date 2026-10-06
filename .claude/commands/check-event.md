@@ -89,6 +89,11 @@ Parse dòng JSON cuối stdout. Chỉ `pass`/`fail` là kết quả; mọi thứ
 còn dở phải xử ở mục 5:
 
 - `pass` / `fail` — tool đã đo được: event bắn hay không, param đúng hay sai
+  (thiếu param → `FAIL_MISSING`, thừa param → `FAIL_PARAM_EXTRA`), và **bắn đúng
+  lúc không** (`event_timing`, dòng "thời điểm · <case>"): mốc `@bấm` ghi ngay
+  trước lệnh input của bước kích hoạt; bắn trước mốc hoặc trễ quá ngưỡng →
+  `FAIL_TIMING` "Sai thời điểm". Ngưỡng ở `config/event-check-rules.yaml`
+  (click 1500 ms, `*_view` 5000 ms, mốc "thấy màn" [-3500, +1000] ms)
 - `not_tested` — **lái hụt, chưa đo gì cả**. Báo kèm `reason` (tên step chết và
   số giây đã chờ). Nói "app thiếu event" ở đây là báo oan
 - `blocked` — reset không ăn (app không debuggable, Remote Config bị đè). Cũng
@@ -119,6 +124,33 @@ từng cái cho tới khi về 0, đừng hỏi lại người dùng, đừng b�
 - **Chưa kết luận** (logcat không phân biệt String/Number…) → đo bằng cách khác
   trên máy (payload upload Firebase, log verbose) cho ra pass/fail.
 - **Blocked** (reset không ăn) → làm theo cách sửa tool in ra, chạy lại.
+- **Sai thời điểm** (`FAIL_TIMING`) → **chưa được báo là lỗi app**. Đọc timeline
+  log phiên (`out/report-…log`: dòng `USV_MARK` + `Logging event`) và đối chiếu
+  cột Triggered của spec: mốc tool đặt có đúng là thứ spec nói kích hoạt event
+  không. Mốc sai thì sửa flow rồi chạy lẻ case đó; mốc đúng mà app vẫn lệch thì
+  mới là Sai thật, giữ nguyên để báo dev. Các kiểu mốc sai đã gặp (05–06/10):
+  - bước kích hoạt mặc định (thao tác bắt buộc cuối) là bước dọn dẹp, không
+    phải cú bấm → khai `trigger: true` cho đúng bước (vd Cancel trước BACK)
+  - event `*_view` hiện sau splash/ads → bước `wait_text` chờ màn đó khai
+    `trigger: true`, đặt **trước** các bước `close_ad` (wait_text tự dọn quảng
+    cáo; đặt sau thì mốc trễ thêm cả timeout của close_ad)
+  - event app tự bắn sau một event khác → `after_event: <event>` (mốc = lần bắn
+    gần nhất của event đó trước event được chấm): `result_view` sau
+    `gen_success`, `limit_reached_view` sau `gen_gate`, `gen_fail` (ngắt mạng
+    giữa ad) sau `gen_start`
+  - event chờ server/xử lý mà spec cho phép trễ → `max_delay_ms` cho case
+- **Không gen được** (sheet mở khoá chỉ còn nút Premium = rewarded no-fill; gen
+  bằng sub ra `gate_result=limit_reached`, `sub_daily_limit` = sub test hết hạn
+  mức ngày) → đây là giới hạn bên ngoài, **đừng sửa flow**. Dừng các case cần
+  gen, báo người dùng, chạy lẻ lại khi ads/quota về (thường sáng hôm sau).
+- **Chạy lẻ case cần dữ liệu từ case khác**: tool chỉ kéo theo case tiền đề
+  `relaunch: false` liền trước. Case cần ảnh trong History (`history_*`) phải
+  `--case` kèm case gen xong ("gen T2I xong"), không thì app bị tắt giữa lúc gen,
+  History trống.
+- **Sub test còn hạn** làm hỏng case cần đi đường ads (sheet mở khoá, `gen_start`
+  `quota_type: ads`, `gen_fail` giữa ad). Trước khi chạy: mở
+  `play.google.com/store/account/subscriptions?package=<pkg>`, sub của app còn
+  thì Cancel subscription và chờ qua giờ "will end on" (≤5 phút).
 
 Mỗi vòng nói ngắn một dòng đang kẹt ở màn nào.
 
@@ -138,6 +170,13 @@ Event của case khớp `--case` lấy kết quả mới (kể cả vẫn hụt 
 giấu); event khác giữ kết quả base. Report ra **đủ mọi event spec**. Còn hụt thì
 lấy stdout vừa ra làm base mới, sửa tiếp, gộp tiếp. Chỉ chạy lại cả lượt khi sửa
 flow/tool làm đổi đường đi của **nhiều** case đã Khớp.
+
+Gộp ở tầng **cửa sổ log từng case**: mỗi lượt lưu log phiên `out/report-…log`,
+stdout ghi `sources` (file log + nhãn case lấy từ nó). Case giữ từ base vẫn được
+**chấm lại** theo flow hiện tại — sửa mốc (`trigger`, `after_event`,
+`max_delay_ms`) cho case đã có log đúng thì không cần lái lại, chỉ cần một lần
+chạy lẻ bất kỳ có `--base`. Base phải do bản tool có `sources` sinh ra; stdout
+cũ thiếu `sources` thì tool báo và cần một lượt đầy đủ mới.
 
 Report **không có mục ảnh chụp màn hình** (tester bỏ 05/10/2026). Muốn biết màn
 nào đang chắn khi lái hụt thì tự `adb exec-out screencap -p` lúc debug, đừng đưa
@@ -166,4 +205,6 @@ ngắn đã sửa gì.
 
 **Dừng ở đây. Không `git add`, không `git commit`, không `git push`.** Lượt chấm
 chỉ sinh ra report trong `out/` (thư mục này đã gitignore). Sửa flow hay sửa tool
-là việc riêng, người dùng sẽ tự nói.
+là việc riêng, người dùng sẽ tự nói. Khi người dùng bảo commit + push: chạy
+`pytest` trước, không add `flows/*.bak`, push lên `origin` (DuyenLTA/
+auto_check_event_tracking) nhánh `main`.
