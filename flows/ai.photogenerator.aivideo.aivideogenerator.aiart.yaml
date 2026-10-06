@@ -1269,6 +1269,10 @@ cases:
 # nhac - case nhac mua sub test.
 - event: gen_fail
   label: mất mạng lúc đang gen T2I
+  # Ngat mang luc ad cuoi dang chay: app chi BIET loi khi dong ad xong va gui
+  # request (gen_start) - gen_fail phai ban ngay sau gen_start do (do 06/10:
+  # 53 ms, duration_ms=151).
+  after_event: gen_start
   expect_params:
     feature: t2i
     error_type: no_network
@@ -1325,10 +1329,8 @@ cases:
     leave_last: true
   - kind: wait
     seconds: 32
-  # gen_fail ban khi app biet mat mang - moc cu bam dat o buoc ngat mang.
   - kind: network
     state: 'off'
-    trigger: true
   - *id004
   - kind: wait_text
     text: Something Went Wrong

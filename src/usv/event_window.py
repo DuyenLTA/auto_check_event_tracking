@@ -68,7 +68,7 @@ class Window:
     # con mot case lai app toi DUNG MOT trong bon cho do nen no biet lan nay
     # PHAI ra gia tri nao. Cham theo case thi chat hon cham theo spec.
     expect_params: dict[str, str] = field(default_factory=dict)
-    # Moc cu bam kich hoat (TAP_PREFIX) dau tien trong cua so, va ten buoc.
+    # Moc cu bam kich hoat (TAP_PREFIX) cuoi cung trong cua so, va ten buoc.
     tap_ms: float | None = None
     tap_step: str = ""
     # Nguong tre toi da case khai rieng (flow `max_delay_ms`); None = mac dinh.
@@ -181,8 +181,10 @@ def cut(events: list[ObservedEvent], markers: list[Marker]) -> tuple[Window, ...
             inside.append(event)
         spec_event, note = split_label(marker.label)
         tap_ms, tap_step = None, ""
-        # Moc DAU TIEN trong cua so: cu bam dau tien la cu kich hoat; moc lap
-        # lai (vd don quang cao roi bam lai) den sau.
+        # Moc CUOI CUNG trong cua so: cu bam co HIEU LUC. Do that 06/10: bam X
+        # ad cuoi lan dau khong thoat, lan hai moi thoat va gen_start ban 186 ms
+        # sau lan hai. Moc chi ghi khi da tim thay node, nen moc lap lai luon
+        # la cu bam that.
         for tap in taps:
             stamp = to_ms(tap.timestamp)
             if stamp is None or start is None or stamp < start:
@@ -190,7 +192,6 @@ def cut(events: list[ObservedEvent], markers: list[Marker]) -> tuple[Window, ...
             if end is not None and stamp >= end:
                 continue
             tap_ms, tap_step = stamp, tap.label[len(TAP_PREFIX):]
-            break
         windows.append(Window(
             spec_event=spec_event, note=note, events=tuple(inside),
             start_ms=start, end_ms=end, near_edge=_edge_names(inside, start, end),
