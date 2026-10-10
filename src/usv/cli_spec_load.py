@@ -13,6 +13,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+from . import spec_alias
 from .confluence_client import ConfluenceError, fetch_page
 from .event_spec_confluence import parse_page
 from .event_spec_models import SpecSheet
@@ -45,14 +46,18 @@ def missing_env() -> list[str]:
 
 
 def from_confluence(url: str) -> tuple[SpecSheet, str]:
-    """(spec, tieu de trang). Loi mang/token/link -> SpecLoadError."""
+    """(spec, tieu de trang). Loi mang/token/link -> SpecLoadError.
+
+    `url` nhan ca ten chuc nang ("rating", "widget") - xem `spec_alias`.
+    """
     if missing_env():
         raise SpecLoadError(
             f"Thiếu {', '.join(missing_env())}. Đặt trong .env cạnh repo, "
             "hoặc export trong shell rồi chạy lại.")
     try:
+        url, _, _ = spec_alias.resolve(url)
         title, html = fetch_page(url)
-    except ConfluenceError as exc:
+    except (ConfluenceError, spec_alias.SpecAliasError) as exc:
         raise SpecLoadError(str(exc)) from exc
     return parse_page(html), title
 

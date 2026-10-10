@@ -15,6 +15,10 @@ from dataclasses import dataclass, field
 
 from .device_actions import Selector
 
+# Kind la mot THAO TAC lam app phan ung - ung vien buoc kich hoat.
+THAO_TAC = frozenset({"launch", "tap", "long_press", "swipe", "key", "intent",
+                      "watch_ads", "buy_sub"})
+
 
 @dataclass(frozen=True, slots=True)
 class Step:
@@ -26,9 +30,19 @@ class Step:
     component: str = ""             # intent: <package>/<Activity>, de trong thi de `am` tu chon
     seconds: float = 0.0            # wait
     timeout: float = 10.0           # wait_text
+    # wait_text/close_popup: bien the NGON NGU KHAC cua cung chuoi can tim.
+    # Xem Selector.alt - cung ly do, khac cho vi hai kind nay khong dung
+    # selector ma doc thang `text`.
+    text_alt: tuple[str, ...] = ()
     # Buoc co the KHONG xuat hien: quang cao xen ke, popup danh gia, tooltip.
     # Hut mot buoc nhu vay khong phai lai hut - case van chay tiep.
     optional: bool = False
+    # watch_ads: bam ad cuoi roi de no chay, khong dong (ep gen_fail giua ad).
+    leave_last: bool = False
+    # Buoc KICH HOAT event cua case: tool ghi moc `@bấm` ngay truoc lenh input
+    # cua buoc nay de cham event ban dung luc. Khong khai buoc nao thi lay buoc
+    # thao tac bat buoc cuoi cung (xem FlowCase.trigger_index).
+    trigger: bool = False
 
     def label(self) -> str:
         if self.optional:
@@ -40,7 +54,10 @@ class Step:
             return f"{self.kind} {self.selector.label()}"
         if self.kind == "wait":
             return f"wait {self.seconds:g}s"
-        return f"{self.kind} {self.text!r}" if self.text else self.kind
+        if not self.text:
+            return self.kind
+        ten = " | ".join(repr(x) for x in (self.text, *self.text_alt))
+        return f"{self.kind} {ten}"
 
 
 @dataclass(frozen=True, slots=True)
@@ -73,6 +90,26 @@ class FlowCase:
     expect_params: dict[str, str] = field(default_factory=dict)
     steps: tuple[Step, ...] = ()
     reset: Reset = field(default_factory=Reset)
+    # Tre toi da (ms) tu cu bam kich hoat toi luc event ban. None = nguong mac
+    # dinh trong config. Event ban khi server tra ve (report_submit, download
+    # luu xong, gen_*) can nguong rong hon cu click.
+    max_delay_ms: float | None = None
+    # Moc thoi diem la EVENT KHAC trong cung cua so thay vi cu bam: event app tu
+    # ban sau mot event khac (result_view ngay sau gen_success cung gen_id).
+    after_event: str = ""
+
+    @property
+    def trigger_index(self) -> int | None:
+        """Buoc kich hoat: buoc khai `trigger: true`, khong thi buoc thao tac
+        BAT BUOC cuoi cung - buoc tuy chon co the bi bo qua, moc se mat."""
+        for i, step in enumerate(self.steps):
+            if step.trigger:
+                return i
+        for i in range(len(self.steps) - 1, -1, -1):
+            step = self.steps[i]
+            if step.kind in THAO_TAC and not step.optional:
+                return i
+        return None
 
     @property
     def label(self) -> str:

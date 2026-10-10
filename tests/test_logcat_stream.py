@@ -379,3 +379,10 @@ def test_loi_doc_stream_cung_tinh_la_dut():
 
     recording = asyncio.run(run())
     assert recording.stream_died is True
+
+
+def test_enable_fa_bat_debug_firebase_khi_biet_package():
+    """Debug mode gui batch ngay -> payload upload (co kieu param) vao phien ghi."""
+    client = FakeClient()
+    assert asyncio.run(enable_fa(client, "S1", "com.x")) is True
+    assert client.props["debug.firebase.analytics.app"] == "com.x"

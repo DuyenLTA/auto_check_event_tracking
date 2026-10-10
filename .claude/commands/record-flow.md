@@ -52,8 +52,15 @@ usv-record ... wait-text "Add Widget" --timeout 25
 **Luôn `dump` trước khi bấm và sau khi bấm.** Bấm mù rồi đoán là cách chắc nhất
 để ghi ra một flow chạy đúng một lần.
 
-Bước dùng được: `dump · show · launch · tap · swipe · back · type · wait ·
-wait-text · close-ad · allow · save · drop`.
+Bước dùng được: `dump · show · launch · tap · long-press · swipe · back · type ·
+wait · wait-text · close-ad · allow · save · drop`.
+
+`long-press` nhấn giữ 1,2 s tại tâm node — cho màn chỉ vào chế độ chọn bằng
+long-click (History "X selected"). Ghi ra YAML là `kind: long_press`.
+Item chỉ một số mới nhấn giữ được (bài nhạc user gen thì có, bài sẵn thì
+không) mà tên lại thay đổi mỗi lượt: thêm `long_clickable: true` vào selector
+(vd `cls: View` + `long_clickable: true`) để chỉ đếm node có
+`long-clickable="true"` trong dump, thay vì đếm `index` mò.
 
 `dump` và `show` **không ghi bước** (`show` in các bước đã gom ra JSON). Mọi lệnh
 còn lại ghi một bước vào phiên đang mở (`out/record-<pkg>.json`).
@@ -109,6 +116,26 @@ usv-record ... save --event widget_view --label "tại result" --expect placemen
   `placement_name=home` thì chấm theo spec là PASS, chấm theo case là FAIL_VALUE.
 - `--rc k=v` / `--clear-prefs <file>` chỉ khi trang spec nói rõ vị trí đó bị remote
   key chặn. Đừng với tay tới nó khi một thao tác trên màn đã đủ.
+
+**Mốc thời điểm** (tool chấm event bắn đúng lúc cú bấm): mặc định mốc là thao
+tác bắt buộc cuối cùng của case. Sửa tay trong `flows/<package>.yaml` khi không
+đúng — đối chiếu cột Triggered của spec:
+
+```yaml
+- event: history_delete_cancel
+  steps:
+  - text: Cancel
+    kind: tap
+    trigger: true        # cú kích hoạt; BACK sau đó chỉ là dọn dẹp
+- event: result_view
+  after_event: gen_success   # mốc = gen_success gần nhất trước result_view
+- event: report_submit
+  max_delay_ms: 10000        # spec: bắn khi server trả "gửi thành công"
+```
+
+`trigger: true` dùng được cho `tap`/`long_press`/`swipe`/`key`/`launch`/`intent`/
+`network`/`watch_ads`/`buy_sub`, và `wait_text` (mốc = lúc tool thấy màn — đặt
+trước các bước `close_ad`). Mỗi case chỉ một bước `trigger: true`.
 
 `save` đọc lại case bằng **chính parser của `check`**, sai gì báo ngay tại đây chứ
 không để đến lượt chạy thật mới vỡ. Ghi xong: case nối vào `flows/<package>.yaml`

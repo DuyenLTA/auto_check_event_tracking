@@ -122,3 +122,18 @@ def test_khong_truyen_event_ca_phien_thi_van_la_fail_nhu_truoc():
     events, markers = parse_log(LOG_BAN_TRUOC_MOC)
     results, _ = event_check_runner.run(spec, cut(events, markers), CONFIG)
     assert _tim(results, "daily_checkin_screen_view").verdict is Verdict.FAIL_MISSING
+
+
+def test_lan_ban_cua_luong_khac_khong_lam_treo_chua_ket_luan():
+    """Case doi feature=video_edit: picker_done feature=i2i_style o nhom khac
+    khong the la lan ban lech moc cua case nay -> khong tinh."""
+    from usv.checks.event_presence import _ngoai_cua_so
+    from usv.fa_event_parse import parse_line
+
+    khac = parse_line("10-01 21:28:05.074 V/FA-SVC  ( 5727): Logging event: "
+                      "origin=app,name=picker_done,params=Bundle[{feature=i2i_style, "
+                      "media_count=1, ga_event_origin(_o)=app}]")
+    assert _ngoai_cua_so("picker_done", (khac,), {"feature": "video_edit"}) == ""
+    # Cung luong thi van la "chua ket luan" nhu cu.
+    assert _ngoai_cua_so("picker_done", (khac,), {"feature": "i2i_style"}).startswith("1 lần")
+    assert _ngoai_cua_so("picker_done", (khac,), {}).startswith("1 lần")

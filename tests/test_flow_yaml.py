@@ -202,3 +202,77 @@ def test_intent_thieu_action_thi_bao_ngay(tmp_path):
         encoding="utf-8")
     flow = flow_yaml.load(path)
     assert flow.errors and "action" in flow.errors[0]
+
+
+# --- bien the ngon ngu: mot o nhan nhieu chuoi ---
+
+def _mot_step(step: dict):
+    """Flow toi thieu quanh MOT step, de test trung vao step do."""
+    return parse({"package": "com.x", "cases": [
+        {"event": "e", "label": "l", "steps": [step]}]})
+
+
+def test_selector_nhan_nhieu_bien_the_ngon_ngu():
+    """Chuoi tren man HE THONG doi theo locale cua may.
+
+    Do duoc that: may de vi-VN, picker anh hien desc "Ảnh được chụp lúc..."
+    trong khi flow cho "Photo taken on" - ngoi het 30 giay roi bao "Chua test"
+    trong khi picker mo binh thuong.
+    """
+    flow = _mot_step({"kind": "tap",
+                      "desc": ["Photo taken on*", "Ảnh được chụp lúc*"]})
+    assert flow.ok, flow.errors
+    sel = flow.cases[0].steps[0].selector
+    assert sel.desc == "Photo taken on*"
+    assert sel.alt == ("Ảnh được chụp lúc*",)
+    assert sel.needles == ("Photo taken on*", "Ảnh được chụp lúc*")
+
+
+def test_wait_text_nhan_nhieu_bien_the():
+    flow = _mot_step({"kind": "wait_text", "text": ["Done", "Xong"]})
+    assert flow.ok, flow.errors
+    step = flow.cases[0].steps[0]
+    assert (step.text, step.text_alt) == ("Done", ("Xong",))
+
+
+def test_mot_chuoi_van_chay_nhu_cu():
+    """Khai mot chuoi tron thi khong duoc doi hanh vi - ca tram step dang vay."""
+    flow = _mot_step({"kind": "tap", "text": "PREMIUM"})
+    assert flow.ok, flow.errors
+    sel = flow.cases[0].steps[0].selector
+    assert sel.alt == () and sel.needles == ("PREMIUM",)
+
+
+def test_type_va_key_KHONG_nhan_danh_sach():
+    """`type` go chu, `key` bam phim - chi co MOT gia tri dung.
+
+    Nhan danh sach roi lay phan tu dau la am tham bo mat phan con lai.
+    """
+    flow = _mot_step({"kind": "type", "text": ["a", "b"]})
+    assert not flow.ok
+    assert any("chỉ nhận một" in e for e in flow.errors), flow.errors
+
+
+def test_bao_loi_in_ca_hai_bien_the():
+    """Bao loi chi ra mot chuoi trong khi flow tim hai thi nguoi doc di sua
+    nham cai khong hong."""
+    from usv.device_actions import Selector
+    nhan = Selector(desc="Photo taken on*", alt=("Ảnh được chụp lúc*",)).label()
+    assert "Photo taken on*" in nhan and "Ảnh được chụp lúc*" in nhan
+
+
+def test_network_doc_state_on_off():
+    import yaml
+    # `state: off` tran -> YAML doc thanh False; "ON" co ngoac -> chuoi.
+    flow = parse(yaml.safe_load("package: com.x\ncases:\n- event: gen_fail\n  steps:\n"
+                                "  - kind: network\n    state: off\n"
+                                "  - kind: network\n    state: 'ON'\n"))
+    assert flow.ok, flow.errors
+    assert [s.text for s in flow.cases[0].steps] == ["off", "on"]
+
+
+def test_network_thieu_state_la_loi():
+    flow = parse({"package": "com.x", "cases": [
+        {"event": "gen_fail", "steps": [{"kind": "network"}]}]})
+    assert not flow.ok
+    assert "state" in flow.errors[0]

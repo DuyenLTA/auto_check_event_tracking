@@ -6,6 +6,8 @@ Ba dieu khong duoc pha, moi dieu mot test:
   - Case lai hut (step chet) -> van co mat trong report, kem ten step chet.
     Bien mat khoi report la im lang va sai.
   - 0 may / >1 may -> message doc duoc, khong phai traceback.
+  - Case cua SDK khac (event khong co trong spec dang cham) KHONG duoc chay:
+    no lai that tren may va doi trang thai cua app.
 """
 
 from __future__ import annotations
@@ -342,23 +344,25 @@ def test_chay_duoc_tren_console_cp1252(tmp_path):
     assert done.returncode == 0, done.stdout + done.stderr
     assert "--serial" in done.stdout
 
-def test_report_co_anh_va_ban_app_dang_cai(adb, tmp_path):
+def test_report_co_ban_app_va_khong_co_anh(adb, tmp_path):
     """Doi chat voi dev ma khong noi duoc da check ban nao thi moi ket luan
-    deu tra lai duoc bang 'ban do cu roi'."""
+    deu tra lai duoc bang 'ban do cu roi'. Tester bo muc anh chup 05/10/2026."""
     payload = _run(adb, SPEC_TSV, _flow(_case("rating_placement_viewed")), tmp_path)
     assert payload["app_version"] == "2.4.1 (125)"
     html = Path(payload["report"]).read_text(encoding="utf-8")
     assert "2.4.1 (125)" in html
-    assert "data:image/png;base64," in html
+    assert "data:image/png;base64," not in html
 
-def test_case_lai_hut_van_co_anh_ngay_cho_bi_ket(adb, tmp_path):
-    """Anh o dung cho lai hut la thu duy nhat noi duoc vi sao khong bam trung."""
+
+def test_case_lai_hut_ra_bang_luot_chua_xong(adb, tmp_path):
+    """Lai hut khong duoc lan vao danh sach: report chi co Khop/Sai."""
     hong = FlowCase(event="rating_placement_viewed", name="tai home",
                     steps=(Step(kind="tap",
                                 selector=Selector(resource_id="khong_co_nut_nay")),))
     payload = _run(adb, SPEC_TSV, _flow(hong), tmp_path)
     html = Path(payload["report"]).read_text(encoding="utf-8")
-    assert "lúc lái hụt" in html
+    assert "Lượt chưa xong" in html
+    assert payload["not_tested"] >= 1
 
 def test_khong_chup_duoc_thi_report_van_ra(adb, tmp_path, monkeypatch):
     async def hong(serial):
@@ -413,3 +417,52 @@ def test_case_khong_co_step_launch_thi_van_duoc_mo_lai(adb, tmp_path):
     o man nao thi chay tu man do."""
     _run(adb, SPEC_TSV, _flow(_case("rating_placement_viewed")), tmp_path)
     assert adb.calls.count("force_stop") >= 1, adb.calls
+
+
+def test_case_co_event_ngoai_spec_thi_khong_chay(adb, tmp_path):
+    """File flow gom case cua nhieu SDK; mot luot chi cham mot spec.
+
+    Chay case ngoai spec khong chi ton thoi gian: no bam nut that tren may -
+    dong popup, them widget, bam check-in - nen doi luon trang thai ma spec
+    dang cham can toi, va nhieu man chi hien mot lan moi ngay.
+    """
+    payload = _run(adb, SPEC_TSV, _flow(
+        _case("rating_placement_viewed", "tai home", {"placement_name": "home"}),
+        _case("widget_view", "popup Add Widget"),
+        _case("daily_checkin_screen_view", "popup checkin")), tmp_path)
+
+    da_chay = {row["case"] for row in payload["cases"]}
+    assert da_chay == {"tai home"}, "chi case cua spec nay duoc chay"
+    assert not any(row["element"].startswith(("widget", "daily"))
+                   for row in payload["results"]), \
+        "event ngoai spec khong duoc lot vao bang cham"
+
+
+def test_case_chon_bang_tu_khoa_keo_theo_case_tien_de():
+    """`--case` chay le mot phan flow, nhung khong duoc chay tren man sai.
+
+    Case dat `relaunch: false` chay tiep tren man cua case ngay truoc no, nen
+    chon mot minh no la lai tren man khong co that. Chon thi phai keo ca chuoi
+    ve toi case tu mo app.
+    """
+    from dataclasses import replace as _replace
+
+    from usv.event_flow_models import Reset
+
+    noi_tiep = Reset(relaunch=False)
+    cases = (
+        _case("rating_placement_viewed", "popup o home"),
+        _replace(_case("rating_star_clicked", "cham 3 sao o home"), reset=noi_tiep),
+        _replace(_case("rating_placement_viewed", "popup o man result"), reset=noi_tiep),
+    )
+
+    chon = cli_check.chon_case(cases, ("result",))
+    assert [c.name for c in chon] == ["popup o home", "cham 3 sao o home",
+                                      "popup o man result"]
+
+    # Case tu mo app thi khong keo theo gi ca.
+    assert [c.name for c in cli_check.chon_case(cases, ("popup o home",))] == ["popup o home"]
+    # Tu khoa khop nhieu case thi lay het, moi case van keo tien de cua no.
+    assert len(cli_check.chon_case(cases, ("o home",))) == 2
+    # Khong truyen gi thi giu nguyen ca flow.
+    assert cli_check.chon_case(cases, ()) == cases

@@ -15,13 +15,14 @@ import argparse
 import json
 import sys
 
-from . import confluence_client, event_spec_confluence, spec_case_rules
+from . import confluence_client, event_spec_confluence, spec_alias, spec_case_rules
 from . import spec_case_skeleton, spec_prose_sections
 
 
 def _check(path: str, url: str) -> int:
     raw = json.loads(open(path, encoding="utf-8").read())
     cases, parse_errors = spec_case_skeleton.parse(raw)
+    url, _, _ = spec_alias.resolve(url)
     _, page_html = confluence_client.fetch_page(url)
     sheet = event_spec_confluence.parse_page(page_html)
     if sheet.errors:
@@ -77,7 +78,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         if args.cmd == "dump":
-            print(spec_prose_sections.dump(args.url))
+            print(spec_prose_sections.dump(spec_alias.resolve(args.url)[0]))
             return 0
         return _check(args.cases, args.url)
     except confluence_client.ConfluenceError as err:

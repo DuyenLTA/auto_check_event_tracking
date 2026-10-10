@@ -31,3 +31,20 @@ checks:
     severity: error
     param_extra: true
     global_param_heuristic: false
+
+  # Event co ban DUNG LUC cu bam kich hoat khong (moc `@bấm` ghi ngay truoc
+  # lenh input cua buoc kich hoat trong case).
+  #
+  # Ban truoc cu bam -> FAIL_TIMING. Ban sau cu bam qua nguong -> FAIL_TIMING.
+  # click_max_ms: event bam nut. view_max_ms: event `*_view` (man hien ra).
+  # Event cho server / xu ly (report_submit, download, gen_*) khai
+  # `max_delay_ms` rieng trong case cua flow.
+  event_timing:
+    enabled: true
+    severity: error
+    click_max_ms: 1500
+    view_max_ms: 5000
+    # Buoc kich hoat la `wait_text` (moc = luc tool THAY man): tool doc man
+    # ~2.2s/lan nen thay tre hon app; cho phep event truoc moc toi seen_min_ms.
+    seen_min_ms: -3500
+    seen_max_ms: 1000

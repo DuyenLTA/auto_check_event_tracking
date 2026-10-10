@@ -28,7 +28,10 @@ Cần `CONFLUENCE_BASE_URL` + `CONFLUENCE_TOKEN` trong env. Thiếu thì workflo
 
 ## 1. Link spec
 
-`$ARGUMENTS` phải có một link Confluence (`http…`). Không có thì **dừng và hỏi** —
+`$ARGUMENTS` phải có một link Confluence (`http…`) **hoặc tên chức năng**
+(`rating`, `widget`, `daily checkin`…) — `usv-cases` phân giải tên giống
+`usv-check`, tên khớp nhiều trang thì nó dừng và in danh sách để hỏi.
+Không có gì thì **dừng và hỏi** —
 workflow cũng tự chặn, nhưng hỏi trước rẻ hơn một lượt agent chạy không.
 
 Đừng đoán link từ lượt trước: khung case sinh từ nhầm trang thì **sai im lặng** —

@@ -98,3 +98,26 @@ def la_man_quang_cao(activity: str | None) -> bool:
     """
     thap = (activity or "").casefold()
     return bool(thap) and any(m in thap for m in MAU_ACTIVITY_ADS)
+
+
+# Activity cua man paywall. Chu tren paywall (ke ca content-desc nut X - do that:
+# "Close Billing Screen") doi theo ngon ngu app, con ten activity thi khong:
+# `com.visionlab.billing.ui.VslBillingActivity` o moi thu tieng.
+# Chi xet TEN LOP (doan sau dau cham cuoi), khong xet ca duong package: app dat
+# man thuong trong package `...premium...` thi van khong phai paywall.
+MAU_ACTIVITY_PAYWALL = ("billing", "paywall", "subscription", "subscribe",
+                        "premium", "purchase")
+# Sheet mua hang cua Google Play cung ten "billing"/"purchase" nhung la man cua
+# Play, KHONG phai paywall cua app: bam X o do la huy giao dich dang mua.
+PACKAGE_KHONG_PHAI_PAYWALL = ("com.android.vending",)
+
+
+def la_man_paywall(activity: str | None) -> bool:
+    """Man dang hien co phai paywall cua app khong - xet ten activity, khong xet chu."""
+    if not activity or "/" not in activity:
+        return False
+    package, lop = activity.casefold().split("/", 1)
+    if package in PACKAGE_KHONG_PHAI_PAYWALL:
+        return False
+    ten_lop = lop.rsplit(".", 1)[-1]
+    return any(m in ten_lop for m in MAU_ACTIVITY_PAYWALL)

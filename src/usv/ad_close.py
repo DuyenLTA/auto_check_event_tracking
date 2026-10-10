@@ -68,18 +68,66 @@ def _trong_khung_ads(node: DeviceNode, theo_id: dict[str, DeviceNode]) -> bool:
     return False
 
 
+# Nut X cua paywall theo HINH chu khong theo chu: icon nho, bam duoc, khong co
+# chu, nam o dai tren cung. Do that: ImageView [34,64][166,196] tren man
+# 1080x2400, khong id, khong text - chi co content-desc "Close Billing Screen",
+# ma desc do doi theo ngon ngu app.
+X_TOI_DA_THEO_RONG = 0.2      # canh icon <= 20% be rong man
+DAI_TREN_THEO_CAO = 0.15      # mep tren nam trong 15% phia tren man
+
+
+def tim_nut_x_paywall(nodes: list[DeviceNode]) -> DeviceNode | None:
+    """Nut X cua paywall, khong phu thuoc ngon ngu. None neu chua thay.
+
+    CHI goi khi da biet dang o paywall (xet ten activity): o day khong co popup
+    nao cua app de bam nham, nen duoc nhan ca mau mo ho lan mot icon tron khong
+    ten. Ra ngoai paywall thi luat hinh dang nay bam nham nut back/menu.
+    """
+    dung_duoc = [n for n in nodes if n.visible and not n.bounds_px.empty]
+    # Con chu thi dung chu truoc - chac hon doan theo hinh.
+    for node in dung_duoc:
+        if any(_khop(gia_tri, MAU_DESC + MAU_MO_HO) for gia_tri in
+               (node.resource_id, node.content_desc, node.text)):
+            return node
+    if not dung_duoc:
+        return None
+    rong = max(n.bounds_px.right for n in dung_duoc)
+    cao = max(n.bounds_px.bottom for n in dung_duoc)
+    ung_vien = []
+    for node in dung_duoc:
+        box = node.bounds_px
+        if not node.clickable or node.text.strip():
+            continue
+        if (box.right - box.left > rong * X_TOI_DA_THEO_RONG
+                or box.bottom - box.top > rong * X_TOI_DA_THEO_RONG
+                or box.top > cao * DAI_TREN_THEO_CAO):
+            continue
+        tam_x = (box.left + box.right) / 2
+        # Gan goc tren (trai hay phai deu duoc) nhat thi la X.
+        ung_vien.append((min(tam_x, rong - tam_x) + box.top, node))
+    if not ung_vien:
+        return None
+    return min(ung_vien, key=lambda cap: cap[0])[1]
+
+
 def tim_nut_dong(nodes: list[DeviceNode], *, chi_chac: bool = False,
-                 man_ads: bool = False) -> DeviceNode | None:
+                 man_ads: bool = False,
+                 man_paywall: bool = False) -> DeviceNode | None:
     """Node dong quang cao dau tien tim duoc, hoac None neu man khong co.
 
     None KHONG phai loi: khong co quang cao chan duong la truong hop binh
     thuong nhat, va `close_ad` phai im lang di tiep luc do.
+
+    `man_paywall=True` (biet qua ten activity) thi tim X theo hinh dang, khong
+    theo chu - xem `tim_nut_x_paywall`.
 
     `chi_chac=True` bo han bac mau mo ho. Dung khi dang CHO mot man cu the
     hien ra (`wait_text`): chinh man dang cho co the co nut "Close" cua no -
     popup Add Widget la vi du - va tu bam vao do la tu tay dong cai man minh
     vua doi.
     """
+    if man_paywall:
+        return tim_nut_x_paywall(nodes)
     dung_duoc = [n for n in nodes if n.visible and not n.bounds_px.empty]
     for mau, lay in ((MAU_ID, lambda n: n.resource_id),
                      (MAU_DESC, lambda n: n.content_desc),

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from usv.ad_close import tim_nut_dong
 from usv.density import ScreenMetrics
 from usv.ui_dump import parse_dump
@@ -238,3 +240,27 @@ def test_trong_man_quang_cao_thi_nhan_nut_Close_mot_chu():
     nodes = _man(_node(desc="Close"))
     assert tim_nut_dong(nodes) is None                      # o man app: khong dong
     assert tim_nut_dong(nodes, man_ads=True) is not None    # trong man ads: dong
+
+
+# Cay UI THAT cua paywall (VslBillingActivity), 1080x2400. Nut X la ImageView
+# khong id, khong text, content-desc "Close Billing Screen" o [34,64][166,196].
+PAYWALL = (Path(__file__).parent / "fixtures" / "paywall-dump.xml").read_text()
+
+
+def _paywall(desc_x: str) -> list:
+    return parse_dump(PAYWALL.replace("Close Billing Screen", desc_x), METRICS)
+
+
+def test_paywall_tieng_nao_cung_tim_ra_nut_x():
+    """App doi ngon ngu thi desc nut X doi theo - tim theo hinh, khong theo chu."""
+    for desc in ("Close Billing Screen", "Đóng màn hình thanh toán",
+                 "請求画面を閉じる", ""):
+        node = tim_nut_dong(_paywall(desc), chi_chac=True, man_paywall=True)
+        assert node is not None, desc
+        assert (node.bounds_px.left, node.bounds_px.top) == (34, 64), desc
+
+
+def test_ngoai_paywall_khong_doan_nut_x_theo_hinh():
+    """Luat hinh dang chi dung khi biet chac dang o paywall: o man app no bam
+    nham nut back/menu."""
+    assert tim_nut_dong(_paywall("請求画面を閉じる"), chi_chac=True) is None

@@ -25,6 +25,8 @@ from usv.resources import config_dir
 MAC_DINH = {
     "event_presence": {"duplicate": True},
     "event_params": {"param_extra": True, "global_param_heuristic": False},
+    "event_timing": {"click_max_ms": 1500, "view_max_ms": 5000,
+                     "seen_min_ms": -3500, "seen_max_ms": 1000},
 }
 
 

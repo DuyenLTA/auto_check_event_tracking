@@ -1,5 +1,6 @@
 """Cua vao dong lenh cua luot cham.
 
+    usv-check --spec rating --package com.x        # ten chuc nang
     usv-check --spec <link Confluence> --package com.x
     usv-check --spec-tsv spec.tsv --package com.x --flows flows/com.x.yaml
 
@@ -18,7 +19,7 @@ import json
 import sys
 from pathlib import Path
 
-from . import cli_check, cli_spec_load
+from . import cli_check, cli_check_merge, cli_spec_load
 from .cli_device import CliError, make_client
 from .flow_yaml import Flow, FlowError, load as load_flow
 
@@ -40,13 +41,21 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="usv-check",
         description="Chấm event tracking: spec + máy thật -> report HTML.")
-    parser.add_argument("--spec", default="", help="link trang Confluence")
+    parser.add_argument("--spec", default="",
+                        help="link Confluence, hoặc tên chức năng "
+                             "(rating, widget, daily checkin)")
     parser.add_argument("--spec-tsv", default="", help="file TSV dán tay")
     parser.add_argument("--package", required=True)
     parser.add_argument("--flows", default="",
                         help="file flow YAML (mặc định flows/<package>.yaml)")
     parser.add_argument("--out", default="out", help="thư mục ghi report")
     parser.add_argument("--serial", default="", help="chọn máy khi cắm nhiều máy")
+    parser.add_argument("--case", action="append", default=[],
+                        help="chỉ chạy case có nhãn/tên event khớp chuỗi này "
+                             "(lặp được). Case tiền đề được kéo theo.")
+    parser.add_argument("--base", default="",
+                        help="stdout JSON của lượt đầy đủ trước: kết quả chạy lẻ "
+                             "--case được gộp vào đó, report ra đủ mọi event")
     return parser
 
 
@@ -75,8 +84,10 @@ def main(argv: list[str] | None = None) -> int:
         flow, flows_path = doc_flow(args.package, args.flows)
         payload = asyncio.run(cli_check.check(
             spec=spec, package=args.package, flow=flow, adb=make_client(),
-            out_dir=Path(args.out), serial=args.serial, flows_path=flows_path))
-    except (CliError, cli_spec_load.SpecLoadError) as exc:
+            out_dir=Path(args.out), serial=args.serial, flows_path=flows_path,
+            chi_case=tuple(args.case),
+            base=cli_check_merge.doc_base(Path(args.base)) if args.base else None))
+    except (CliError, cli_spec_load.SpecLoadError, cli_check_merge.MergeError) as exc:
         cli_check.say(f"Lỗi: {exc}")
         return 1
     print(json.dumps(payload, ensure_ascii=False))

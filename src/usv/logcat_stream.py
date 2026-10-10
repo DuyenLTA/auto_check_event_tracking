@@ -40,10 +40,18 @@ LAUNCH_SETTLE = 1.5
 STOP_TIMEOUT = 5.0
 
 
-async def enable_fa(client, serial: str) -> bool:
+# Che do debug cua Firebase Analytics: batch gui NGAY thay vi doi vai phut,
+# nen payload upload (co kieu string_value/int_value cua tung param) nam gon
+# trong phien ghi. Khong co no thi spec String ma app gui so mai NOT_VERIFIABLE.
+FA_DEBUG_PROP = "debug.firebase.analytics.app"
+
+
+async def enable_fa(client, serial: str, package: str = "") -> bool:
     """Bat log Firebase. Tra True neu doc lai dung VERBOSE."""
     await client.setprop(serial, FA_PROP, VERBOSE)
     await client.setprop(serial, FA_PROP_ALT, VERBOSE)
+    if package:
+        await client.setprop(serial, FA_DEBUG_PROP, package)
     got = await client.getprop(serial, FA_PROP)
     if got.strip().upper() != VERBOSE:
         log.warning("setprop %s khong an: doc lai duoc %r", FA_PROP, got)
@@ -62,7 +70,7 @@ async def start(client, serial: str, package: str, *,
     3. mo stream - phai truoc khi app ban event dau tien
     4. mo app   - de bat duoc ca first_open / session_start / app_shortcut
     """
-    await enable_fa(client, serial)
+    await enable_fa(client, serial, package)
     await client.logcat_clear(serial)
     process = await client.logcat_spawn(serial, TAGS)
     recording = Recording(serial=serial, package=package, process=process,

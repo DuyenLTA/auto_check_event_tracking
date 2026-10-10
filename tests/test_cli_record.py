@@ -60,6 +60,9 @@ class FakeAdb:
     async def input_text(self, serial, text):
         self.keys.append(f"type:{text}")
 
+    async def input_swipe(self, serial, x1, y1, x2, y2, duration_ms=300):
+        self.keys.append(f"swipe:{x1},{y1}->{x2},{y2}/{duration_ms}")
+
     async def force_stop(self, serial, package):
         self.keys.append("force_stop")
 
@@ -118,6 +121,13 @@ def test_tap_bam_that_va_ghi_lai_buoc(adb, phien):
     assert adb.taps == [(200.0, 300.0)]
     steps = json.loads((phien / "record-com.x.json").read_text(encoding="utf-8"))
     assert steps["steps"] == [{"kind": "tap", "resource_id": "btnStart", "index": 0}]
+
+
+def test_long_press_nhan_giu_tai_cho_va_ghi_buoc(adb, phien):
+    assert chay(["--package", "com.x", "long-press", "--id", "btnStart"], phien) == 0
+    assert adb.keys == ["swipe:200.0,300.0->200.0,300.0/1200"]
+    steps = json.loads((phien / "record-com.x.json").read_text(encoding="utf-8"))
+    assert steps["steps"] == [{"kind": "long_press", "resource_id": "btnStart", "index": 0}]
 
 
 def test_tap_khong_thay_node_thi_khong_ghi_buoc_ma(adb, phien, capsys):

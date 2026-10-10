@@ -22,12 +22,12 @@ import sys
 from pathlib import Path
 
 from .ad_close import tim_nut_dong
-from .adb_foreground_parse import la_man_quang_cao
+from .flow_screen import man_chan
 from .quyen_he_thong import tim_nut_cho_phep
 from .adb_parsers import AdbError
 from .cli_device import CliError, make_client, pick_serial
 from .density import ScreenMetrics
-from .device_actions import Selector, swipe, tap
+from .device_actions import Selector, long_press, swipe, tap
 from .flow_yaml import FlowError
 from .record_session import doc_phien, ghi_phien, luu, say, session_path
 from .ui_dump import parse_dump
@@ -101,8 +101,9 @@ async def lam(args) -> tuple[int, list[dict]]:
     if args.lenh == "close-ad":
         # Trong man quang cao thi "Close" mot chu chac chan la nut dong quang
         # cao; o man app thi chinh no cung la nut dong popup cua app.
-        man_ads = la_man_quang_cao(await adb.top_activity(serial))
-        node = tim_nut_dong(await _nodes(adb, serial), man_ads=man_ads)
+        # Paywall nhan qua ten activity, X tim theo hinh: moi thu tieng.
+        node = tim_nut_dong(await _nodes(adb, serial),
+                            **await man_chan(adb, serial))
         if node is None:
             say("Không thấy nút đóng quảng cáo nào — màn đang sạch.")
         else:
@@ -126,6 +127,13 @@ async def lam(args) -> tuple[int, list[dict]]:
         return 0, [_them_tuy_chon({"kind": "tap", chon.kind: chon.needle,
                                "index": chon.index}, args)]
 
+    if args.lenh == "long-press":
+        # Man chi vao che do chon bang long-click (History "X selected").
+        node = await long_press(adb, serial, await _nodes(adb, serial), chon)
+        say(f"Đã nhấn giữ {node.label}")
+        return 0, [_them_tuy_chon({"kind": "long_press", chon.kind: chon.needle,
+                                   "index": chon.index}, args)]
+
     node = await swipe(adb, serial, await _nodes(adb, serial), chon, args.huong)
     say(f"Đã quét {args.huong} trên {node.label}")
     return 0, [_them_tuy_chon({"kind": "swipe", chon.kind: chon.needle,
@@ -148,7 +156,7 @@ def build_parser() -> argparse.ArgumentParser:
                              "id/chữ/desc")
     parser.add_argument("--index", type=int, default=0,
                         help="node thứ mấy trong số các node khớp")
-    parser.add_argument("lenh", choices=["dump", "tap", "swipe", "back", "launch",
+    parser.add_argument("lenh", choices=["dump", "tap", "long-press", "swipe", "back", "launch",
                                          "type", "wait", "wait-text", "close-ad", "allow",
                                          "show", "save", "drop"])
     parser.add_argument("giay_hoac_chu", nargs="?", default="")

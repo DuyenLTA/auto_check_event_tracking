@@ -146,6 +146,12 @@ class FakeAdb:
 
     async def shell_log(self, serial, tag, message):
         self.marks.append(message)
+        if message.startswith("@bấm "):
+            # Moc cu bam nam GIUA moc case (.000) va event (.500): app ban
+            # 300 ms sau cu bam - dung thu tu that.
+            self.process.stdout.queue.append(
+                f"09-08 15:00:{self.step:02d}.200 I/USV_MARK( 9): {message}\n".encode())
+            return
         self.step += 1
         stamp = f"09-08 15:00:{self.step:02d}"
         self.process.stdout.queue.append(

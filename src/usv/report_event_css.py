@@ -63,29 +63,6 @@ CSS = """<style>
     letter-spacing:0.01em;text-wrap:balance;}
   .meta{margin:0;font-family:'JetBrains Mono',monospace;font-size:0.78rem;
     color:var(--ink-soft);}
-  .scorecard{background:var(--surface);border:1px solid var(--line);
-    border-radius:12px;padding:1.25rem 1.5rem;display:flex;
-    flex-direction:column;gap:0.6rem;}
-  .score-row{display:flex;align-items:baseline;gap:0.4rem;flex-wrap:wrap;}
-  .score-num{font-family:'Manrope',sans-serif;font-weight:800;font-size:2.6rem;
-    color:var(--pass);line-height:1;}
-  .score-den{font-family:'Manrope',sans-serif;font-weight:700;font-size:1.3rem;
-    color:var(--ink-soft);}
-  .score-bar{height:6px;border-radius:99px;background:var(--surface-alt);
-    overflow:hidden;}
-  .score-bar-fill{height:100%;border-radius:99px;background:var(--pass);}
-  .tallies,.section-chips{display:flex;flex-wrap:wrap;gap:0.5rem;}
-  .tallies{margin-top:0.2rem;}
-  .section-chip{font-family:'JetBrains Mono',monospace;font-size:0.74rem;
-    padding:0.28rem 0.6rem;border-radius:7px;border:1px solid var(--line);
-    background:var(--surface);color:var(--ink-soft);}
-  .section-chip b{font-weight:600;}
-  .section-chip.pass{border-color:transparent;background:var(--pass-soft);
-    color:var(--pass);}
-  .section-chip.pending{border-color:transparent;background:var(--pending-soft);
-    color:var(--pending);}
-  .section-chip.fail{border-color:transparent;background:var(--fail-soft);
-    color:var(--fail);}
   .callout{border:1px solid var(--line);border-left:3px solid var(--pending);
     background:var(--pending-soft);border-radius:0 10px 10px 0;
     padding:1rem 1.25rem;}
@@ -97,44 +74,10 @@ CSS = """<style>
   .chip{font-family:'JetBrains Mono',monospace;font-size:0.76rem;
     background:var(--surface);border:1px solid var(--line);border-radius:6px;
     padding:0.3rem 0.55rem;color:var(--ink-soft);}
-  .sections{display:flex;flex-direction:column;gap:1rem;}
-  details.section{background:var(--surface);border:1px solid var(--line);
-    border-radius:12px;overflow:hidden;}
-  summary{list-style:none;cursor:pointer;display:flex;align-items:center;
-    justify-content:space-between;gap:1rem;padding:0.9rem 1.25rem;
-    flex-wrap:wrap;}
-  summary::-webkit-details-marker{display:none;}
-  summary::before{content:'\\25B8';display:inline-block;margin-right:0.6rem;
-    color:var(--ink-soft);transition:transform 0.15s ease;}
-  details[open] summary::before{transform:rotate(90deg);}
-  .section-title{font-family:'Manrope',sans-serif;font-weight:700;
-    font-size:1.15rem;flex:1;}
-  .section-frac{font-family:'JetBrains Mono',monospace;font-size:0.72rem;
-    font-weight:600;padding:0.18rem 0.55rem;border-radius:20px;}
-  .section-frac.pass{background:var(--pass-soft);color:var(--pass);}
-  .section-frac.pending{background:var(--pending-soft);color:var(--pending);}
-  .section-frac.fail{background:var(--fail-soft);color:var(--fail);}
-  .table-scroll{overflow-x:auto;border-top:1px solid var(--line);}
-  table{width:100%;border-collapse:collapse;font-size:0.88rem;min-width:720px;}
-  thead th{text-align:left;font-family:'JetBrains Mono',monospace;
-    font-size:0.68rem;text-transform:uppercase;letter-spacing:0.07em;
-    color:var(--ink-soft);padding:0.6rem 1.1rem;
-    border-bottom:1px solid var(--line);background:var(--surface-alt);}
-  tbody td{padding:0.6rem 1.1rem;border-bottom:1px solid var(--line);
-    vertical-align:top;}
-  tbody tr:last-child td{border-bottom:none;}
-  tbody tr.row-fail td:first-child{box-shadow:inset 3px 0 0 var(--fail);}
-  .cell-mono{font-family:'JetBrains Mono',monospace;font-size:0.83rem;
-    color:var(--ink-soft);}
-  .cell-want{max-width:22ch;}
   /* "x5" = nam case cho ra dong giong het nhau, da gop lai lam mot. */
   .times{display:inline-block;margin-left:0.4rem;padding:0.05rem 0.3rem;
     border-radius:0.25rem;background:var(--surface-alt);border:1px solid var(--line);
     font-size:0.72rem;font-weight:600;color:var(--ink-soft);}
-  .cell-ev code{font-family:'JetBrains Mono',monospace;font-size:0.83rem;
-    color:var(--ink);}
-  .trig{display:block;font-size:0.76rem;color:var(--ink-soft);
-    margin-top:0.15rem;max-width:24ch;}
   .status{display:inline-flex;align-items:center;gap:0.35rem;
     font-family:'JetBrains Mono',monospace;font-size:0.72rem;font-weight:600;
     padding:0.2rem 0.55rem;border-radius:20px;white-space:nowrap;}
@@ -145,7 +88,8 @@ CSS = """<style>
     border:1px solid var(--line);}
   .status .dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
   .note{margin-top:0.4rem;font-family:'JetBrains Mono',monospace;
-    font-size:0.76rem;color:var(--ink-soft);max-width:38ch;}
+    font-size:0.76rem;color:var(--ink-soft);max-width:70ch;
+    white-space:pre-wrap;overflow-wrap:anywhere;}
   /* Ghi chu triage: PHAI trong khac han phan tool tu do duoc. Doc chung mot
      kieu chu thi nguoi doc tuong tool da xac minh, ma day la suy luan. */
   .triage{margin-top:0.5rem;padding:0.5rem 0.65rem;max-width:42ch;
@@ -159,14 +103,4 @@ CSS = """<style>
   .triage p{margin:0.3rem 0 0;font-size:0.78rem;color:var(--ink);}
   .triage .ev{font-family:'JetBrains Mono',monospace;font-size:0.72rem;
     color:var(--ink-soft);}
-  .shots{margin-top:2rem;}
-  .shots-note{font-size:0.78rem;color:var(--ink-soft);max-width:60ch;}
-  .shots-case{margin-top:1.2rem;}
-  .shots-case h3{font-size:0.85rem;margin:0 0 0.5rem;}
-  .shots-row{display:flex;flex-wrap:wrap;gap:0.9rem;}
-  /* Anh may that cao 2280px - khong ghim chieu rong thi mot tam an het trang. */
-  .shot{margin:0;max-width:260px;}
-  .shot img{width:100%;height:auto;border-radius:8px;
-    border:1px solid var(--line,#ddd);display:block;}
-  .shot figcaption{font-size:0.72rem;color:var(--ink-soft);margin-top:0.3rem;}
 </style>"""

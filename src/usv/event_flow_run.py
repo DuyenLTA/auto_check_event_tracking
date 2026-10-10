@@ -24,14 +24,16 @@ from dataclasses import dataclass, field
 
 from .ad_close import tim_nut_dong, tim_nut_dong_popup
 from .adb_parsers import AdbError
-from .device_actions import swipe, tap
+from .device_actions import find, long_press, swipe, tap
 from .event_flow_models import Flow, FlowCase, Step
 from .event_flow_reset import LAUNCH_SETTLE, prepare
-from .event_window import mark_label
+from .event_flow_watch_ads import mua_sub_neu_chua_co, xem_ads
+from .event_window import TAP_PREFIX, mark_label
 from .logcat_stream import Recording, mark
 from .models import DeviceNode
 from .flow_screen import (bam_node as _bam_node, cho_nut,
-                          dang_trong_quang_cao, nodes, wait_text)
+                          dong_man_chan, man_chan, nodes,
+                          wait_text)
 from .quyen_he_thong import tim_nut_cho_phep
 from .ui_cache import CayUI
 
@@ -70,6 +72,9 @@ class CaseResult:
                 "steps_done": self.steps_done, "notes": self.notes}
 
 
+# Wi-Fi bat lai mat vai giay moi co IP; tat thi app thay mat mang gan nhu ngay.
+NETWORK_SETTLE = 3.0
+
 async def _dong_popup(client, serial: str, metrics, neo: str,
                       cay: CayUI | None) -> None:
     """Bam X cua popup mang chu `neo`, kiem lai, con thi don lop che roi bam lai.
@@ -95,9 +100,8 @@ async def _dong_popup(client, serial: str, metrics, neo: str,
         # Bam roi ma van con -> co lop che. Don no truoc, dung bam lai vo ich.
         nut = None if da_bam else tim_nut_dong_popup(tren_man, neo)
         if nut is None:
-            nut = tim_nut_dong(
-                tren_man, chi_chac=True,
-                man_ads=await dang_trong_quang_cao(client, serial))
+            nut = tim_nut_dong(tren_man, chi_chac=True,
+                               **await man_chan(client, serial))
             da_bam = False              # don xong thi thu lai nut cua popup
             if nut is None:
                 raise AdbError(
@@ -123,11 +127,18 @@ async def _don_quang_cao(client, serial: str, metrics, cay: CayUI | None) -> boo
     app, nut "Close" mot chu la nut dong popup cua app - dong nham no la tu tay
     tat cai man dang can do.
     """
+    man = await man_chan(client, serial)
     tren_man = await nodes(client, serial, metrics, cay)
-    nut = tim_nut_dong(tren_man, chi_chac=True,
-                       man_ads=await dang_trong_quang_cao(client, serial))
+    nut = tim_nut_dong(tren_man, chi_chac=True, **man)
     if nut is None:
-        return False
+        if not (man["man_ads"] or man["man_paywall"]):
+            return False
+        # Dung trong man quang cao / paywall ma cay UI khong co nut dong: giao
+        # cho `dong_man_chan` - no bam BACK khi interstitial ve nut X ngoai cay
+        # accessibility, va dong ca paywall hay bat len ngay sau. Do that tren
+        # AIP922 khi het sub: interstitial chen sau gan nhu moi lan mo the.
+        await dong_man_chan(client, serial, metrics, cay, AD_SETTLE)
+        return True
     log.info("Don quang cao chan duong bang %s", nut.label)
     await _bam_node(client, serial, nut)
     if cay is not None:
@@ -136,11 +147,41 @@ async def _don_quang_cao(client, serial: str, metrics, cay: CayUI | None) -> boo
     return True
 
 
+async def _khong_moc() -> None:
+    return None
+
+
+async def _run_cong(client, serial: str, metrics, step: Step,
+                    cay: CayUI | None, truoc_bam) -> str:
+    """Step qua cong mo khoa: xem ads / mua sub. Moc cu kich hoat: ngay truoc
+    cu dong ad cuoi (watch_ads), hoac sau khi mua xong (buy_sub)."""
+    cay = cay if cay is not None else CayUI()
+    if step.kind == "buy_sub":
+        duong = await mua_sub_neu_chua_co(client, serial, metrics, cay)
+        await truoc_bam()
+        return duong
+    # So ad do Remote Config quyet, khong viet cung trong flow.
+    return await xem_ads(client, serial, metrics, (step.text, *step.text_alt), cay,
+                         de_lai_cuoi=step.leave_last, truoc_dong_cuoi=truoc_bam)
+
+
 async def run_step(client, serial: str, metrics, package: str, step: Step,
-                   cay: CayUI | None = None) -> None:
-    """Chay mot step. That bai -> AdbError co message noi ro sai o dau."""
+                   cay: CayUI | None = None, truoc_bam=None) -> str:
+    """Chay mot step. That bai -> AdbError co message noi ro sai o dau.
+
+    Tra chuoi mo ta duong da di khi step tu quyet (vd `watch_ads` xem may ad,
+    co phai mua sub khong) - ghi vao notes cua case. Con lai tra "".
+
+    `truoc_bam`: coroutine goi NGAY TRUOC lenh input (sau khi da tim xong
+    node) - ghi moc cu bam kich hoat. Goi sau `uiautomator dump` chu khong
+    truoc ca step: dump mat ~2.2s, moc dat truoc dump thi do tre lech 2s.
+    """
+    truoc_bam = truoc_bam or _khong_moc
+    if step.kind in {"watch_ads", "buy_sub"}:
+        return await _run_cong(client, serial, metrics, step, cay, truoc_bam)
     if step.kind == "launch":
         await client.force_stop(serial, package)
+        await truoc_bam()
         await client.launch(serial, package)
         await asyncio.sleep(LAUNCH_SETTLE)
         if cay is not None:
@@ -150,6 +191,7 @@ async def run_step(client, serial: str, metrics, package: str, step: Step,
         await asyncio.sleep(max(0.0, step.seconds))
         return
     if step.kind == "key":
+        await truoc_bam()
         await client.input_keyevent(serial, step.text)
         if cay is not None:
             cay.bo()
@@ -179,9 +221,16 @@ async def run_step(client, serial: str, metrics, package: str, step: Step,
         await _dong_popup(client, serial, metrics, step.text, cay)
         return
 
+    if step.kind == "network":
+        await truoc_bam()
+        await client.set_network(serial, step.text == "on")
+        await asyncio.sleep(NETWORK_SETTLE)
+        return
+
     if step.kind == "intent":
         # Mo thang mot man bang intent. Man Rating o app shortcut khong co nut
         # nao trong app dan sang - day la duong duy nhat toi no.
+        await truoc_bam()
         await client.start_intent(serial, step.text, step.component)
         await asyncio.sleep(LAUNCH_SETTLE)
         if cay is not None:
@@ -189,10 +238,14 @@ async def run_step(client, serial: str, metrics, package: str, step: Step,
         return
 
     if step.kind == "wait_text":
-        if not await wait_text(client, serial, metrics, step.text,
-                               step.timeout, cay):
+        cho = (step.text, *step.text_alt)
+        if not await wait_text(client, serial, metrics, cho, step.timeout, cay):
+            ten = " | ".join(repr(x) for x in cho)
             raise AdbError(
-                f"Chờ {step.text!r} xuất hiện trong {step.timeout:g}s mà không thấy.")
+                f"Chờ {ten} xuất hiện trong {step.timeout:g}s mà không thấy.")
+        # Buoc kich hoat la `wait_text`: moc = luc tool THAY man hien ra (cham
+        # event *_view). Thay tre hon app ve man ~1 lan dump.
+        await truoc_bam()
         return
     if step.kind == "allow":
         # Dialog quyen do he thong ve, nam DE tren app - moi selector cua app
@@ -218,24 +271,17 @@ async def run_step(client, serial: str, metrics, package: str, step: Step,
         # dat nut dong trong WebView khong co resource_id nao, nen luat "phai
         # co to tien la khung ads" khong bat duoc; do duoc khi di do placement
         # `result`, phai xem ba quang cao thuong moi gen duoc anh.
-        man_ads = await dang_trong_quang_cao(client, serial)
-        # Ngoai man quang cao thi goi y NGUYEN BAN `tim_nut_dong` - de cho
-        # duong tim nut khong doi gi so voi truoc, va de test thay the duoc no.
-        tim = (lambda ds: tim_nut_dong(ds, man_ads=True)) if man_ads \
-            else tim_nut_dong
-        node = await cho_nut(client, serial, metrics, cay, step.timeout, tim)
-        if node is not None:
-            await _bam_node(client, serial, node)
-            log.info("Da dong quang cao bang %s", node.label)
-            if cay is not None:
-                cay.bo()
-            await asyncio.sleep(AD_SETTLE)
+        # Paywall nhan ra qua ten activity, X tim theo hinh - chay moi thu
+        # tieng. Xem `dong_man_chan`.
+        await dong_man_chan(client, serial, metrics, cay, step.timeout)
         return
 
     if step.kind == "tap":
         try:
-            await tap(client, serial, await nodes(client, serial, metrics, cay),
-                      step.selector)
+            tren_man = await nodes(client, serial, metrics, cay)
+            find(tren_man, step.selector)       # khong thay -> AdbError, chua ghi moc
+            await truoc_bam()
+            await tap(client, serial, tren_man, step.selector)
         except AdbError:
             # Khong thay element: truoc khi bao hut, thu don quang cao chan
             # duong roi bam lai MOT lan. App quang cao day thi lop chen co the
@@ -244,14 +290,26 @@ async def run_step(client, serial: str, metrics, package: str, step: Step,
             # flow tu nho chen `close_ad` vao dung cho.
             if not await _don_quang_cao(client, serial, metrics, cay):
                 raise
-            await tap(client, serial, await nodes(client, serial, metrics, cay),
-                      step.selector)
+            tren_man = await nodes(client, serial, metrics, cay)
+            find(tren_man, step.selector)
+            await truoc_bam()
+            await tap(client, serial, tren_man, step.selector)
         if cay is not None:
             cay.bo()          # da bam -> man doi, cay vua doc thanh qua khu
         return
+    if step.kind == "long_press":
+        tren_man = await nodes(client, serial, metrics, cay)
+        find(tren_man, step.selector)
+        await truoc_bam()
+        await long_press(client, serial, tren_man, step.selector)
+        if cay is not None:
+            cay.bo()
+        return
     if step.kind == "swipe":
-        await swipe(client, serial, await nodes(client, serial, metrics, cay),
-                    step.selector, step.text or "up")
+        tren_man = await nodes(client, serial, metrics, cay)
+        find(tren_man, step.selector)
+        await truoc_bam()
+        await swipe(client, serial, tren_man, step.selector, step.text or "up")
         if cay is not None:
             cay.bo()
         return
@@ -281,11 +339,19 @@ async def run_case(client, serial: str, metrics, package: str,
 
     cay = CayUI()
     cuoi = len(case.steps) - 1
+    kich_hoat = case.trigger_index
     for order, step in enumerate(case.steps):
         if on_shot is not None and order == cuoi:
             await on_shot("trước bước cuối")
+
+        async def ghi_moc_bam(step=step) -> None:
+            await mark(client, recording, TAP_PREFIX + step.label())
+
         try:
-            await run_step(client, serial, metrics, package, step, cay)
+            duong = await run_step(client, serial, metrics, package, step, cay,
+                                   truoc_bam=ghi_moc_bam if order == kich_hoat else None)
+            if duong:
+                result.notes.append(f"`{step.label()}`: {duong}")
         except AdbError as exc:
             if step.optional:
                 # Man dong (quang cao, popup) luc co luc khong. Bo qua va di

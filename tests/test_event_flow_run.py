@@ -93,7 +93,9 @@ def test_case_chay_duoc_thi_chen_moc_va_chay_het_step(recording):
     assert result.status == "ok"
     assert result.steps_done == 1
     assert client.taps == 1
-    assert client.marks == [mark_label("rating_placement_viewed", "rating tai home")]
+    # Moc case truoc, roi moc cu bam ngay truoc lenh tap cua buoc kich hoat.
+    assert client.marks == [mark_label("rating_placement_viewed", "rating tai home"),
+                            "@bấm tap resource_id='btnHome'"]
 
 
 def test_moc_mang_NHAN_CASE_de_phan_biet_nhieu_case_cung_event(recording):
@@ -103,7 +105,7 @@ def test_moc_mang_NHAN_CASE_de_phan_biet_nhieu_case_cung_event(recording):
         run(run_case(client, "S1", METRICS, "com.x", recording,
                      _case(name=f"rating tai {place}",
                            expect_params={"placement_name": place})))
-    assert client.marks == [
+    assert [m for m in client.marks if not m.startswith("@bấm ")] == [
         mark_label("rating_placement_viewed", "rating tai home"),
         mark_label("rating_placement_viewed", "rating tai result"),
     ]
@@ -296,8 +298,8 @@ def test_wait_text_dem_bang_dong_ho_that_khong_tru_dan_theo_POLL(recording, monk
 def test_close_ad_bam_dung_nut_dong_va_cho_man_lang(recording, monkeypatch):
     client = FakeClient()
     case = _case(steps=(Step(kind="close_ad"),))
-    monkeypatch.setattr("usv.event_flow_run.tim_nut_dong",
-                        lambda nodes: nodes[-1])
+    monkeypatch.setattr("usv.flow_screen.tim_nut_dong",
+                        lambda nodes, **_: nodes[-1])
     result = run(run_case(client, "S1", METRICS, "com.x", recording, case))
     assert result.status == "ok"
     assert client.taps == 1
@@ -564,6 +566,39 @@ def test_tap_don_quang_cao_chan_duong_roi_bam_lai(recording):
     assert client.taps_at == [(940.0, 140.0), (200.0, 300.0)], client.taps_at
 
 
+def test_tap_bam_back_khi_interstitial_khong_co_nut_dong_trong_cay(recording):
+    """Interstitial AdMob ve nut X ngoai cay accessibility: tap hut thi phai
+    bam BACK de thoat quang cao roi bam lai, khong bao hut ca case."""
+    from usv.event_flow_models import Step
+
+    TRONG = ("<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>"
+             "<hierarchy rotation=\"0\"><node index=\"0\" text=\"\""
+             " resource-id=\"\" class=\"android.webkit.WebView\" package=\"com.x\""
+             " content-desc=\"\" clickable=\"true\" enabled=\"true\""
+             " visible-to-user=\"true\" bounds=\"[0,0][1080,2400]\" /></hierarchy>")
+
+    class Adb(FakeClient):
+        def __init__(self):
+            super().__init__()
+            self.keys = []
+
+        async def dump_ui(self, serial):
+            return DUMP if self.keys else TRONG
+
+        async def top_activity(self, serial):
+            return ("com.x/.MainActivity" if self.keys
+                    else "com.x/com.google.android.gms.ads.AdActivity")
+
+        async def input_keyevent(self, serial, name):
+            self.keys.append(name)
+
+    client = Adb()
+    case = _case(steps=(Step(kind="tap", selector=Selector(resource_id="btnHome")),))
+    result = run(run_case(client, "S1", METRICS, "com.x", recording, case))
+    assert result.status == "ok", result.reason
+    assert client.keys == ["KEYCODE_BACK"]
+
+
 def test_tap_van_bao_hut_khi_khong_co_quang_cao_nao(recording):
     """Don quang cao khong duoc bien mot buoc hut thanh im lang: khong co gi de
     don thi van phai bao `not_tested` kem ten step chet."""
@@ -574,3 +609,149 @@ def test_tap_van_bao_hut_khi_khong_co_quang_cao_nao(recording):
     result = run(run_case(client, "S1", METRICS, "com.x", recording, case))
     assert result.status == "not_tested"
     assert "khong_co" in result.reason
+
+
+class _PaywallAdb(FakeClient):
+    """Paywall voi nut X bam SOM thi khong an: `bam_an_tu` = cu bam thu may
+    moi thoat duoc. None = bam bao nhieu cung khong thoat."""
+
+    def __init__(self, bam_an_tu):
+        super().__init__()
+        self.bam_an_tu = bam_an_tu
+        from pathlib import Path
+        self.paywall = (Path(__file__).parent / "fixtures" /
+                        "paywall-dump.xml").read_text().replace(
+            "Close Billing Screen", "請求画面を閉じる")
+
+    def _con_paywall(self):
+        return self.bam_an_tu is None or self.taps < self.bam_an_tu
+
+    async def top_activity(self, serial):
+        if self._con_paywall():
+            return "com.x/com.visionlab.billing.ui.VslBillingActivity"
+        return "com.x/.ui.MainActivity"
+
+    async def dump_ui(self, serial):
+        return self.paywall if self._con_paywall() else DUMP
+
+
+def _nhanh(monkeypatch, cho_x=0.3):
+    from usv import flow_screen
+    monkeypatch.setattr(flow_screen, "POLL", 0.0)
+    monkeypatch.setattr(flow_screen, "DONG_SETTLE", 0.0)
+    monkeypatch.setattr(flow_screen, "PAYWALL_CHO_X", cho_x)
+
+
+def test_close_ad_paywall_x_hien_tre_thi_bam_lai_toi_khi_thoat(recording,
+                                                              monkeypatch):
+    """X hien tre vai giay: cu bam dau khong an, phai kiem da thoat paywall
+    chua roi bam lai - du `close_ad` khai timeout 0."""
+    _nhanh(monkeypatch, cho_x=5)
+    client = _PaywallAdb(bam_an_tu=3)
+    case = _case(steps=(Step(kind="close_ad", timeout=0),))
+    result = run(run_case(client, "S1", METRICS, "com.x", recording, case))
+    assert result.status == "ok", result.reason
+    assert client.taps == 3
+
+
+def test_close_ad_ket_paywall_thi_bao_ro_tai_cho(recording, monkeypatch):
+    _nhanh(monkeypatch)
+    client = _PaywallAdb(bam_an_tu=None)
+    case = _case(steps=(Step(kind="close_ad", timeout=0),))
+    result = run(run_case(client, "S1", METRICS, "com.x", recording, case))
+    assert result.status == "not_tested"
+    assert "Kẹt ở paywall" in result.reason
+
+
+def test_wait_text_don_paywall_tieng_la_roi_thay_chu(monkeypatch):
+    from usv import flow_screen
+    _nhanh(monkeypatch, cho_x=5)
+    client = _PaywallAdb(bam_an_tu=2)
+    thay = run(flow_screen.wait_text(client, "S1", METRICS, "Home", 0.2))
+    assert thay is True
+    assert client.taps == 2
+
+
+class _InterstitialAdb(FakeClient):
+    """Interstitial AdMob: cay UI khong co nut dong nao (do that). `back_an_tu`
+    = lan BACK thu may moi thoat; None = BACK khong an."""
+
+    def __init__(self, back_an_tu):
+        super().__init__()
+        self.back_an_tu = back_an_tu
+        self.backs = 0
+
+    def _con_ads(self):
+        return self.back_an_tu is None or self.backs < self.back_an_tu
+
+    async def top_activity(self, serial):
+        if self._con_ads():
+            return "com.x/com.google.android.gms.ads.AdActivity"
+        return "com.x/.ui.MainActivity"
+
+    async def input_keyevent(self, serial, name):
+        await super().input_keyevent(serial, name)
+        if name == "KEYCODE_BACK":
+            self.backs += 1
+
+    async def dump_ui(self, serial):
+        # DUMP chi co nut Home cua app - khong co nut dong quang cao nao.
+        return DUMP
+
+
+def _nhanh_ads(monkeypatch, cho=0.3):
+    from usv import flow_screen
+    _nhanh(monkeypatch)
+    monkeypatch.setattr(flow_screen, "QUANG_CAO_CHO", cho)
+
+
+def test_close_ad_interstitial_khong_nut_dong_thi_bam_back(recording,
+                                                           monkeypatch):
+    """BACK som trong luc dem nguoc khong an: bam lai toi khi ra khoi
+    AdActivity, du `close_ad` khai timeout 0."""
+    _nhanh_ads(monkeypatch, cho=5)
+    client = _InterstitialAdb(back_an_tu=2)
+    case = _case(steps=(Step(kind="close_ad", timeout=0),))
+    result = run(run_case(client, "S1", METRICS, "com.x", recording, case))
+    assert result.status == "ok", result.reason
+    assert client.backs == 2
+    assert client.taps == 0
+
+
+def test_close_ad_ket_interstitial_thi_bao_ro_tai_cho(recording, monkeypatch):
+    _nhanh_ads(monkeypatch)
+    client = _InterstitialAdb(back_an_tu=None)
+    case = _case(steps=(Step(kind="close_ad", timeout=0),))
+    result = run(run_case(client, "S1", METRICS, "com.x", recording, case))
+    assert result.status == "not_tested"
+    assert "Kẹt ở quảng cáo" in result.reason
+
+
+def test_close_ad_man_app_khong_bao_gio_bam_back(recording, monkeypatch):
+    """O man app BACK la lui man / thoat app - tuyet doi khong bam."""
+    _nhanh_ads(monkeypatch)
+    client = FakeClient()
+    case = _case(steps=(Step(kind="close_ad", timeout=0.2),))
+    result = run(run_case(client, "S1", METRICS, "com.x", recording, case))
+    assert result.status == "ok", result.reason
+    assert "key:KEYCODE_BACK" not in client.log
+
+
+def test_buoc_network_tat_mang_that(recording):
+    """GEN-04: tat mang luc dang gen - step `network` goi xuong adb."""
+    from usv.event_flow_models import Step
+
+    class Adb(FakeClient):
+        def __init__(self):
+            super().__init__()
+            self.network = []
+
+        async def set_network(self, serial, on):
+            self.network.append(on)
+
+    client = Adb()
+    case = _case(steps=(Step(kind="network", text="off"),
+                        Step(kind="network", text="on")))
+    result = run(run_case(client, "S1", METRICS, "com.x", recording, case))
+    assert result.status == "ok", result.reason
+    assert client.network == [False, True]
