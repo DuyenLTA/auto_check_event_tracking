@@ -76,7 +76,7 @@ class CaseResult:
 NETWORK_SETTLE = 3.0
 
 async def _dong_popup(client, serial: str, metrics, neo: str,
-                      cay: CayUI | None) -> None:
+                      cay: CayUI | None, truoc_bam=None) -> None:
     """Bam X cua popup mang chu `neo`, kiem lai, con thi don lop che roi bam lai.
 
     Bam mot phat roi tin la xong thi hong: nut X co that va tim dung, nhung
@@ -84,6 +84,10 @@ async def _dong_popup(client, serial: str, metrics, neo: str,
     that, anh chup luc lai hut cho thay popup van nguyen sau khi "da bam".
     Nen phai doc lai man: popup con thi don lop che (chi mau CHAC, khong dong
     nham popup khac) roi bam lai.
+
+    `truoc_bam` goi ngay truoc moi cu bam vao nut X cua CHINH popup: popup ke
+    tiep (vd Check-In nam duoi Add Widget) hien dung luc nay, nen day la moc
+    cua event `*_view` cua no. Bam lai thi ghi moc lai - bo cham lay moc cuoi.
     """
     thap = neo.strip().casefold()
 
@@ -109,6 +113,8 @@ async def _dong_popup(client, serial: str, metrics, neo: str,
                     "đóng nào dùng được trên màn.")
         else:
             da_bam = True
+            if truoc_bam is not None:
+                await truoc_bam()
         await _bam_node(client, serial, nut)
         if cay is not None:
             cay.bo()
@@ -218,7 +224,7 @@ async def run_step(client, serial: str, metrics, package: str, step: Step,
                                cay, don_man_chan=True):
             log.info("Khong thay popup %r - bo qua", step.text)
             return
-        await _dong_popup(client, serial, metrics, step.text, cay)
+        await _dong_popup(client, serial, metrics, step.text, cay, truoc_bam)
         return
 
     if step.kind == "network":

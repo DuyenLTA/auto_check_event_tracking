@@ -533,6 +533,47 @@ def test_close_popup_don_lop_che_roi_bam_lai(recording):
         client.taps_at
 
 
+def test_close_popup_la_buoc_kich_hoat_thi_ghi_moc_ngay_truoc_cu_bam_X(recording):
+    """Popup Check-In nam duoi Add Widget va hien dung luc Add Widget dong, nen
+    `daily_checkin_screen_view` lay moc o cu bam X nay. Truoc day `close_popup`
+    bo qua `trigger` - case ra "khong co moc cu bam", chi cham co/khong ban."""
+    from usv.event_flow_models import Step
+    from usv.event_window import TAP_PREFIX
+
+    POPUP = ("<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>"
+             "<hierarchy rotation=\"0\"><node index=\"0\" text=\"\" resource-id=\"com.x:id/popup\""
+             " class=\"a.b.F\" package=\"com.x\" content-desc=\"\" clickable=\"false\""
+             " enabled=\"true\" visible-to-user=\"true\" bounds=\"[60,600][1020,1500]\">"
+             "<node index=\"0\" text=\"Add Widget\" resource-id=\"\" class=\"a.b.T\""
+             " package=\"com.x\" content-desc=\"\" clickable=\"false\" enabled=\"true\""
+             " visible-to-user=\"true\" bounds=\"[100,650][900,720]\" />"
+             "<node index=\"1\" text=\"\" resource-id=\"\" class=\"a.b.V\" package=\"com.x\""
+             " content-desc=\"Close\" clickable=\"true\" enabled=\"true\""
+             " visible-to-user=\"true\" bounds=\"[930,640][990,700]\" /></node></hierarchy>")
+
+    class Adb(FakeClient):
+        def __init__(self):
+            super().__init__()
+            self.thu_tu = []
+
+        async def dump_ui(self, serial):
+            return DUMP if "tap" in self.thu_tu else POPUP
+
+        async def input_tap(self, serial, x, y):
+            self.thu_tu.append("tap")
+
+        async def shell_log(self, serial, tag, message):
+            self.thu_tu.append(message)
+
+    client = Adb()
+    buoc = Step(kind="close_popup", text="Add Widget", timeout=5, trigger=True)
+    result = run(run_case(client, "S1", METRICS, "com.x", recording, _case(steps=(buoc,))))
+    assert result.status == "ok", result.reason
+    moc = TAP_PREFIX + buoc.label()
+    assert moc in client.thu_tu, client.thu_tu
+    assert client.thu_tu.index(moc) == client.thu_tu.index("tap") - 1, client.thu_tu
+
+
 def test_tap_don_quang_cao_chan_duong_roi_bam_lai(recording):
     """Quang cao chen len giua hai buoc bat ky. Bao hut ngay la mat ca case,
     trong khi man dang can van nam ngay duoi lop quang cao do."""
