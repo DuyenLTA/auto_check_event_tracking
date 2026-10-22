@@ -19,7 +19,7 @@ Lấy cái đầu tiên có `.claude/workflows/spec-to-cases.js`:
 
 1. `git rev-parse --show-toplevel` (nếu CWD đang nằm trong chính repo này)
 2. biến môi trường `$EVENT_CHECK_REPO`
-3. `~/projects/auto_check_event_tracking`
+3. `~/Desktop/auto-check-event-tracking`, rồi `~/auto-check-event-tracking`
 
 Không thấy thì dừng, nói rõ đã tìm ở đâu. Gọi đường dẫn tìm được là `<repo>`.
 

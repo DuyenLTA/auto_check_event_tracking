@@ -12,7 +12,7 @@ tiên có `src/usv/cli_check.py`:
 
 1. `git rev-parse --show-toplevel` (nếu CWD đang nằm trong chính repo này)
 2. biến môi trường `$EVENT_CHECK_REPO`
-3. `~/projects/auto_check_event_tracking`
+3. `~/Desktop/auto-check-event-tracking`, rồi `~/auto-check-event-tracking`
 
 Không thấy thì dừng, nói rõ đã tìm ở đâu. Gọi đường dẫn tìm được là `<repo>`.
 
@@ -45,7 +45,7 @@ Tên khớp nhiều trang, hoặc không trang nào có số version, thì tool 
 danh sách** — hỏi người dùng chọn, rồi chốt lại một lần cho lượt sau:
 
 ```
-cd <repo> && .venv/bin/usv-spec --add "<tên>" "<link đã chọn>"
+cd <repo> && <venv>/usv-spec --add "<tên>" "<link đã chọn>"
 ```
 
 `usv-spec` không tham số thì in các tên đã lưu.
@@ -162,7 +162,7 @@ lượt ~30 phút, chạy lại cả lượt cho vài case là phí). Lượt đ
 Sửa flow xong thì chạy lẻ và gộp thẳng vào base:
 
 ```
-cd <repo> && .venv/bin/usv-check --package <pkg> --spec ... \
+cd <repo> && <venv>/usv-check --package <pkg> --spec ... \
   --case "<nhãn case hụt 1>" --case "<nhãn case hụt 2>" \
   --base <scratchpad>/check-base.json \
   > <scratchpad>/check-stdout.json 2> <scratchpad>/check-stderr.log
@@ -204,6 +204,14 @@ nhất chỉ Claude làm được — đừng bỏ qua khi đã có kết quả 
 Nói rõ: bao nhiêu pass / fail (không có mục thứ ba), event nào sai và sai gì,
 bản app đã chấm, và **link artifact**. Case nào đã phải sửa flow lái lại thì nói
 ngắn đã sửa gì.
+
+**FAIL chưa phải bug cho tới khi tester xác nhận.** Report là kết quả đo; báo dev
+hay log Jira là quyết định của người, vì báo nhầm một lỗi do flow sai làm dev
+mất công và làm mất lòng tin vào cả report. Với mỗi dòng Sai, liệt kê: event,
+sai gì, dòng log làm bằng chứng (`out/report-…log`), và đã loại trừ mốc sai chưa
+(mục 5, `FAIL_TIMING`). Rồi **hỏi tester** dòng nào là bug thật. Đừng tự log
+Jira, đừng nhắn dev. Muốn có ý kiến thứ hai trước khi hỏi thì chạy workflow
+`.claude/workflows/triage-event-fail.js`.
 
 **Dừng ở đây. Không `git add`, không `git commit`, không `git push`.** Lượt chấm
 chỉ sinh ra report trong `out/` (thư mục này đã gitignore). Sửa flow hay sửa tool
