@@ -1,0 +1,108 @@
+# Fravix: AI Hair Style Try On — event cua SDK Daily Checkin.
+#
+# Popup Daily Check-in hien o home SAU popup Add Widget, va chi MOT LAN MOI
+# NGAY: bam Check-in hay bam X deu lam no im tiep den het ngay. Het luot trong
+# ngay thi xoa sach data roi chay lai:
+#
+#     adb shell pm clear com.hairai.hairstyletryon.haircolorchanger
+#
+# Xoa data dua app ve man xin quyen thong bao + Select Language, nen case dau co
+# san nhom step ngon ngu + onboarding + question, de `optional`.
+package: com.hairai.hairstyletryon.haircolorchanger
+
+cases:
+
+- event: daily_checkin_screen_view
+  label: popup Daily Check-in o home
+  steps:
+  - kind: launch
+  # Android 13+ hoi quyen thong bao ngay lan mo dau, dialog he thong nam de tren
+  # app nen khong bam Cho phep thi moi selector sau deu khong thay gi.
+  - kind: allow
+    timeout: 15
+  - kind: close_ad
+    timeout: 30
+  - kind: wait
+    seconds: 4
+  # Ca nhom duoi day `optional`: chi hien sau khi xoa data. May da di qua
+  # onboarding thi khong man nao hien, khong tim thay khong phai lai hut.
+  # Bam "English" chi MO RONG danh sach con - phai bam them bien the moi tinh
+  # la da chon, nen co hai buoc tap lien nhau. Chi dong English mang
+  # `rootLanguageItem` (cac ngon ngu khac la constraintLayout), nen index 0.
+  - kind: tap
+    resource_id: rootLanguageItem
+    index: 0
+    optional: true
+  - kind: tap
+    text: English (US)
+    optional: true
+  - kind: wait
+    seconds: 2
+  - kind: tap
+    resource_id: imageButtonLanguageNext
+    optional: true
+  - kind: wait
+    seconds: 3
+  - kind: tap
+    resource_id: btnNextOnboarding
+    optional: true
+  - kind: wait
+    seconds: 3
+  - kind: tap
+    resource_id: btnNextOnboarding
+    optional: true
+  - kind: wait
+    seconds: 3
+  # Trang thu ba cua onboarding la quang cao native full man, khong co nut Next:
+  # phai vuot sang trang sau.
+  - kind: swipe
+    resource_id: viewPagerOnboarding
+    direction: left
+    optional: true
+  - kind: wait
+    seconds: 3
+  - kind: tap
+    resource_id: btnNextOnboarding
+    optional: true
+  - kind: wait
+    seconds: 3
+  # Man question: chon mot style roi "Go to Home" -> interstitial -> paywall.
+  - kind: tap
+    resource_id: ivQuestionImage
+    index: 0
+    optional: true
+  - kind: tap
+    resource_id: btnNextQuestion
+    optional: true
+  - kind: close_ad
+    timeout: 25
+  # Popup Add Widget nam tren popup checkin. `close_popup` dong dung no theo
+  # danh tinh - ca hai popup deu dat nut X la desc="Close", bam mu la dong nham.
+  # Popup checkin chi hien (va bat daily_checkin_screen_view) dung luc Add Widget
+  # dong lai, nen moc la buoc dong Add Widget. Dat moc o `wait_text` thi tre them
+  # vai giay doc man (do 10/10: event bat 5.7s truoc khi wait_text thay chu).
+  - kind: close_popup
+    text: Add Widget
+    timeout: 25
+    trigger: true
+  - kind: wait_text
+    text: Today's Check-In
+    timeout: 15
+
+# Chay tiep tren man cua case tren (`relaunch: false`): mo lai app la mat popup
+# cua ngay hom nay.
+- event: daily_checkin_button_clicked
+  label: bam Check-in
+  reset:
+    relaunch: false
+  steps:
+  - kind: wait_text
+    text: Check-in
+    timeout: 10
+  # Nut khong co resource_id nen phai khoa theo chu - vo neu app doi ngon ngu.
+  - kind: tap
+    text: Check-in
+    index: 0
+    trigger: true
+  - kind: wait
+    seconds: 4

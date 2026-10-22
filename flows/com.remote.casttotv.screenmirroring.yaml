@@ -1,0 +1,170 @@
+package: com.remote.casttotv.screenmirroring
+
+# Duong toi HOME (do tay tren Pixel 7, ban 1.1.0) - moi case deu di lai doan nay:
+#   [quyen thong bao] -> splash + interstitial -> [Choose Language]
+#   -> [onboarding 4 trang] -> man cau hoi -> home
+# App dung VSL Template 4 (VslTemplate4Language11Activity / ...OnboardingActivity
+# / ...QuestionActivity), home la AIP805MainActivity.
+#
+# Man cau hoi "Welcome back! Which fe..." hien LAI MOI SESSION, khong phai buoc
+# onboarding mot lan. Chon mot the roi nut "Go to Home" (btnNextOnboardingImage)
+# moi hien ra.
+#
+# Rieng app nay: vao home la tu chay quet TV, ra bottom sheet "No TVs found" CHE
+# het home. Phai bam "Cancel" moi cham duoc vao home va moi bam BACK duoc.
+# Sheet chi hien khi khong tim thay TV nao -> de `optional`.
+#
+# Man home la Compose: KHONG co resource-id, chi co text va content-desc. Cac
+# buoc tu home tro di bat buoc dung selector text/desc.
+#
+# App KHONG debuggable (ban release, pkgFlags khong co DEBUGGABLE) -> khong reset
+# duoc prefs/Remote Config. Moi case bat dau bang `launch` (force-stop + mo lai)
+# de tu co session moi.
+#
+# TUYET DOI khong bam nut RATE / "Rate on Google Play": bam mot lan la "da rate",
+# moi vi tri con lai tat vinh vien va KHONG co duong reset trong tool. Do 19/09/2026:
+# da tro tay bam thu mot lan, popup chet han qua ca force-stop; chi `adb shell pm
+# clear <package>` moi goi lai duoc (pm clear nam ngoai tool, phai lam tay).
+#
+# Placement `app_shortcut` KHONG viet case: intent com.apero.rating.action.RATING
+# khong resolve o app nay ("unable to resolve Intent"), khac app aibeauty.
+
+cases:
+# --- home: popup tu bat luc vao app ---
+- event: rating_placement_viewed
+  label: popup tu bat o home
+  expect_params:
+    placement_name: home
+  steps:
+  - {kind: launch}
+  - {kind: allow, timeout: 15}
+  - {kind: close_ad, timeout: 40}
+  - {kind: wait, seconds: 3}
+  # Bam "English" chi mo danh sach con - phai bam them bien the moi tinh la da chon.
+  - {kind: tap, resource_id: rootLanguageItem, index: 1, optional: true}
+  - {kind: tap, text: English (US), optional: true}
+  - {kind: tap, resource_id: buttonLanguageNext, optional: true}
+  - {kind: wait, seconds: 3}
+  # Onboarding 4 trang, dung chung id btnNextOnboarding.
+  - {kind: tap, resource_id: btnNextOnboarding, optional: true}
+  - {kind: wait, seconds: 3}
+  - {kind: tap, resource_id: btnNextOnboarding, optional: true}
+  - {kind: wait, seconds: 3}
+  - {kind: tap, resource_id: btnNextOnboarding, optional: true}
+  - {kind: wait, seconds: 3}
+  - {kind: tap, resource_id: btnNextOnboarding, optional: true}
+  - {kind: wait, seconds: 3}
+  # Man cau hoi: 4 card dung chung `borderContainer`, phai chi `index`.
+  - {kind: tap, resource_id: borderContainer, index: 0, optional: true}
+  - {kind: wait, seconds: 2}
+  - {kind: tap, resource_id: btnNextOnboardingImage, optional: true}
+  - {kind: close_ad, timeout: 25}
+  - {kind: wait, seconds: 5}
+  - {kind: wait_text, text: rate us, timeout: 30}
+
+# --- home: bam sao tren chinh popup vua bat ---
+- event: rating_star_clicked
+  label: bam 4 sao tren popup home
+  expect_params:
+    placement_name: home
+    star_value: "4"
+  steps:
+  - {kind: launch}
+  - {kind: allow, timeout: 15}
+  - {kind: close_ad, timeout: 40}
+  - {kind: wait, seconds: 3}
+  - {kind: tap, resource_id: rootLanguageItem, index: 1, optional: true}
+  - {kind: tap, text: English (US), optional: true}
+  - {kind: tap, resource_id: buttonLanguageNext, optional: true}
+  - {kind: wait, seconds: 3}
+  - {kind: tap, resource_id: btnNextOnboarding, optional: true}
+  - {kind: wait, seconds: 3}
+  - {kind: tap, resource_id: btnNextOnboarding, optional: true}
+  - {kind: wait, seconds: 3}
+  - {kind: tap, resource_id: btnNextOnboarding, optional: true}
+  - {kind: wait, seconds: 3}
+  - {kind: tap, resource_id: btnNextOnboarding, optional: true}
+  - {kind: wait, seconds: 3}
+  - {kind: tap, resource_id: borderContainer, index: 0, optional: true}
+  - {kind: wait, seconds: 2}
+  - {kind: tap, resource_id: btnNextOnboardingImage, optional: true}
+  - {kind: close_ad, timeout: 25}
+  - {kind: wait, seconds: 5}
+  - {kind: wait_text, text: rate us, timeout: 30}
+  - {kind: tap, desc: Star 4}
+
+# --- exit_click: dong popup home truoc, roi moi bam BACK o home ---
+# Hai popup trong y het nhau va cung nam tren home; do gop mot luot la bat nham
+# popup tu bat roi ket luan sai. Phai dong popup home (nut X, desc "Close") va
+# dong ca sheet "No TVs found" thi BACK moi la BACK cua home.
+- event: rating_placement_viewed
+  label: bam BACK o home (thoat app)
+  expect_params:
+    placement_name: exit_click
+  steps:
+  - {kind: launch}
+  - {kind: allow, timeout: 15}
+  - {kind: close_ad, timeout: 40}
+  - {kind: wait, seconds: 3}
+  - {kind: tap, resource_id: rootLanguageItem, index: 1, optional: true}
+  - {kind: tap, text: English (US), optional: true}
+  - {kind: tap, resource_id: buttonLanguageNext, optional: true}
+  - {kind: wait, seconds: 3}
+  - {kind: tap, resource_id: btnNextOnboarding, optional: true}
+  - {kind: wait, seconds: 3}
+  - {kind: tap, resource_id: btnNextOnboarding, optional: true}
+  - {kind: wait, seconds: 3}
+  - {kind: tap, resource_id: btnNextOnboarding, optional: true}
+  - {kind: wait, seconds: 3}
+  - {kind: tap, resource_id: btnNextOnboarding, optional: true}
+  - {kind: wait, seconds: 3}
+  - {kind: tap, resource_id: borderContainer, index: 0, optional: true}
+  - {kind: wait, seconds: 2}
+  - {kind: tap, resource_id: btnNextOnboardingImage, optional: true}
+  - {kind: close_ad, timeout: 25}
+  - {kind: wait, seconds: 5}
+  # Popup home neu co thi dong truoc; khong co thi bo qua.
+  - {kind: tap, desc: Close, optional: true}
+  - {kind: wait, seconds: 2}
+  # Sheet quet TV che het home - khong dong thi BACK chi dong sheet, khong ra rating.
+  - {kind: tap, text: Cancel, optional: true}
+  - {kind: wait, seconds: 3}
+  - {kind: key, text: KEYCODE_BACK}
+  - {kind: wait_text, text: rate us, timeout: 20}
+
+# --- exit_click: bam sao tren popup thoat app (sao khac home de doc ro param) ---
+- event: rating_star_clicked
+  label: bam 3 sao tren popup thoat app
+  expect_params:
+    placement_name: exit_click
+    star_value: "3"
+  steps:
+  - {kind: launch}
+  - {kind: allow, timeout: 15}
+  - {kind: close_ad, timeout: 40}
+  - {kind: wait, seconds: 3}
+  - {kind: tap, resource_id: rootLanguageItem, index: 1, optional: true}
+  - {kind: tap, text: English (US), optional: true}
+  - {kind: tap, resource_id: buttonLanguageNext, optional: true}
+  - {kind: wait, seconds: 3}
+  - {kind: tap, resource_id: btnNextOnboarding, optional: true}
+  - {kind: wait, seconds: 3}
+  - {kind: tap, resource_id: btnNextOnboarding, optional: true}
+  - {kind: wait, seconds: 3}
+  - {kind: tap, resource_id: btnNextOnboarding, optional: true}
+  - {kind: wait, seconds: 3}
+  - {kind: tap, resource_id: btnNextOnboarding, optional: true}
+  - {kind: wait, seconds: 3}
+  - {kind: tap, resource_id: borderContainer, index: 0, optional: true}
+  - {kind: wait, seconds: 2}
+  - {kind: tap, resource_id: btnNextOnboardingImage, optional: true}
+  - {kind: close_ad, timeout: 25}
+  - {kind: wait, seconds: 5}
+  - {kind: tap, desc: Close, optional: true}
+  - {kind: wait, seconds: 2}
+  - {kind: tap, text: Cancel, optional: true}
+  - {kind: wait, seconds: 3}
+  - {kind: key, text: KEYCODE_BACK}
+  - {kind: wait_text, text: rate us, timeout: 20}
+  - {kind: wait, seconds: 2}
+  - {kind: tap, desc: Star 3}

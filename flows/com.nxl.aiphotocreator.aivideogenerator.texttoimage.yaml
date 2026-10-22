@@ -96,3 +96,168 @@ cases:
   - kind: tap
     text: Add Widget Now
     index: 0
+
+# Popup rating xep hang NGAY SAU popup Add Widget o man home: dong Add Widget
+# la no bat len luon, va SDK ghi placement_name=home (da soi logcat: event ra
+# ngay luc popup Add Widget dong, chua bam Back gi ca).
+#
+# `exit_click` la mot placement KHAC cua cung popup nay: phai dong cai popup
+# home o tren truoc, roi bam Back o home thi no hien lai va ghi exit_click.
+# Khong gop duoc vao mot case - mot case mot event - nen case nay khoa theo
+# `home`, la duong di ngan va chac hon.
+#
+# Khong can `clear_prefs`: popup hien lai moi lan, khong phai mot-lan-moi-cai
+# nhu Add Widget. Ma may cam ban release, `run-as` bi chan thi clear_prefs
+# cung khong chay duoc.
+- event: rating_placement_viewed
+  label: popup rating o man home
+  expect_params:
+    placement_name: home
+  steps:
+  - kind: launch
+  - kind: allow
+    timeout: 15
+  - kind: close_ad
+    timeout: 25
+  - kind: allow
+    timeout: 5
+  # Nhom onboarding: chi hien khi app chua di het onboarding lan nao, nen ca
+  # nhom `optional`. Giai thich tung buoc xem case widget_view o tren.
+  - kind: tap
+    resource_id: rootLanguageItem
+    index: 1
+    optional: true
+  - kind: tap
+    text: English (US)
+    optional: true
+  - kind: tap
+    resource_id: imageButtonLanguageNext
+    optional: true
+  - kind: wait
+    seconds: 3
+  - kind: tap
+    resource_id: btnNextOnboarding
+    optional: true
+  - kind: wait
+    seconds: 3
+  - kind: tap
+    resource_id: btnNextOnboarding
+    optional: true
+  - kind: wait
+    seconds: 3
+  - kind: tap
+    resource_id: btnNextOnboarding
+    optional: true
+  - kind: wait
+    seconds: 3
+  - kind: tap
+    resource_id: btnNextOnboarding
+    optional: true
+  - kind: wait
+    seconds: 3
+  - kind: wait_text
+    text: Glow Up Style
+    timeout: 25
+  - kind: tap
+    resource_id: borderContainer
+    index: 0
+  - kind: tap
+    resource_id: btnNextQuestion
+    index: 0
+  - kind: close_ad
+    timeout: 20
+  - kind: close_ad
+    timeout: 15
+  # Popup Add Widget nam de tren home ngay sau khi paywall dong. Dong theo
+  # DANH TINH chu dung bam `desc=Close` bua: ca ba popup o home (Add Widget,
+  # Check-In, rating) deu dat nut X la desc=Close, bam nham la dong mat cai
+  # dang can do.
+  - kind: close_popup
+    text: Add Widget
+  - kind: wait_text
+    text: RATE
+    timeout: 15
+
+# Chay tiep tren popup rating cua case tren (`relaunch: false`): bam sao la
+# thao tac ke tiep tren dung man do, mo lai app chi ton them mot luot
+# onboarding + hai quang cao.
+# Tap sao la du de event ban ra - da xac nhan tren logcat, khong phai doi bam
+# tiep "Rate on Google Play".
+- event: rating_star_clicked
+  label: bam 5 sao tren popup rating
+  expect_params:
+    star_value: "5"
+    placement_name: home
+  reset:
+    relaunch: false
+  steps:
+  - kind: tap
+    desc: Star 5
+
+# placement_name=exit_click: van la popup rating do, nhung phai DONG cai popup
+# `home` o tren truoc roi bam Back o home thi SDK moi ghi exit_click. Chay tiep
+# tren man cua case truoc (`relaunch: false`) - mo lai app chi de bam Back la
+# ton them mot luot onboarding + hai quang cao.
+#
+# Buoc `tap desc=Close` dau tien dong cai popup dang o trang thai "We are
+# thrilled..." con lai sau khi case tren bam sao.
+- event: rating_placement_viewed
+  label: popup rating khi bam Back o home
+  expect_params:
+    placement_name: exit_click
+  reset:
+    relaunch: false
+  steps:
+  - kind: tap
+    desc: Close
+  - kind: wait
+    seconds: 2
+  - kind: key
+    text: BACK
+  - kind: wait_text
+    text: RATE
+    timeout: 15
+
+- event: rating_star_clicked
+  label: bam 5 sao tren popup rating exit_click
+  expect_params:
+    star_value: "5"
+    placement_name: exit_click
+  reset:
+    relaunch: false
+  steps:
+  - kind: tap
+    desc: Star 5
+
+# placement_name=app_shortcut: man rating dung rieng (VslRatingActivity),
+# trong app khong co nut nao dan sang - chi toi duoc bang intent cua shortcut
+# `vsl_rating_shortcut` (soi bang `adb shell dumpsys shortcut`).
+#
+# LUU Y NGON NGU: man nay ve theo locale cua MAY, khong theo ngon ngu da chon
+# trong app - may dang de tieng Viet nen nut la `Sao 5` / `ĐÁNH GIÁ`, trong
+# khi popup trong app o tren la `Star 5` / `RATE`. Doi locale may la hai case
+# duoi day vo, con bon case tren thi khong.
+- event: rating_placement_viewed
+  label: man rating mo tu app shortcut
+  expect_params:
+    placement_name: app_shortcut
+  reset:
+    relaunch: false
+  steps:
+  - kind: intent
+    action: com.apero.rating.action.RATING
+    component: com.nxl.aiphotocreator.aivideogenerator.texttoimage/com.apero.rating.internal.features.activity.rating.VslRatingActivity
+  - kind: wait_text
+    text: ĐÁNH GIÁ
+    timeout: 15
+
+- event: rating_star_clicked
+  label: bam 5 sao tren man rating app shortcut
+  expect_params:
+    star_value: "5"
+    placement_name: app_shortcut
+  reset:
+    relaunch: false
+  steps:
+  - kind: tap
+    desc: Sao 5
