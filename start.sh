@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# UI Spec Verifier - khoi dong tren macOS va Linux.
+# UI Spec Verifier - khoi dong tren macOS, Linux va Windows (Git Bash).
 #
 #   ./start.sh                    -> http://127.0.0.1:8000
 #   PORT=9000 ./start.sh          -> doi cong
@@ -11,6 +11,12 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 
 ENV_DIR=".venv"
 PORT="${PORT:-8000}"
+
+# Windows (Git Bash/MSYS/Cygwin): venv de file chay o Scripts/ chu khong phai bin/.
+case "$(uname -s)" in
+  MINGW*|MSYS*|CYGWIN*) IS_WINDOWS=1; VENV_BIN="Scripts" ;;
+  *)                    IS_WINDOWS=0; VENV_BIN="bin" ;;
+esac
 
 die() {
   echo "" >&2
@@ -33,12 +39,12 @@ done
 # --- 2. Moi truong ao ---------------------------------------------------------
 # BAT BUOC dung moi truong ao: Python he thong tren Ubuntu/Debian va Homebrew
 # chan 'pip install' voi loi externally-managed-environment (PEP 668).
-if [ ! -x "$ENV_DIR/bin/python" ]; then
+if [ ! -x "$ENV_DIR/$VENV_BIN/python" ] && [ ! -x "$ENV_DIR/$VENV_BIN/python.exe" ]; then
   echo "Lan dau chay - dang tao moi truong ao..."
   "$PY" -m venv "$ENV_DIR" || die "Khong tao duoc moi truong ao.
   Ubuntu/Debian can them goi: sudo apt install python3-venv"
 fi
-VPY="$ENV_DIR/bin/python"
+VPY="$ENV_DIR/$VENV_BIN/python"
 
 # Cai lai khi thieu thu vien HOAC khi pyproject.toml moi hon lan cai truoc
 STAMP="$ENV_DIR/.usv-installed"
@@ -50,7 +56,9 @@ NEEDS_INSTALL=0
 # editable install tro vao duong dan cu -> uvicorn nap MOT PACKAGE KHAC ma
 # pytest khong he bao loi, vi pytest lay src qua `pythonpath` trong pyproject.
 # Da gap that: server serve nguyen mot tool khac, moi route tra 404.
-HERE_SRC="$(cd "$(dirname "$0")" && pwd)/src"
+# Lay duong dan bang chinh Python cua venv de hai ve cung dinh dang: tren Windows
+# Git Bash in /c/Users/... con Python in C:/Users/..., so chuoi se luon lech.
+HERE_SRC="$("$VPY" -c "import os;print(os.path.abspath('src'))")"
 LOADED="$("$VPY" -c "import usv,os;print(os.path.dirname(os.path.dirname(usv.__file__)))" 2>/dev/null || true)"
 if [ -n "$LOADED" ] && [ "$LOADED" != "$HERE_SRC" ]; then
   echo "usv dang tro vao $LOADED thay vi $HERE_SRC - cai lai..."
@@ -111,7 +119,8 @@ echo "Mo $URL  (Ctrl+C de dung)"
 if [ "${USV_NO_BROWSER:-0}" != "1" ]; then
   (
     sleep 2
-    if command -v open >/dev/null 2>&1; then open "$URL"
+    if [ "$IS_WINDOWS" = "1" ]; then cmd.exe //c start "" "$URL"
+    elif command -v open >/dev/null 2>&1; then open "$URL"
     elif command -v xdg-open >/dev/null 2>&1; then xdg-open "$URL"
     fi
   ) >/dev/null 2>&1 &
@@ -126,5 +135,10 @@ fi
 #
 # Chi bind 127.0.0.1: cong cu noi bo, khong co auth, dieu khien duoc adb ->
 # KHONG duoc expose ra LAN. main.py con co middleware chan thu hai.
+# Windows: uvicorn dat SelectorEventLoop, loop do khong chay duoc subprocess nen
+# moi lenh adb se chet. scripts/run-windows.py dat ProactorEventLoop va nap .env.
+if [ "$IS_WINDOWS" = "1" ]; then
+  exec "$VPY" scripts/run-windows.py "$FREE_PORT"
+fi
 "$VPY" -m uvicorn usv.main:app --host 127.0.0.1 --port "$FREE_PORT" \
   --reload --reload-dir src
