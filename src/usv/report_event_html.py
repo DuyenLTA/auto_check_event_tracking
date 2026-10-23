@@ -58,7 +58,7 @@ def build(spec: SpecSheet, results: list[CheckResult], summary: Summary, *,
           checked_package: str = "",
           near_edge: tuple[str, ...] = (),
           quick: bool = False, triage=None,
-          app_version: str = "") -> str:
+          app_version: str = "", khong_claude: bool = False) -> str:
     screens = {e.name: e.screen for e in spec.events}
     triggered = {e.name: e.triggered for e in spec.events}
     groups = group_events(results)
@@ -87,7 +87,7 @@ def build(spec: SpecSheet, results: list[CheckResult], summary: Summary, *,
     {_tiles(groups)}
     <p class="counts">Theo mục (event + param): {summary.passed} khớp / {checked} mục đã kiểm{sai}{chua_test}</p>
   </header>
-  {render_unfinished(groups)}
+  {render_unfinished(groups, khong_claude)}
   {render_todo(groups)}
   {_callouts(results, fa_silent, near_edge, quick, stream_died, app_seen,
              foreground, package, checked_package)}

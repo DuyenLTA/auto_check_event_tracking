@@ -466,3 +466,20 @@ def test_case_chon_bang_tu_khoa_keo_theo_case_tien_de():
     assert len(cli_check.chon_case(cases, ("o home",))) == 2
     # Khong truyen gi thi giu nguyen ca flow.
     assert cli_check.chon_case(cases, ()) == cases
+
+
+def test_discord_hong_khong_lam_hong_stdout_mot_dong_JSON(adb, tmp_path, monkeypatch,
+                                                         capsys):
+    spec_file = tmp_path / "spec.tsv"
+    spec_file.write_text(SPEC_TSV, encoding="utf-8")
+    monkeypatch.setattr(cli_main, "make_client", lambda: adb)
+    monkeypatch.setenv("DISCORD_NOTIFY", "1")
+    monkeypatch.setenv("DISCORD_WEBHOOK_URL", "http://127.0.0.1:1/x")   # khong ai nghe
+
+    code = cli_main.main(["--spec-tsv", str(spec_file), "--package", PACKAGE,
+                           "--out", str(tmp_path)])
+    out = capsys.readouterr()
+    assert code == 0
+    assert len(out.out.strip().splitlines()) == 1, out.out
+    assert "duration_s" in json.loads(out.out)
+    assert "discord:" in out.err

@@ -186,14 +186,26 @@ def render_todo(groups: list[EventGroup]) -> str:
     return f"<section class='todo-card'>{''.join(cot)}</section>"
 
 
-def render_unfinished(groups: list[EventGroup]) -> str:
+def render_unfinished(groups: list[EventGroup], khong_claude: bool = False) -> str:
     """Bang do: event chua ra pass/fail. Co bang nay = luot CHUA XONG, khong
-    phai report de gui di - lai lai / do lai tren may roi chay lai."""
+    phai report de gui di - lai lai / do lai tren may roi chay lai.
+
+    `khong_claude`: luot chay khong co agent di sua flow (user chot 23/10/2026).
+    Report van duoc gui di, nhung cac event nay ghi ro la can nguoi xem - khong
+    ai lai lai ho, nen bao "khong publish" la bao mot viec khong ai lam.
+    """
     cua = [g for g in groups if g.bucket == "unfinished"]
     if not cua:
         return ""
     items = "".join(f"<span class='chip'>{esc(g.label)} — {esc(g.reason())}</span>"
                     for g in cua)
+    if khong_claude:
+        return ("<div class='callout alarm'><h3>Cần người xem — "
+                f"{len(cua)} event tool chưa tự chấm được</h3>"
+                "<p>Tool chưa đo được các event dưới đây (lái hụt hoặc chưa kết luận), "
+                "kể cả sau lần tự chạy lại nếu có. Chúng <b>chưa phải lỗi app</b>: tester lái tay tới màn "
+                "đó để kết luận, hoặc sửa flow rồi chạy lại.</p>"
+                f"<div class='chip-list'>{items}</div></div>")
     return ("<div class='callout alarm'><h3>Lượt chưa xong — "
             f"{len(cua)} event chưa ra pass/fail</h3>"
             "<p>Report chỉ được có Khớp hoặc Sai. Các event dưới đây chưa đo được "

@@ -76,7 +76,22 @@ async def ghi_chu_man_khoa(adb, serial: str, ket_qua) -> None:
     ket_qua.reason = f"{ket_qua.reason} — {MAN_KHOA}"
 
 
-def chon_case(cases: tuple, muon: tuple[str, ...]) -> tuple:
+def khop(case, muon: tuple[str, ...], chinh_xac: bool = False) -> bool:
+    """Case co nam trong `muon` khong.
+
+    Go tay `--case`: tu khoa, khop chuoi con trong label hoac ten event.
+    `chinh_xac`: dung nguyen nhan case - lan tu chay lai case hut di duong nay.
+    Khop chuoi con o do la keo ca case da PASS co nhan chua nhan case hut
+    ("tu Home" nam trong "bam tab tu Home") va de ket qua cu bang lan chay lai.
+    """
+    kim = [m.strip().casefold() for m in muon if m.strip()]
+    if chinh_xac:
+        return case.label.strip().casefold() in kim
+    nhan = f"{case.label} {case.event}".casefold()
+    return any(k in nhan for k in kim)
+
+
+def chon_case(cases: tuple, muon: tuple[str, ...], chinh_xac: bool = False) -> tuple:
     """Loc case theo tu khoa (khop trong label hoac ten event, khong phan biet hoa).
 
     KEO THEO CASE TIEN DE: case dat `reset.relaunch: false` chay tiep tren man
@@ -85,11 +100,9 @@ def chon_case(cases: tuple, muon: tuple[str, ...]) -> tuple:
     """
     if not muon:
         return cases
-    kim = [m.strip().casefold() for m in muon if m.strip()]
     giu = set()
     for i, case in enumerate(cases):
-        nhan = f"{case.label} {case.event}".casefold()
-        if not any(k in nhan for k in kim):
+        if not khop(case, muon, chinh_xac):
             continue
         giu.add(i)
         j = i
@@ -102,11 +115,15 @@ def chon_case(cases: tuple, muon: tuple[str, ...]) -> tuple:
 async def check(*, spec: SpecSheet, package: str, flow: Flow | None, adb,
                 out_dir: Path, serial: str = "", flows_path: str = "",
                 chi_case: tuple[str, ...] = (),
-                base: cli_check_merge.Base | None = None) -> dict:
+                base: cli_check_merge.Base | None = None,
+                khong_claude: bool = False, chinh_xac: bool = False) -> dict:
     """Chay ca luot cham. Tra payload de in JSON.
 
     `base`: stdout JSON cua luot day du truoc - chi dung voi `chi_case`. Ket qua
     luot le duoc gop vao do (xem cli_check_merge), report ra du moi event.
+    `khong_claude`: khong co agent sua flow sau luot nay - event chua ra ket qua
+    ghi la "can nguoi xem" thay vi "luot chua xong, cam publish".
+    `chinh_xac`: `chi_case` la nhan case nguyen ven, khong phai tu khoa (xem `khop`).
     """
     if base is not None and not chi_case:
         raise CliError("--base chỉ dùng kèm --case: gộp lượt chạy lẻ vào lượt đầy đủ.")
@@ -131,23 +148,19 @@ async def check(*, spec: SpecSheet, package: str, flow: Flow | None, adb,
         if bo := len(flow.cases) - len(giu):
             say(f"[flow] bỏ {bo} case không thuộc spec này")
         if chi_case:
-            chon = chon_case(giu, chi_case)
+            chon = chon_case(giu, chi_case, chinh_xac)
             if not chon:
                 raise CliError(
                     f"--case {', '.join(chi_case)} không khớp case nào. "
                     "Case có trong flow: "
                     + " | ".join(c.label for c in giu))
             if them := len(chon) - sum(1 for c in chon
-                                       if any(k.strip().casefold()
-                                              in f"{c.label} {c.event}".casefold()
-                                              for k in chi_case)):
+                                       if khop(c, chi_case, chinh_xac)):
                 say(f"[flow] kéo thêm {them} case tiền đề "
                     "(case sau chạy tiếp trên màn của case trước)")
             say(f"[flow] chạy {len(chon)}/{len(giu)} case theo --case")
             giu = chon
-            nhan_chon = {c.label for c in chon
-                         if any(k.strip().casefold() in f"{c.label} {c.event}".casefold()
-                                for k in chi_case)}
+            nhan_chon = {c.label for c in chon if khop(c, chi_case, chinh_xac)}
         flow = replace(flow, cases=giu)
 
     config = doc_config()
@@ -255,7 +268,7 @@ async def check(*, spec: SpecSheet, package: str, flow: Flow | None, adb,
                  checked_package=recording.checked_package or package,
                  near_edge=tuple(dict.fromkeys(n for w in windows
                                                for n in w.near_edge)),
-                 app_version=app_version)
+                 app_version=app_version, khong_claude=khong_claude)
     report = out_dir / f"{stem}.html"
     report.write_text(html, encoding="utf-8")
     say(f"[report] {report}")
@@ -271,6 +284,7 @@ async def check(*, spec: SpecSheet, package: str, flow: Flow | None, adb,
         "spec_event_count": len(spec.events),
         "event_count": len(events),
         "fa_silent": recording.fa_silent, "stream_died": recording.stream_died,
+        "khong_claude": khong_claude,
         "cases": [c.payload() for c in cases],
         "sources": cli_check_merge.sources(nguon),
         "results": [r.payload() for r in results],

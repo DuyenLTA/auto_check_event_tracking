@@ -17,9 +17,11 @@ import argparse
 import asyncio
 import json
 import sys
+import time
 from pathlib import Path
 
-from . import cli_check, cli_check_merge, cli_spec_load
+from . import cli_chay_lai, cli_check, cli_check_merge, cli_spec_load, discord_notify
+from .run_message import build_run_message
 from .cli_device import CliError, make_client
 from .flow_yaml import Flow, FlowError, load as load_flow
 
@@ -56,6 +58,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--base", default="",
                         help="stdout JSON của lượt đầy đủ trước: kết quả chạy lẻ "
                              "--case được gộp vào đó, report ra đủ mọi event")
+    parser.add_argument("--khong-claude", action="store_true",
+                        help="chạy không có agent: tự chạy lại case hụt, event chưa "
+                             "chấm được ghi 'Cần người xem', Discord đính kèm report")
+    parser.add_argument("--tu-chay-lai", type=int, default=None, metavar="N",
+                        help="số lần tự chạy lại case lái hụt (mặc định 1 khi "
+                             "--khong-claude, 0 khi không)")
     return parser
 
 
@@ -73,24 +81,67 @@ def ep_utf8() -> None:
             pass          # stream bi thay the (pytest capture) - khong sao
 
 
+def thong_bao_discord(payload: dict) -> None:
+    """Mot tin Discord cho moi lan chay. Hong o day khong duoc doi ket qua luot cham.
+
+    Khong co Claude thi khong ai publish artifact: dinh kem chinh file report de
+    team mo duoc tu Discord.
+    """
+    try:
+        cli_spec_load.load_env(Path(".env"))
+        kind, title, lines, action = build_run_message(
+            payload, payload.get("duration_s"))
+        dinh_kem = Path(payload["report"]) if (payload.get("khong_claude")
+                                               and payload.get("report")) else None
+        discord_notify.send(kind, title, lines, action, file=dinh_kem)
+    except Exception as exc:  # noqa: BLE001 - thong bao la tien nghi, khong duoc nem
+        cli_check.say(f"discord: bỏ qua thông báo ({type(exc).__name__})")
+
+
 def main(argv: list[str] | None = None) -> int:
     ep_utf8()
     args = parse_args(argv)
+    bat_dau = time.monotonic()
     try:
         spec, nguon = cli_spec_load.load(
             url=args.spec, tsv=Path(args.spec_tsv) if args.spec_tsv else None,
             env_file=Path(".env"))
         cli_check.say(f"[spec] {nguon}: {len(spec.events)} event")
         flow, flows_path = doc_flow(args.package, args.flows)
-        payload = asyncio.run(cli_check.check(
-            spec=spec, package=args.package, flow=flow, adb=make_client(),
-            out_dir=Path(args.out), serial=args.serial, flows_path=flows_path,
-            chi_case=tuple(args.case),
-            base=cli_check_merge.doc_base(Path(args.base)) if args.base else None))
+
+        def mot_luot(chi_case: tuple[str, ...], base, chinh_xac: bool = False):
+            # Client moi cho moi asyncio.run: client cu co the giu tai nguyen
+            # cua event loop da dong.
+            return asyncio.run(cli_check.check(
+                spec=spec, package=args.package, flow=flow, adb=make_client(),
+                out_dir=Path(args.out), serial=args.serial, flows_path=flows_path,
+                chi_case=chi_case, base=base, khong_claude=args.khong_claude,
+                chinh_xac=chinh_xac))
+
+        payload = mot_luot(tuple(args.case), cli_check_merge.doc_base(Path(args.base))
+                           if args.base else None)
+        so_lan = args.tu_chay_lai if args.tu_chay_lai is not None else (
+            1 if args.khong_claude else 0)
+        for lan in range(1, max(so_lan, 0) + 1):
+            hut = cli_chay_lai.case_hut(payload)
+            if not hut:
+                break
+            cli_check.say(f"[chạy lại {lan}/{so_lan}] {len(hut)} case hụt: "
+                          + " | ".join(hut))
+            try:
+                base = cli_check_merge.doc_base(cli_chay_lai.ghi_base(payload))
+                payload = mot_luot(hut, base, chinh_xac=True)
+            except (CliError, cli_check_merge.MergeError, OSError) as exc:
+                # Lan chay lai hong (rut cap, may khoa sau 30 phut) khong duoc
+                # lam mat ket qua cua luot day du da co: giu payload truoc do.
+                cli_check.say(f"[chạy lại {lan}/{so_lan}] bỏ dở, giữ kết quả lượt trước: {exc}")
+                break
     except (CliError, cli_spec_load.SpecLoadError, cli_check_merge.MergeError) as exc:
         cli_check.say(f"Lỗi: {exc}")
         return 1
+    payload["duration_s"] = round(time.monotonic() - bat_dau, 1)
     print(json.dumps(payload, ensure_ascii=False))
+    thong_bao_discord(payload)
     return 0
 
 

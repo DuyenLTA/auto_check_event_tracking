@@ -15,6 +15,13 @@ FIXTURES = Path(__file__).parent / "fixtures"
 REAL_METRICS = ScreenMetrics(width_px=1080, height_px=2280, density=440)
 
 
+@pytest.fixture(autouse=True)
+def _khong_gui_discord(monkeypatch):
+    """Khong test nao duoc cham mang that. test_discord_notify tu bat lai."""
+    monkeypatch.setenv("DISCORD_NOTIFY", "0")
+    monkeypatch.delenv("DISCORD_WEBHOOK_URL", raising=False)
+
+
 @pytest.fixture
 def metrics() -> ScreenMetrics:
     return REAL_METRICS

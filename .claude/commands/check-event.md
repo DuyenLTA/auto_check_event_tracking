@@ -29,6 +29,11 @@ rồi thử lại: venv cài từ trước khi mấy lệnh này được thêm 
 một ký tự thì nó lái app hàng xóm và chấm sai app mà không báo gì.
 `$ARGUMENTS` không có chuỗi nào trông như `com.abc.xyz` thì **dừng và hỏi**.
 
+Mỗi chỗ **dừng và hỏi** / **dừng báo** dưới đây, trước khi hỏi gọi thêm một dòng
+`<venv>/usv-notify --kind stop --title "<việc đang kẹt>" --line "<chi tiết>"
+--action "<cần người dùng làm gì>"` để tester thấy trên Discord. Gửi hỏng thì bỏ
+qua, lệnh luôn exit 0.
+
 Spec lấy theo thứ tự:
 
 - chuỗi `http…` trong `$ARGUMENTS` → `--spec "<link>"`
@@ -42,7 +47,8 @@ Spec lấy theo thứ tự:
   bảng" — trông như app sai trong khi chỉ là nhầm trang.
 
 Tên khớp nhiều trang, hoặc không trang nào có số version, thì tool **dừng và in
-danh sách** — hỏi người dùng chọn, rồi chốt lại một lần cho lượt sau:
+danh sách** — gọi `usv-notify --kind stop` (title "Spec trùng nhiều trang", line
+là các link) rồi hỏi người dùng chọn, rồi chốt lại một lần cho lượt sau:
 
 ```
 cd <repo> && <venv>/usv-spec --add "<tên>" "<link đã chọn>"
@@ -63,10 +69,10 @@ flow" — đó là việc của mình (mục 5), không phải kết quả để
 adb devices -l
 ```
 
-- 0 máy → **dừng**: cần máy Android thật cắm cáp, bật USB debugging
+- 0 máy → **dừng** (kèm `usv-notify --kind stop`): cần máy Android thật cắm cáp, bật USB debugging
 - đúng 1 máy → không truyền `--serial`
-- nhiều máy → `--serial` lấy từ `$ARGUMENTS`; không có thì in danh sách ra và
-  **hỏi**. Chọn bừa là chấm trên máy người khác đang dùng
+- nhiều máy → `--serial` lấy từ `$ARGUMENTS`; không có thì in danh sách ra,
+  `usv-notify --kind stop` (title "Nhiều máy", line là các serial) rồi **hỏi**. Chọn bừa là chấm trên máy người khác đang dùng
 - máy `unauthorized` không tính là dùng được
 
 ## 3. Chạy nền
@@ -80,6 +86,10 @@ cd <repo> && <venv>/usv-check --package <pkg> --spec "<link>" [--serial <S>] \
 ```
 
 `<scratchpad>` là thư mục scratchpad của phiên (system prompt có nêu).
+
+**Đừng truyền `--khong-claude`.** Cờ đó dành cho lượt chạy không có agent (`chay-khong-claude.bat`):
+nó cho phép report có dòng "Cần người xem", trong khi lượt có agent thì phải tự xử
+mọi dòng cho tới khi chỉ còn Khớp/Sai (mục 5).
 
 stdout là **đúng một dòng JSON** (`report`, `generated_at`, `app_version`, `pass`,
 `fail`, `not_tested`, `cases`, `results`); tiến độ từng case ra stderr. Trong lúc
@@ -144,7 +154,8 @@ từng cái cho tới khi về 0, đừng hỏi lại người dùng, đừng b�
 - **Không gen được** (sheet mở khoá chỉ còn nút Premium = rewarded no-fill; gen
   bằng sub ra `gate_result=limit_reached`, `sub_daily_limit` = sub test hết hạn
   mức ngày) → đây là giới hạn bên ngoài, **đừng sửa flow**. Dừng các case cần
-  gen, báo người dùng, chạy lẻ lại khi ads/quota về (thường sáng hôm sau).
+  gen, `usv-notify --kind stop` (title "Không gen được", line ghi case + lý do
+  ads/quota), báo người dùng, chạy lẻ lại khi ads/quota về (thường sáng hôm sau).
 - **Chạy lẻ case cần dữ liệu từ case khác**: tool chỉ kéo theo case tiền đề
   `relaunch: false` liền trước. Case cần ảnh trong History (`history_*`) phải
   `--case` kèm case gen xong ("gen T2I xong"), không thì app bị tắt giữa lúc gen,
@@ -199,6 +210,11 @@ nhất chỉ Claude làm được — đừng bỏ qua khi đã có kết quả 
 
    `usv-artifact` không tham số thì in link đã lưu của lượt trước.
 
+   Thêm `--package <package> --version "<app_version>" --pass <pass> --fail <fail>
+   --duration-s <duration_s>` (lấy từ JSON stdout của lượt cuối) thì tool tự thêm
+   một dòng vào `docs/usage-log.md`. Có `--url` thì tool cũng tự gửi Discord "Report
+   đã publish" kèm link.
+
 ## 6. Báo lại
 
 Nói rõ: bao nhiêu pass / fail (không có mục thứ ba), event nào sai và sai gì,
@@ -212,6 +228,9 @@ sai gì, dòng log làm bằng chứng (`out/report-…log`), và đã loại tr
 (mục 5, `FAIL_TIMING`). Rồi **hỏi tester** dòng nào là bug thật. Đừng tự log
 Jira, đừng nhắn dev. Muốn có ý kiến thứ hai trước khi hỏi thì chạy workflow
 `.claude/workflows/triage-event-fail.js`.
+
+Cuối mỗi lần `usv-check` tool tự gửi Discord (xong / chưa xong / có dòng Sai),
+agent không cần gửi lại các trường hợp đó.
 
 **Dừng ở đây. Không `git add`, không `git commit`, không `git push`.** Lượt chấm
 chỉ sinh ra report trong `out/` (thư mục này đã gitignore). Sửa flow hay sửa tool

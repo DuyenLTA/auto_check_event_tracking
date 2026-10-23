@@ -150,6 +150,26 @@ vào `out/`.
   chấm nhầm máy thì cả báo cáo nói về một máy không ai định kiểm.
 - Chưa có file flow → mọi event ra `NOT_TESTED` kèm "chưa có flow", **không** FAIL.
 
+### Chạy không cần Claude — `--khong-claude`
+
+Trên Windows, chạy đúng một lệnh trên máy đang cắm điện thoại:
+
+```bat
+chay-khong-claude.bat com.example.app "<link Confluence hoặc tên chức năng>"
+```
+
+Lệnh này tương đương `usv-check --khong-claude --package … --spec …`. So với lượt chạy qua `/check-event`:
+
+| | Có Claude (`/check-event`) | `--khong-claude` |
+|---|---|---|
+| Case lái hụt | agent sửa flow rồi chạy lẻ lại | tool tự chạy lại 1 lần (`--tu-chay-lai N` để đổi) qua `--case` + `--base`, **không sửa flow** |
+| Event vẫn chưa ra Khớp/Sai | băng đỏ "Lượt chưa xong", cấm publish | khối **"Cần người xem"**, report vẫn gửi đi được |
+| Gửi report | Claude publish artifact | tin Discord **đính kèm file HTML** (file > 9 MB thì chỉ ghi đường dẫn local) |
+
+Không cờ thì hành vi y như cũ. Những việc vẫn cần người (hoặc Claude) làm: ghi flow cho
+app mới (`usv-record` / `/record-flow`), thêm case cho event chưa có case, sửa
+selector sai, phân xử dòng Sai thời điểm theo cột Triggered của spec.
+
 ### Ghi flow — `usv-record`
 
 Đường duy nhất sinh flow, và cố ý có người ngồi xem: `check` không bao giờ tự mò UI
@@ -177,6 +197,21 @@ usv-artifact --url <link artifact> --generated-at "<generated_at trong JSON>"
 ```
 
 Republish cùng file giữ nguyên URL — link gửi team chỉ cần nhớ một lần.
+
+## Thông báo Discord
+
+Tool gửi tin vào Discord qua Webhook: cuối mỗi lượt `usv-check` (xong / chưa
+xong / có dòng Sai cần tester xác nhận) và khi ghi link artifact. Gửi hỏng chỉ in
+một dòng cảnh báo ra stderr, không đổi kết quả hay exit code của lượt chấm.
+
+1. Discord: Server Settings → Integrations → Webhooks → New Webhook, chọn kênh,
+   Copy Webhook URL (dạng `https://discord.com/api/webhooks/<id>/<token>`).
+2. Đặt `DISCORD_WEBHOOK_URL=<url>` trong env hoặc `.env` ở thư mục chạy (xem
+   `.env.example`). URL là bí mật, đừng commit.
+3. `DISCORD_NOTIFY=0` để tắt hẳn (test/CI). Chưa đặt URL thì tool bỏ qua.
+
+`usv-notify --kind stop|done|bug --title "..." --line "..." [--action "..."] [--link URL]`
+gửi tay một tin (slash command dùng khi phải dừng hỏi người dùng).
 
 ## Gọi từ Python
 
