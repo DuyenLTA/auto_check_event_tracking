@@ -118,6 +118,13 @@ def parse_rows(rows: list[list[str]]) -> SpecSheet:
             return row[pos].strip() if pos is not None and pos < len(row) else ""
 
         name = cell("event")
+        # O gop (rowspan) tren Confluence: luoi HTML chep ten event + screen + triggered
+        # xuong moi hang con. Hang trung CA BA voi event dang doc la param tiep theo cua
+        # CUNG event, khong phai event moi (do 10/11/2026 spec Tutorial 3.6.2: tach thanh
+        # 3 event mot param, check chi giu event cuoi -> bao oan "thua param").
+        if (name and current is not None and name == current.name
+                and cell("screen") == current.screen and cell("triggered") == current.triggered):
+            name = ""
         if name:
             flush()
             current = SpecEvent(name=name, screen=cell("screen"),
@@ -141,7 +148,7 @@ def parse_rows(rows: list[list[str]]) -> SpecSheet:
             )
             continue
 
-        allowed = tuple(v.strip() for v in cell("value").split(",") if v.strip())
+        allowed = _allowed(cell("value"), param_name, events)
         params.append(SpecParam(
             name=param_name, value_type=cell("value_type"),
             allowed=allowed, description=cell("param_desc") or cell("value_desc"),
@@ -152,6 +159,26 @@ def parse_rows(rows: list[list[str]]) -> SpecSheet:
         errors.append("Không đọc được event nào — bảng chỉ có dòng tiêu đề?")
     return SpecSheet(events=tuple(events), errors=tuple(errors),
                      columns=tuple(header))
+
+
+# O Value khong phai danh sach that ma la loi dan: "Theo config" = gia tri lay tu
+# Remote Config (tu do); "Nhu tren" = cung danh sach voi param cung ten o event tren.
+_TU_DO = {"theo config", "tùy config", "tuỳ config"}
+_NHU_TREN = {"như trên", "nhu tren"}
+
+
+def _allowed(value: str, param_name: str, events: list[SpecEvent]) -> tuple[str, ...]:
+    """Danh sach gia tri cho phep; rong = free-form."""
+    raw = value.strip().casefold()
+    if raw in _TU_DO:
+        return ()
+    if raw in _NHU_TREN:
+        for ev in reversed(events):
+            p = ev.param(param_name)
+            if p is not None:
+                return p.allowed
+        return ()
+    return tuple(v.strip() for v in value.split(",") if v.strip())
 
 
 def _norm_keys(header: list[str]) -> set[str]:

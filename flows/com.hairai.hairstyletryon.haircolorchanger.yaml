@@ -106,3 +106,58 @@ cases:
     trigger: true
   - kind: wait
     seconds: 4
+
+# --- SDK Tutorial 3.6.2: man cau hoi onboarding (OB1..OB4) ---
+# Chi hien sau `adb shell pm clear <package>` (lan mo dau). Hai case chay noi
+# nhau: chon dap an o OB1, roi Next sang OB2 bam Skip.
+- event: ob_question_answer
+  label: chon dap an o OB1
+  steps:
+  - kind: launch
+  - kind: allow
+    timeout: 15
+    optional: true
+  - kind: close_ad
+    timeout: 30
+  - kind: tap
+    resource_id: rootLanguageItem
+    index: 0
+    optional: true
+  - kind: tap
+    text: English (US)
+    optional: true
+  - kind: wait
+    seconds: 2
+  - kind: tap
+    resource_id: buttonLanguageNext
+    optional: true
+  # wait_text tu don quang cao xen giua Language va OB1.
+  - kind: wait_text
+    text: What brings you here?
+    timeout: 40
+  - kind: tap
+    resource_id: tvObQuestionAnswer
+    index: 0
+    trigger: true
+  - kind: wait
+    seconds: 3
+
+- event: ob_question_skip
+  label: bam Skip o OB2
+  reset:
+    relaunch: false
+  steps:
+  - kind: tap
+    resource_id: btnObQuestionNext
+  - kind: wait_text
+    text: Your gender
+    timeout: 20
+  # Nut Skip hien tre vai giay sau khi vao man (do 10/11: luc wait_text thay tieu de chua co Skip).
+  - kind: wait_text
+    text: Skip
+    timeout: 15
+  - kind: tap
+    resource_id: btnObQuestionSkip
+    trigger: true
+  - kind: wait
+    seconds: 3

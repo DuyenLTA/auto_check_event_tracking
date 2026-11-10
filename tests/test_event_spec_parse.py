@@ -32,6 +32,27 @@ def test_hang_param_tiep_gan_vao_event_phia_tren():
     assert star.param_names == {"star_value", "placement_name"}
 
 
+def test_o_gop_rowspan_chep_ten_event_van_la_mot_event():
+    """Luoi HTML Confluence chep ten event (o gop) xuong moi hang param."""
+    from usv.event_spec_parse import parse_rows
+    head = ["Screen Name", "Event_Name", "Triggered", "Params", "Value Type", "Value"]
+    sheet = parse_rows([
+        head,
+        ["OB1", "ob_question_answer", "Chọn", "screen", "string", "ob1, ob2"],
+        ["OB1", "ob_question_answer", "Chọn", "question_id", "string", "goal, gender"],
+        ["OB1", "ob_question_answer", "Chọn", "answer_id", "string", "Theo config"],
+        ["OB1", "ob_question_skip", "Skip", "screen", "string", "ob1, ob2"],
+        ["OB1", "ob_question_skip", "Skip", "question_id", "string", "Như trên"],
+        ["Home", "ob_question_skip", "Khác", "screen", "string", "home"],   # trigger khac: event rieng
+    ])
+    assert sheet.errors == ()
+    assert [e.name for e in sheet.events] == ["ob_question_answer", "ob_question_skip", "ob_question_skip"]
+    ans = sheet.event("ob_question_answer")
+    assert ans.param_names == {"screen", "question_id", "answer_id"}
+    assert ans.param("answer_id").free_form                                   # "Theo config"
+    assert sheet.events[1].param("question_id").allowed == ("goal", "gender")  # "Như trên"
+
+
 def test_gia_tri_cho_phep_tach_dung():
     sheet = parse_paste(GOOD)
     viewed = sheet.event("rating_placement_viewed")
