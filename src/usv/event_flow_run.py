@@ -36,6 +36,7 @@ from .flow_screen import (bam_node as _bam_node, cho_nut,
                           wait_text)
 from .quyen_he_thong import tim_nut_cho_phep
 from .ui_cache import CayUI
+from .ve_home_rc_check import ve_home
 
 log = logging.getLogger(__name__)
 
@@ -185,6 +186,13 @@ async def run_step(client, serial: str, metrics, package: str, step: Step,
     truoc_bam = truoc_bam or _khong_moc
     if step.kind in {"watch_ads", "buy_sub"}:
         return await _run_cong(client, serial, metrics, step, cay, truoc_bam)
+    if step.kind == "ve_home":
+        # Splash -> Home (ngon ngu, onboarding, question, paywall, popup) bang trinh lai chung cua rc-check:
+        # khong tu do tung man - app chua co flow tung ket o man ngon ngu.
+        duong = await ve_home(serial, package, step.timeout)
+        if cay is not None:
+            cay.bo()
+        return duong
     if step.kind == "launch":
         await client.force_stop(serial, package)
         await truoc_bam()

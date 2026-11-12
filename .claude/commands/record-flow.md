@@ -53,7 +53,7 @@ usv-record ... wait-text "Add Widget" --timeout 25
 để ghi ra một flow chạy đúng một lần.
 
 Bước dùng được: `dump · show · launch · tap · long-press · swipe · back · type ·
-wait · wait-text · close-ad · allow · save · drop`.
+wait · wait-text · close-ad · allow · ve-home · save · drop`.
 
 `long-press` nhấn giữ 1,2 s tại tâm node — cho màn chỉ vào chế độ chọn bằng
 long-click (History "X selected"). Ghi ra YAML là `kind: long_press`.
@@ -70,6 +70,18 @@ còn lại ghi một bước vào phiên đang mở (`out/record-<pkg>.json`).
 
 `tap`/`swipe` không thấy node thì **báo lỗi và không ghi bước** — cứ `dump` lại
 rồi sửa selector, phiên vẫn còn nguyên.
+
+### Splash → Home: `ve-home`, không dò
+
+**Đoạn splash → Home luôn dùng trình lái của rc-check** (user chốt 12/11/2026): mọi flow mới, SDK nào cũng vậy, mở đầu `launch` + `ve_home` (gọi `rcr-sub ve-home`, đi qua splash ad, xin quyền, chọn ngôn ngữ, onboarding, question, paywall, popup Home). **Không tự dò** từng màn ngôn ngữ / onboarding — AIP893 chưa có flow, tự mò thì kẹt ở màn ngôn ngữ. Chỉ dò các bước SAU Home của SDK cần chấm. Có flow kiểu mới thì user sẽ báo.
+
+```
+usv-record ... launch
+usv-record ... ve-home                    # trình lái rc-check, ghi bước `kind: ve_home`
+usv-record ... dump                       # từ đây mới dò bước của SDK
+```
+
+Không tìm thấy `rcr-sub` thì đặt `RCR_SUB` (đường dẫn lệnh) hoặc `RC_CHECK_REPO` (repo rc-check có `.venv`).
 
 ## 3. Selector: chọn cho nó sống được
 

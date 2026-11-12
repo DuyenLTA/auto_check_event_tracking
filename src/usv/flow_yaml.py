@@ -22,12 +22,14 @@ from .flow_yaml_selector import SELECTOR_FIELDS, bien_the, doc_selector
 
 KINDS = frozenset({"launch", "tap", "long_press", "swipe", "type", "key", "wait", "wait_text",
                    "intent", "close_popup", "network",
-                   "close_ad", "allow", "watch_ads", "buy_sub"})
+                   "close_ad", "allow", "watch_ads", "buy_sub", "ve_home"})
 # Chi tap/swipe moi lam viec tren mot node. `wait_text` va `type` cung co
 # truong `text` nhung do la chu de TIM / de GO, doc no thanh selector thi
 # `wait_text` bi danh dau fragile oan va Step.label() in ra sai viec.
 NEEDS_SELECTOR = frozenset({"tap", "long_press", "swipe"})
 DEFAULT_TIMEOUT = 10.0
+# `ve_home` lai qua splash ad + onboarding + paywall bang walker rc-check: 1-4 phut.
+VE_HOME_TIMEOUT = 300.0
 
 
 class FlowError(Exception):
@@ -107,6 +109,8 @@ def _step(raw: object, where: str) -> tuple[Step | None, list[str]]:
     # vai chuc giay khong de lam gi. Flow nao can cho (splash ad) thi khai
     # `timeout` ro rang.
     mac_dinh = 0.0 if kind in {"close_ad", "allow"} else DEFAULT_TIMEOUT
+    if kind == "ve_home":
+        mac_dinh = VE_HOME_TIMEOUT
     try:
         timeout = float(raw.get("timeout") or mac_dinh)
     except (TypeError, ValueError):

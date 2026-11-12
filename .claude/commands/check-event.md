@@ -125,7 +125,7 @@ Lượt còn bất kỳ `not_tested` / `not_verifiable` / `blocked` nào thì **
 từng cái cho tới khi về 0, đừng hỏi lại người dùng, đừng báo "chưa test được":
 
 - **Chưa có flow** (`flows/<package>.yaml` không có) → dò đường lái trên máy
-  (xem `/record-flow`), ghi flow, chạy lại.
+  (xem `/record-flow`), ghi flow, chạy lại. **Đoạn splash → Home luôn dùng trình lái của rc-check** (user chốt 12/11/2026): mọi flow mới, SDK nào cũng vậy, mở đầu `launch` + `ve_home` (gọi `rcr-sub ve-home`, đi qua splash ad, xin quyền, chọn ngôn ngữ, onboarding, question, paywall, popup Home). **Không tự dò** từng màn ngôn ngữ / onboarding — AIP893 chưa có flow, tự mò thì kẹt ở màn ngôn ngữ. Chỉ dò các bước SAU Home của SDK cần chấm. Có flow kiểu mới thì user sẽ báo.
 - **Event chưa có case nào** ("chưa có case nào cho event này") → tự thêm case
   vào flow: đọc cột Triggered của spec để biết phải làm gì trên app, dò trên máy
   (`uiautomator dump`, `screencap`), ghi case, chạy lại.

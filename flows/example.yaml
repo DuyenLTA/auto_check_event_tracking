@@ -17,6 +17,7 @@ cases:
       relaunch: true                 # force-stop + mo lai de app doc gia tri moi
     steps:
       - {kind: launch}                                   # force-stop roi mo lai app
+      - {kind: ve_home}                                  # splash -> Home bang trinh lai rc-check (ngon ngu, onboarding, paywall)
       - {kind: tap, resource_id: btn_result}             # bam theo resource_id (ben nhat)
       - {kind: wait, seconds: 2}                         # cho cung 2s
       - {kind: wait_text, text: "Widget", timeout: 10}    # cho tới khi thay chu, toi da 10s

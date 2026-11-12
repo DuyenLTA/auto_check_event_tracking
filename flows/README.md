@@ -18,6 +18,10 @@ Format chuẩn: [`example.yaml`](example.yaml). Parser: `src/usv/flow_yaml.py`.
   màn home có nút Generate/Create hay ô nhập prompt không.
 - `reset` không có `pm clear` (xoá sạch login). Reset đi qua Remote Config + xoá vài file prefs.
 
+## Mở đầu flow
+
+**Đoạn splash → Home luôn dùng trình lái của rc-check** (user chốt 12/11/2026): mọi flow mới, SDK nào cũng vậy, mở đầu `launch` + `ve_home` (gọi `rcr-sub ve-home`, đi qua splash ad, xin quyền, chọn ngôn ngữ, onboarding, question, paywall, popup Home). **Không tự dò** từng màn ngôn ngữ / onboarding — AIP893 chưa có flow, tự mò thì kẹt ở màn ngôn ngữ. Chỉ dò các bước SAU Home của SDK cần chấm. Có flow kiểu mới thì user sẽ báo.
+
 ## Step
 
 | kind | Trường bắt buộc | Việc |
@@ -29,6 +33,7 @@ Format chuẩn: [`example.yaml`](example.yaml). Parser: `src/usv/flow_yaml.py`.
 | `key` | `text` | keyevent, vd `KEYCODE_BACK` |
 | `wait` | `seconds` | chờ cứng |
 | `wait_text` | `text` | chờ tới khi chữ xuất hiện, `timeout` mặc định 10s |
+| `ve_home` | — | splash → Home bằng trình lái rc-check (`rcr-sub ve-home`): ads, quyền, ngôn ngữ, onboarding, paywall, popup; `timeout` mặc định 300s |
 
 ## Lỗi
 

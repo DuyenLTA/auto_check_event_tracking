@@ -71,6 +71,12 @@ async def lam(args) -> tuple[int, list[dict]]:
             print(line)
         return 0, []
 
+    if args.lenh == "ve-home":
+        # Qua splash / ngon ngu / onboarding / paywall bang trinh lai cua rc-check, khong do tung man.
+        from .ve_home_rc_check import ve_home
+        say(await ve_home(serial, args.package))
+        return 0, [{"kind": "ve_home"}]
+
     if args.lenh == "launch":
         await adb.force_stop(serial, args.package)
         await adb.launch(serial, args.package)
@@ -157,7 +163,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--index", type=int, default=0,
                         help="node thứ mấy trong số các node khớp")
     parser.add_argument("lenh", choices=["dump", "tap", "long-press", "swipe", "back", "launch",
-                                         "type", "wait", "wait-text", "close-ad", "allow",
+                                         "type", "wait", "wait-text", "close-ad", "allow", "ve-home",
                                          "show", "save", "drop"])
     parser.add_argument("giay_hoac_chu", nargs="?", default="")
     parser.add_argument("--huong", default="up", help="swipe: up|down|left|right")
